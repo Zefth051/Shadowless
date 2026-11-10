@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/captail">
+    <file alias="theme.xaml">../../src/Captail/Themes/Theme.xaml</file>
+    <file alias="strings.xaml">../../src/Captail/Languages/Strings.en.xaml</file>
+    <file alias="icon.ico">../../src/Captail/Assets/Captail.ico</file>
+  </qresource>
+</RCC>

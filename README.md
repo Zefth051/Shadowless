@@ -1,3 +1,7 @@
+> **Linux / GSR experiment:** This branch includes a native C++/Qt prototype.
+> See [linux/README.md](linux/README.md) for build instructions, scope, and test results.
+> The Windows application documentation follows below.
+
 <p align="center">
   <img src="docs/banner.svg" alt="Captail — instant replay that stays on" width="920">
 </p>
