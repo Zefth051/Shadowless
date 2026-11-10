@@ -21,28 +21,28 @@ function Reject([string]$text, [string]$pattern, [string]$message) {
 }
 
 $globalJson = Read-RepoText "global.json"
-$project = Read-RepoText "src\Captail\Captail.csproj"
-$lockFile = Read-RepoText "src\Captail\packages.lock.json"
+$project = Read-RepoText "src\Shadowless\Shadowless.csproj"
+$lockFile = Read-RepoText "src\Shadowless\packages.lock.json"
 $runtimeAcquisition = Read-RepoText "tools\AcquireObsRuntime.ps1"
 $sdkAcquisition = Read-RepoText "tools\AcquireObsPluginSdk.ps1"
 $mpvAcquisition = Read-RepoText "tools\AcquireMpvRuntime.ps1"
 $ffmpegAcquisition = Read-RepoText "tools\AcquireFfmpegRuntime.ps1"
-$engine = Read-RepoText "src\Captail\ObsReplayEngine.cs"
+$engine = Read-RepoText "src\Shadowless\ObsReplayEngine.cs"
 $releaseWorkflow = Read-RepoText ".github\workflows\release.yml"
 $releaseScript = Read-RepoText "tools\BuildRelease.ps1"
 
 Require $globalJson '"version"\s*:\s*"10\.0\.401"' `
     ".NET SDK must stay on the validated 10.0.401 feature band."
 Require $project '<TargetFramework>net10\.0-windows10\.0\.22621\.0</TargetFramework>' `
-    "Captail must target .NET 10 WPF."
+    "Shadowless must target .NET 10 WPF."
 Require $project 'H\.NotifyIcon\.Wpf" Version="2\.4\.1"' `
-    "Captail must use H.NotifyIcon.Wpf 2.4.1."
+    "Shadowless must use H.NotifyIcon.Wpf 2.4.1."
 Reject $project 'PackageReference Include="System\.Drawing\.Common"' `
     "System.Drawing.Common is supplied by .NET 10 WindowsDesktop; an explicit reference causes NU1510."
 Reject $project 'Endpne\.LibMPV\.Windows' `
-    "Captail must use the pinned mpv runtime instead of the stale NuGet binary."
+    "Shadowless must use the pinned mpv runtime instead of the stale NuGet binary."
 Require $project '<MpvRuntimeRoot>[\s\S]*?runtime\\mpv</MpvRuntimeRoot>' `
-    "Captail must copy libmpv from the pinned runtime directory."
+    "Shadowless must copy libmpv from the pinned runtime directory."
 Require $lockFile '"net10\.0-windows10\.0\.22621"' `
     "NuGet lock file must target .NET 10."
 Require $lockFile '"H\.NotifyIcon\.Wpf"[\s\S]*?"resolved"\s*:\s*"2\.4\.1"' `

@@ -20,19 +20,19 @@ function Reject([string]$text, [string]$pattern, [string]$message) {
     }
 }
 
-$settings = Read-Text "src\Captail\SettingsWindow.xaml.cs"
-$settingsXaml = Read-Text "src\Captail\SettingsWindow.xaml"
-$app = Read-Text "src\Captail\App.xaml.cs"
-$config = Read-Text "src\Captail\Config.cs"
-$engine = Read-Text "src\Captail\ObsReplayEngine.cs"
-$obsNative = Read-Text "src\Captail\ObsNative.cs"
+$settings = Read-Text "src\Shadowless\SettingsWindow.xaml.cs"
+$settingsXaml = Read-Text "src\Shadowless\SettingsWindow.xaml"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
+$config = Read-Text "src\Shadowless\Config.cs"
+$engine = Read-Text "src\Shadowless\ObsReplayEngine.cs"
+$obsNative = Read-Text "src\Shadowless\ObsNative.cs"
 $manifest = Read-Text "packaging\msix\AppxManifest.xml.template"
-$player = Read-Text "src\Captail\ClipEditorWindow.xaml.cs"
-$playerXaml = Read-Text "src\Captail\ClipEditorWindow.xaml"
-$library = Read-Text "src\Captail\ReplayLibrary.cs"
-$mpvHost = Read-Text "src\Captail\MpvHost.cs"
-$indicator = Read-Text "src\Captail\ReplayStatusIndicatorWindow.xaml.cs"
-$indicatorXaml = Read-Text "src\Captail\ReplayStatusIndicatorWindow.xaml"
+$player = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
+$playerXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
+$library = Read-Text "src\Shadowless\ReplayLibrary.cs"
+$mpvHost = Read-Text "src\Shadowless\MpvHost.cs"
+$indicator = Read-Text "src\Shadowless\ReplayStatusIndicatorWindow.xaml.cs"
+$indicatorXaml = Read-Text "src\Shadowless\ReplayStatusIndicatorWindow.xaml"
 
 Reject $settings `
     'Window_Deactivated[\s\S]{0,180}AboutPopup\.IsOpen\s*=\s*false' `
@@ -193,7 +193,7 @@ Require $indicator 'TryFindResource\("AccentBrush"\)' `
 Require $indicatorXaml 'StateRing[\s\S]*?DynamicResource AccentBrush' `
     "Recording indicator XAML must track accent resource changes."
 
-Get-ChildItem (Join-Path $root "src\Captail\Languages") `
+Get-ChildItem (Join-Path $root "src\Shadowless\Languages") `
     -Filter "Strings.*.xaml" |
     ForEach-Object {
         $language = [IO.File]::ReadAllText($_.FullName)

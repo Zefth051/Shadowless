@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a focused improvement for Captail
+description: Suggest a focused improvement for Shadowless
 title: "[Feature]: "
 labels:
   - enhancement
@@ -37,5 +37,5 @@ body:
       options:
         - label: I searched existing issues for a similar request.
           required: true
-        - label: This request fits Captail's focused instant-replay purpose.
+        - label: This request fits Shadowless's focused instant-replay purpose.
           required: true

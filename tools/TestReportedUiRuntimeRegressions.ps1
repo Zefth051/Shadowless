@@ -14,13 +14,13 @@ function Require([string]$text, [string]$pattern, [string]$message) {
     }
 }
 
-$settings = Read-Text "src\Captail\SettingsWindow.xaml.cs"
-$app = Read-Text "src\Captail\App.xaml.cs"
-$engine = Read-Text "src\Captail\ObsReplayEngine.cs"
-$launcher = Read-Text "src\Captail\ExternalLinkLauncher.cs"
-$player = Read-Text "src\Captail\MpvHost.cs"
-$editor = Read-Text "src\Captail\ClipEditorWindow.xaml.cs"
-$editorXaml = Read-Text "src\Captail\ClipEditorWindow.xaml"
+$settings = Read-Text "src\Shadowless\SettingsWindow.xaml.cs"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
+$engine = Read-Text "src\Shadowless\ObsReplayEngine.cs"
+$launcher = Read-Text "src\Shadowless\ExternalLinkLauncher.cs"
+$player = Read-Text "src\Shadowless\MpvHost.cs"
+$editor = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
+$editorXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
 
 Require $settings 'L\.Status\.RecordingDisabled' `
     "Recording mode needs its own inactive status title."
@@ -59,7 +59,7 @@ Require $editor 'ResizeMode\s*=\s*ResizeMode\.NoResize' `
 Require $editor 'SwpFrameChanged' `
     "Fullscreen must notify Windows after changing native frame style."
 
-Get-ChildItem (Join-Path $repoRoot "src\Captail\Languages") `
+Get-ChildItem (Join-Path $repoRoot "src\Shadowless\Languages") `
     -Filter "Strings.*.xaml" |
     ForEach-Object {
         $language = [IO.File]::ReadAllText($_.FullName)

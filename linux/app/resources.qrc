@@ -1,7 +1,12 @@
 <RCC>
-  <qresource prefix="/captail">
-    <file alias="theme.xaml">../../src/Captail/Themes/Theme.xaml</file>
-    <file alias="strings.xaml">../../src/Captail/Languages/Strings.en.xaml</file>
-    <file alias="icon.ico">../../src/Captail/Assets/Captail.ico</file>
+  <qresource prefix="/shadowless">
+    <file alias="theme.xaml">../../src/Shadowless/Themes/Theme.xaml</file>
+    <file alias="mint.ico">../../src/Shadowless/Assets/Shadowless.ico</file>
+    <file alias="blue.ico">../../src/Shadowless/Assets/ShadowlessBlue.ico</file>
+    <file alias="violet.ico">../../src/Shadowless/Assets/ShadowlessViolet.ico</file>
+    <file alias="rose.ico">../../src/Shadowless/Assets/ShadowlessRose.ico</file>
+    <file alias="amber.ico">../../src/Shadowless/Assets/ShadowlessAmber.ico</file>
+    <file>chevron.svg</file>
+    <file>chevron-up.svg</file>
   </qresource>
 </RCC>

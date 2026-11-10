@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://faulmit.github.io/captail/sitemap.xml
+Sitemap: https://zefth051.github.io/Shadowless/sitemap.xml

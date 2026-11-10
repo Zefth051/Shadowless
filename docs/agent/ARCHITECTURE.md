@@ -1,6 +1,6 @@
 # Architecture map
 
-Captail is a focused Windows replay/recording application. WPF owns UI and
+Shadowless is a focused Windows replay/recording application. WPF owns UI and
 orchestration; libobs owns capture/encoding; libmpv owns preview playback;
 FFmpeg tools own media inspection, waveforms, thumbnails, and stream-copy trim.
 
@@ -35,7 +35,7 @@ SettingsWindow / hotkeys / tray
 - `Config.cs`: persisted user contract, normalization, comparison, and backup.
 - `ObsReplayEngine.cs`: one OBS graph, capture source selection, encoding,
   replay/recording output, track layout, and capture health.
-- `ObsNative.cs` plus `native/`: native interop and Captail-specific OBS pieces.
+- `ObsNative.cs` plus `native/`: native interop and Shadowless-specific OBS pieces.
 - `SettingsWindow.*`: dashboard, settings editing, replay library, and user
   interaction. It should not directly own OBS lifetime.
 - `ProcessAudio*`: process discovery, selection, monitoring, reconciliation,

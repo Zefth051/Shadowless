@@ -1,0 +1,414 @@
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Shadowless;
+
+public sealed class Config
+{
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        WriteIndented = true,
+    };
+
+    public string Language { get; set; } = "en";
+    public int BufferSeconds { get; set; } = 300;
+    /// <summary>0 = duration-only limit.</summary>
+    public int MaxReplaySizeMb { get; set; }
+    public int FrameRate { get; set; } = 60;
+    /// <summary>0 = adaptive bitrate based on codec and load.</summary>
+    public int BitrateMbps { get; set; }
+    public string Hotkey { get; set; } = "Ctrl+Shift+F10";
+    public string ToggleReplayHotkey { get; set; } = "Ctrl+Shift+F9";
+    /// <summary>"replay" or "recording".</summary>
+    public string CaptureMode { get; set; } = "replay";
+    public bool ReplayEnabled { get; set; } = true;
+    public bool WarnWhenGameStartsWithReplayOff { get; set; } = true;
+    public bool ShowRecordingIndicator { get; set; } = true;
+    /// <summary>"top-left", "top-right", "bottom-left", or "bottom-right".</summary>
+    public string RecordingIndicatorPosition { get; set; } = "top-right";
+
+    /// <summary>"av1", "hevc", or "h264". OBS selects an available encoder for the requested format.</summary>
+    public string Codec { get; set; } = "h264";
+
+    public int MonitorIndex { get; set; }
+    /// <summary>"source", "720p", "1080p", "1440p", or "2160p".</summary>
+    public string RecordingResolution { get; set; } = "source";
+    /// <summary>"desktop" (with automatic game detection) or "game".</summary>
+    public string CaptureSource { get; set; } = "desktop";
+
+    public bool CaptureSystemAudio { get; set; } = true;
+    public int SystemAudioVolume { get; set; } = 100;
+    /// <summary>Render-device ID used for loopback; empty selects the Windows default device.</summary>
+    public string SystemAudioDeviceId { get; set; } = "";
+    public bool CaptureMicrophone { get; set; }
+    public int MicrophoneVolume { get; set; } = 100;
+    public int MicrophoneBoostDb { get; set; }
+    /// <summary>Microphone device ID; empty selects the Windows default microphone.</summary>
+    public string MicrophoneDeviceId { get; set; } = "";
+    public int AudioBitrateKbps { get; set; } = 192;
+    /// <summary>"aac" for fragmented MP4 or "opus" for MKV.</summary>
+    public string AudioCodec { get; set; } = "aac";
+    /// <summary>
+    /// true stores system audio and microphone on separate tracks;
+    /// false mixes both sources into one track.
+    /// </summary>
+    public bool SeparateAudioTracks { get; set; }
+    /// <summary>"simple" preserves device loopback; "advanced" uses process rules.</summary>
+    public string AudioRoutingMode { get; set; } = "simple";
+    public List<ProcessAudioRoute> ProcessAudioRoutes { get; set; } = [];
+    public int AdvancedMicrophoneTrack { get; set; } = 1;
+
+    public string OutputDirectory { get; set; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Shadowless");
+    public bool OrganizeReplaysByGame { get; set; }
+    /// <summary>"mint", "blue", "violet", "rose", or "amber".</summary>
+    public string AccentColor { get; set; } = "mint";
+    public int PlayerVolume { get; set; } = 100;
+    [JsonIgnore]
+    public static string ConfigPath => AppDataPaths.ConfigFile;
+    public static Config Load()
+    {
+        if (TryLoad(ConfigPath, out Config? config) && config is not null)
+            return config;
+
+        string backupPath = ConfigPath + ".bak";
+        if (TryLoad(backupPath, out config) && config is not null)
+        {
+            try
+            {
+                config.Save();
+            }
+            catch (Exception exception)
+            {
+                Log.Write($"Config backup restore failed: {exception.Message}");
+            }
+            return config;
+        }
+
+        var defaultConfig = new Config
+        {
+            Language = Localization.ResolveInitialLanguage(null),
+        };
+        defaultConfig.Save();
+        return defaultConfig;
+    }
+
+    private static bool TryLoad(string path, out Config? config)
+    {
+        config = null;
+        if (!File.Exists(path))
+            return false;
+        try
+        {
+            string json = File.ReadAllText(path);
+            using JsonDocument document = JsonDocument.Parse(json);
+            bool hasConfiguredLanguage = document.RootElement.ValueKind ==
+                                         JsonValueKind.Object &&
+                                         document.RootElement.EnumerateObject().Any(property =>
+                                             string.Equals(
+                                                 property.Name,
+                                                 nameof(Language),
+                                                 StringComparison.OrdinalIgnoreCase) &&
+                                             property.Value.ValueKind == JsonValueKind.String &&
+                                             !string.IsNullOrWhiteSpace(
+                                                 property.Value.GetString()));
+            config = JsonSerializer.Deserialize<Config>(json);
+            if (config is not null && !hasConfiguredLanguage)
+                config.Language = Localization.ResolveInitialLanguage(null);
+            config?.Normalize();
+            return config is not null;
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Config load failed ({Path.GetFileName(path)}): {exception.Message}");
+            return false;
+        }
+    }
+
+    public void Save()
+    {
+        Normalize();
+        string directory = Path.GetDirectoryName(ConfigPath)!;
+        Directory.CreateDirectory(directory);
+        string temporaryPath = Path.Combine(
+            directory,
+            $"config.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp");
+        string backupPath = ConfigPath + ".bak";
+        try
+        {
+            File.WriteAllText(
+                temporaryPath,
+                JsonSerializer.Serialize(this, SerializerOptions));
+            if (File.Exists(ConfigPath))
+                File.Replace(temporaryPath, ConfigPath, backupPath, ignoreMetadataErrors: true);
+            else
+                File.Move(temporaryPath, ConfigPath);
+        }
+        finally
+        {
+            File.Delete(temporaryPath);
+        }
+    }
+
+    public Config Clone()
+    {
+        var clone = new Config();
+        clone.CopyFrom(this);
+        return clone;
+    }
+
+    public void CopyFrom(Config source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        Language = source.Language;
+        BufferSeconds = source.BufferSeconds;
+        MaxReplaySizeMb = source.MaxReplaySizeMb;
+        FrameRate = source.FrameRate;
+        BitrateMbps = source.BitrateMbps;
+        Hotkey = source.Hotkey;
+        ToggleReplayHotkey = source.ToggleReplayHotkey;
+        CaptureMode = source.CaptureMode;
+        ReplayEnabled = source.ReplayEnabled;
+        WarnWhenGameStartsWithReplayOff = source.WarnWhenGameStartsWithReplayOff;
+        ShowRecordingIndicator = source.ShowRecordingIndicator;
+        RecordingIndicatorPosition = source.RecordingIndicatorPosition;
+        Codec = source.Codec;
+        MonitorIndex = source.MonitorIndex;
+        RecordingResolution = source.RecordingResolution;
+        CaptureSource = source.CaptureSource;
+        CaptureSystemAudio = source.CaptureSystemAudio;
+        SystemAudioVolume = source.SystemAudioVolume;
+        SystemAudioDeviceId = source.SystemAudioDeviceId;
+        CaptureMicrophone = source.CaptureMicrophone;
+        MicrophoneVolume = source.MicrophoneVolume;
+        MicrophoneBoostDb = source.MicrophoneBoostDb;
+        MicrophoneDeviceId = source.MicrophoneDeviceId;
+        AudioBitrateKbps = source.AudioBitrateKbps;
+        AudioCodec = source.AudioCodec;
+        SeparateAudioTracks = source.SeparateAudioTracks;
+        AudioRoutingMode = source.AudioRoutingMode;
+        ProcessAudioRoutes = (source.ProcessAudioRoutes ?? [])
+            .Where(route => route is not null)
+            .Select(route => new ProcessAudioRoute
+            {
+                Executable = route.Executable,
+                Track = route.Track,
+                Enabled = route.Enabled,
+            })
+            .ToList();
+        AdvancedMicrophoneTrack = source.AdvancedMicrophoneTrack;
+        OutputDirectory = source.OutputDirectory;
+        OrganizeReplaysByGame = source.OrganizeReplaysByGame;
+        AccentColor = source.AccentColor;
+        PlayerVolume = source.PlayerVolume;
+        Normalize();
+    }
+
+    public bool PipelineEquals(Config other) =>
+        string.Equals(CaptureMode, other.CaptureMode, StringComparison.Ordinal) &&
+        (string.Equals(CaptureMode, "recording", StringComparison.Ordinal) ||
+         (BufferSeconds == other.BufferSeconds &&
+          MaxReplaySizeMb == other.MaxReplaySizeMb)) &&
+        FrameRate == other.FrameRate &&
+        BitrateMbps == other.BitrateMbps &&
+        string.Equals(Codec, other.Codec, StringComparison.Ordinal) &&
+        MonitorIndex == other.MonitorIndex &&
+        string.Equals(RecordingResolution, other.RecordingResolution, StringComparison.Ordinal) &&
+        string.Equals(CaptureSource, other.CaptureSource, StringComparison.Ordinal) &&
+        CaptureSystemAudio == other.CaptureSystemAudio &&
+        SystemAudioVolume == other.SystemAudioVolume &&
+        string.Equals(SystemAudioDeviceId, other.SystemAudioDeviceId, StringComparison.Ordinal) &&
+        CaptureMicrophone == other.CaptureMicrophone &&
+        MicrophoneVolume == other.MicrophoneVolume &&
+        MicrophoneBoostDb == other.MicrophoneBoostDb &&
+        string.Equals(MicrophoneDeviceId, other.MicrophoneDeviceId, StringComparison.Ordinal) &&
+        AudioBitrateKbps == other.AudioBitrateKbps &&
+        string.Equals(AudioCodec, other.AudioCodec, StringComparison.Ordinal) &&
+        SeparateAudioTracks == other.SeparateAudioTracks &&
+        string.Equals(AudioRoutingMode, other.AudioRoutingMode, StringComparison.Ordinal) &&
+        AdvancedMicrophoneTrack == other.AdvancedMicrophoneTrack &&
+        ProcessAudioRoutesEqual(ProcessAudioRoutes, other.ProcessAudioRoutes);
+
+    public void Normalize()
+    {
+        Language = NormalizeLanguage(Language);
+        CaptureMode = AllowedText(CaptureMode, ["replay", "recording"], "replay");
+        BufferSeconds = AllowedValue(BufferSeconds, [15, 30, 60, 120, 300, 600, 900], 300);
+        MaxReplaySizeMb = AllowedValue(MaxReplaySizeMb, [0, 250, 500, 1000, 2000, 5000, 10000], 0);
+        FrameRate = AllowedValue(FrameRate, [30, 60, 120, 144, 240], 60);
+        BitrateMbps = AllowedValue(BitrateMbps, [0, 10, 20, 50, 80], 0);
+        Hotkey = NormalizeHotkey(Hotkey, "Ctrl+Shift+F10");
+        ToggleReplayHotkey = NormalizeHotkey(ToggleReplayHotkey, "Ctrl+Shift+F9");
+        if (!HotkeyManager.IsValid(Hotkey))
+            Hotkey = "Ctrl+Shift+F10";
+        if (!HotkeyManager.IsValid(ToggleReplayHotkey) ||
+            !HotkeyManager.AreDistinct(Hotkey, ToggleReplayHotkey))
+        {
+            ToggleReplayHotkey = "Ctrl+Shift+F9";
+        }
+        Codec = AllowedText(Codec, ["h264", "hevc", "av1"], "h264");
+        MonitorIndex = Math.Clamp(MonitorIndex, 0, 63);
+        RecordingResolution = AllowedText(
+            RecordingResolution,
+            ["source", "720p", "1080p", "1440p", "2160p"],
+            "source");
+        CaptureSource = AllowedText(CaptureSource, ["desktop", "game"], "desktop");
+        RecordingIndicatorPosition = AllowedText(
+            RecordingIndicatorPosition,
+            ["top-left", "top-right", "bottom-left", "bottom-right"],
+            "top-right");
+        SystemAudioVolume = Math.Clamp(SystemAudioVolume, 0, 100);
+        SystemAudioDeviceId = NormalizeIdentifier(SystemAudioDeviceId);
+        MicrophoneVolume = Math.Clamp(MicrophoneVolume, 0, 100);
+        MicrophoneBoostDb = Math.Clamp(MicrophoneBoostDb, 0, 20);
+        MicrophoneDeviceId = NormalizeIdentifier(MicrophoneDeviceId);
+        AudioBitrateKbps = Math.Clamp(AudioBitrateKbps, 64, 512);
+        AudioCodec = AllowedText(AudioCodec, ["aac", "opus"], "aac");
+        AudioRoutingMode = AllowedText(
+            AudioRoutingMode,
+            ["simple", "advanced"],
+            "simple");
+        AdvancedMicrophoneTrack = AdvancedMicrophoneTrack is >= 1 and <= 6
+            ? AdvancedMicrophoneTrack
+            : 1;
+        ProcessAudioRoutes = NormalizeProcessAudioRoutes(ProcessAudioRoutes);
+        OutputDirectory = NormalizePath(OutputDirectory, allowEmpty: false);
+        AccentColor = AllowedText(
+            AccentColor,
+            ["mint", "blue", "violet", "rose", "amber"],
+            "mint");
+        PlayerVolume = Math.Clamp(PlayerVolume, 0, 100);
+    }
+
+    private static List<ProcessAudioRoute> NormalizeProcessAudioRoutes(
+        IEnumerable<ProcessAudioRoute>? routes)
+    {
+        var normalized = new Dictionary<string, ProcessAudioRoute>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (ProcessAudioRoute? route in routes ?? [])
+        {
+            string executable = NormalizeExecutableName(route?.Executable);
+            if (executable.Length == 0 || route?.Track is not (>= 1 and <= 6))
+                continue;
+
+            // The first valid rule wins. This makes conflicting persisted
+            // entries deterministic without silently moving an existing route.
+            normalized.TryAdd(
+                executable,
+                new ProcessAudioRoute
+                {
+                    Executable = executable,
+                    Track = route.Track,
+                    Enabled = route.Enabled,
+                });
+        }
+        return normalized.Values
+            .OrderBy(route => route.Executable, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    internal static string NormalizeExecutableName(string? value)
+    {
+        string candidate = value?.Trim().Trim('"') ?? "";
+        if (candidate.Length == 0)
+            return "";
+        try
+        {
+            candidate = Path.GetFileName(candidate.Replace('/', '\\')).Trim();
+        }
+        catch
+        {
+            return "";
+        }
+        if (candidate.Length == 0 ||
+            candidate.Length > 260 ||
+            candidate.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return "";
+        }
+
+        string extension = Path.GetExtension(candidate);
+        if (extension.Length == 0)
+            candidate += ".exe";
+        else if (!string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase))
+            return "";
+        else
+            candidate = candidate[..^extension.Length] + ".exe";
+        return candidate.ToLowerInvariant();
+    }
+
+    private static bool ProcessAudioRoutesEqual(
+        IReadOnlyList<ProcessAudioRoute>? left,
+        IReadOnlyList<ProcessAudioRoute>? right)
+    {
+        ProcessAudioRoute[] leftRoutes = NormalizeProcessAudioRoutes(left).ToArray();
+        ProcessAudioRoute[] rightRoutes = NormalizeProcessAudioRoutes(right).ToArray();
+        return leftRoutes.Length == rightRoutes.Length &&
+               leftRoutes.Zip(rightRoutes).All(pair =>
+                   pair.First.Track == pair.Second.Track &&
+                   pair.First.Enabled == pair.Second.Enabled &&
+                   string.Equals(
+                       pair.First.Executable,
+                       pair.Second.Executable,
+                       StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static int AllowedValue(int value, int[] allowed, int fallback) =>
+        allowed.Contains(value) ? value : fallback;
+
+    private static string AllowedText(
+        string? value,
+        string[] allowed,
+        string fallback)
+    {
+        string normalized = value?.Trim().ToLowerInvariant() ?? "";
+        return allowed.Contains(normalized, StringComparer.Ordinal)
+            ? normalized
+            : fallback;
+    }
+
+    private static string NormalizeHotkey(string? value, string fallback)
+    {
+        string normalized = value?.Trim() ?? "";
+        return normalized.Length is > 0 and <= 64 ? normalized : fallback;
+    }
+
+    private static string NormalizeIdentifier(string? value)
+    {
+        string normalized = value?.Trim() ?? "";
+        return normalized.Length <= 1024 ? normalized : "";
+    }
+
+    private static string NormalizePath(string? value, bool allowEmpty)
+    {
+        string fallback = allowEmpty
+            ? ""
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+                "Shadowless");
+        string normalized = value?.Trim() ?? "";
+        if (normalized.Length == 0)
+            return fallback;
+        if (normalized.Length > 1024 || normalized.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+            return fallback;
+        try
+        {
+            return Path.GetFullPath(normalized);
+        }
+        catch
+        {
+            return fallback;
+        }
+    }
+
+    private static string NormalizeLanguage(string? language) =>
+        Localization.NormalizeLanguage(language);
+}
+
+public sealed class ProcessAudioRoute
+{
+    public string Executable { get; set; } = "";
+    public int Track { get; set; } = 1;
+    public bool Enabled { get; set; } = true;
+}

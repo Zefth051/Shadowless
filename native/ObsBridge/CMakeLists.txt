@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
-project(CaptailObsBridge LANGUAGES CXX)
+project(ShadowlessObsBridge LANGUAGES CXX)
 
-add_library(CaptailObsBridge SHARED CaptailObsBridge.cpp)
-target_compile_features(CaptailObsBridge PRIVATE cxx_std_20)
-target_compile_definitions(CaptailObsBridge PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
-target_link_libraries(CaptailObsBridge PRIVATE dxgi)
+add_library(ShadowlessObsBridge SHARED ShadowlessObsBridge.cpp)
+target_compile_features(ShadowlessObsBridge PRIVATE cxx_std_20)
+target_compile_definitions(ShadowlessObsBridge PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(ShadowlessObsBridge PRIVATE dxgi)

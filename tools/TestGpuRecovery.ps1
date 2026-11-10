@@ -6,11 +6,11 @@ param(
 
 $root = [IO.Path]::GetFullPath($ProjectRoot)
 $exe = Join-Path $root `
-    'src\Captail\bin\Debug\net10.0-windows10.0.22621.0\win-x64\Captail.exe'
-$logPath = Join-Path $env:LOCALAPPDATA 'Captail\log.txt'
+    'src\Shadowless\bin\Debug\net10.0-windows10.0.22621.0\win-x64\Shadowless.exe'
+$logPath = Join-Path $env:LOCALAPPDATA 'Shadowless\log.txt'
 
 if (-not (Test-Path -LiteralPath $exe)) {
-    throw "Debug Captail executable not found: $exe"
+    throw "Debug Shadowless executable not found: $exe"
 }
 
 $token = [Guid]::NewGuid().ToString('N')
@@ -53,7 +53,7 @@ try {
 }
 finally {
     $matchingProcesses = Get-CimInstance Win32_Process `
-        -Filter "Name = 'Captail.exe'" |
+        -Filter "Name = 'Shadowless.exe'" |
         Where-Object { $_.CommandLine -like "*$token*" }
     foreach ($process in $matchingProcesses) {
         Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue

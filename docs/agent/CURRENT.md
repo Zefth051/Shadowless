@@ -7,7 +7,7 @@ Verify the live branch, HEAD, and changed paths with `GetAgentContext.ps1` befor
 ## Release candidate
 
 - Branch: `codex/bugfix-capture-player`.
-- Base: `56f60fa` (`Release Captail 0.2.3`).
+- Base: `56f60fa` (`Release Shadowless 0.2.3`).
 - Candidate version: `0.2.4`.
 - Player and trim editor now share one window, including timeline, audio rows, range selection, output settings, and save actions.
 - README and Store listing use six new screenshots from the candidate build. The obsolete standalone editor screenshot was removed.

@@ -3,34 +3,34 @@
   "ReleaseVersion": "0.2.4",
   "Screenshots": [
     {
-      "Source": "images/captail-main.png",
-      "FileName": "captail-main.png"
+      "Source": "images/shadowless-main.png",
+      "FileName": "shadowless-main.png"
     },
     {
-      "Source": "images/captail-feature-recording.png",
-      "FileName": "captail-feature-recording.png"
+      "Source": "images/shadowless-feature-recording.png",
+      "FileName": "shadowless-feature-recording.png"
     },
     {
-      "Source": "images/captail-settings-video.png",
-      "FileName": "captail-settings-video.png"
+      "Source": "images/shadowless-settings-video.png",
+      "FileName": "shadowless-settings-video.png"
     },
     {
-      "Source": "images/captail-settings-audio.png",
-      "FileName": "captail-settings-audio.png"
+      "Source": "images/shadowless-settings-audio.png",
+      "FileName": "shadowless-settings-audio.png"
     },
     {
-      "Source": "images/captail-audio-routing.png",
-      "FileName": "captail-audio-routing.png"
+      "Source": "images/shadowless-audio-routing.png",
+      "FileName": "shadowless-audio-routing.png"
     },
     {
-      "Source": "images/captail-player.png",
-      "FileName": "captail-player.png"
+      "Source": "images/shadowless-player.png",
+      "FileName": "shadowless-player.png"
     }
   ],
   "Listings": {
     "en-us": {
       "ShortDescription": "Lightweight instant replay and continuous recording for Windows with automatic capture recovery and a built-in clip player.",
-      "Description": "Captail is a lightweight, open-source game and desktop recorder for Windows. Use Instant Replay to keep the latest seconds or minutes in a rolling buffer and save them with a global hotkey, or switch to Recording and write a continuous file until you stop.\n\nCaptail focuses on capture without a large streaming interface. Desktop mode automatically switches to a detected game while it is active and returns to desktop capture after you Alt+Tab. Game Capture mode records games without recording the desktop.\n\nCapture interruptions do not silently disable recording. Captail monitors the pipeline and attempts automatic recovery after game exits, source loss, encoder problems, graphics-driver interruptions, and a hung capture shutdown. Protected content may appear black, but Captail is designed to recover normal capture afterward.\n\nChoose AV1, HEVC, or H.264 according to the hardware encoders available on your GPU. Captail supports 30 to 240 FPS, resolutions up to 4K, system or detected-game audio, microphone capture, separate audio tracks, per-application routing, volume controls, microphone boost, per-game folders, and configurable global hotkeys including F13-F24.\n\nBrowse saved clips inside Captail, filter them by game or capture mode, and delete one or several clips. The resizable built-in player supports clip navigation, volume controls, simultaneous multi-track preview, and fullscreen playback. Use the same player to trim a clip, select audio tracks, choose export settings, save a copy, or overwrite the original.\n\nChoose from five accent colors. Captail starts in the Windows notification area, can launch with Windows, and includes an optional capture-status indicator. Recordings and diagnostics stay local. Captail does not upload recorded video or personal data.",
+      "Description": "Shadowless is a lightweight, open-source game and desktop recorder for Windows. Use Instant Replay to keep the latest seconds or minutes in a rolling buffer and save them with a global hotkey, or switch to Recording and write a continuous file until you stop.\n\nShadowless focuses on capture without a large streaming interface. Desktop mode automatically switches to a detected game while it is active and returns to desktop capture after you Alt+Tab. Game Capture mode records games without recording the desktop.\n\nCapture interruptions do not silently disable recording. Shadowless monitors the pipeline and attempts automatic recovery after game exits, source loss, encoder problems, graphics-driver interruptions, and a hung capture shutdown. Protected content may appear black, but Shadowless is designed to recover normal capture afterward.\n\nChoose AV1, HEVC, or H.264 according to the hardware encoders available on your GPU. Shadowless supports 30 to 240 FPS, resolutions up to 4K, system or detected-game audio, microphone capture, separate audio tracks, per-application routing, volume controls, microphone boost, per-game folders, and configurable global hotkeys including F13-F24.\n\nBrowse saved clips inside Shadowless, filter them by game or capture mode, and delete one or several clips. The resizable built-in player supports clip navigation, volume controls, simultaneous multi-track preview, and fullscreen playback. Use the same player to trim a clip, select audio tracks, choose export settings, save a copy, or overwrite the original.\n\nChoose from five accent colors. Shadowless starts in the Windows notification area, can launch with Windows, and includes an optional capture-status indicator. Recordings and diagnostics stay local. Shadowless does not upload recorded video or personal data.",
       "Features": [
         "Rolling instant replay buffer up to 15 minutes",
         "Continuous game and desktop recording",
@@ -53,7 +53,7 @@
         "Per-game replay folders",
         "Eleven interface languages"
       ],
-      "ReleaseNotes": "Captail 0.2.4 combines playback and trimming in one window, with the full timeline, audio tracks, and save actions always available. Export now offers format, resolution, video codec, bitrate, and audio codec settings. Clip browsing and active-clip highlighting are more responsive, accent colors carry through to window and shortcut icons, and updated media runtimes improve compatibility. Desktop capture preparation was also improved on supported Windows systems.",
+      "ReleaseNotes": "Shadowless 0.2.4 combines playback and trimming in one window, with the full timeline, audio tracks, and save actions always available. Export now offers format, resolution, video codec, bitrate, and audio codec settings. Clip browsing and active-clip highlighting are more responsive, accent colors carry through to window and shortcut icons, and updated media runtimes improve compatibility. Desktop capture preparation was also improved on supported Windows systems.",
       "Keywords": [
         "instant replay",
         "game recorder",
@@ -63,13 +63,13 @@
         "replay buffer",
         "AV1 recorder"
       ],
-      "LicenseTerms": "GNU General Public License v2.0 or later. Source and license: https://github.com/FaulMit/captail",
-      "CopyrightAndTrademarkInfo": "Copyright © 2026 faulmit and Captail contributors.",
+      "LicenseTerms": "GNU General Public License v2.0 or later. Source and license: https://github.com/Zefth051/Shadowless",
+      "CopyrightAndTrademarkInfo": "Copyright © 2026 faulmit and Shadowless contributors.",
       "DevStudio": "faulmit"
     },
     "ru-ru": {
       "ShortDescription": "Лёгкая программа мгновенных повторов и непрерывной записи для Windows с автовосстановлением и встроенным плеером.",
-      "Description": "Captail — лёгкая программа с открытым исходным кодом для записи игр и рабочего стола в Windows. Мгновенный повтор хранит последние секунды или минуты в циклическом буфере и сохраняет их по глобальной горячей клавише. Режим «Запись» пишет непрерывный файл, пока вы его не остановите.\n\nCaptail даёт удобный захват без громоздкого интерфейса для стриминга. Режим рабочего стола автоматически переключается на обнаруженную игру, пока она активна, и возвращается к рабочему столу после Alt+Tab. Game Capture записывает игры, но не записывает рабочий стол.\n\nСбой захвата не должен незаметно отключать запись. Captail следит за конвейером и пытается восстановить его после закрытия игры, потери источника, ошибки кодировщика, сбоя видеодрайвера или зависшего завершения захвата. Защищённый контент может отображаться чёрным, но Captail рассчитан на восстановление обычной записи после него.\n\nМожно выбрать AV1, HEVC или H.264 в зависимости от аппаратных кодировщиков видеокарты. Поддерживаются частота от 30 до 240 FPS, разрешение до 4K, системный звук или звук обнаруженной игры, микрофон, раздельные аудиодорожки, маршрутизация отдельных приложений, регулировка громкости, усиление микрофона, папки по играм и глобальные клавиши, включая F13-F24.\n\nПросматривайте сохранённые клипы в Captail, фильтруйте их по игре или режиму записи и удаляйте по одному или группой. Масштабируемый встроенный плеер поддерживает переход между клипами, регулировку громкости, одновременное воспроизведение всех выбранных дорожек и полноэкранный режим. В этом же плеере можно обрезать клип, выбрать дорожки и параметры экспорта, сохранить копию или перезаписать оригинал.\n\nДоступно пять акцентных цветов. Captail запускается в области уведомлений Windows, может стартовать вместе с системой и показывает необязательный индикатор захвата. Записи и диагностика остаются на компьютере. Captail не загружает видео или личные данные.",
+      "Description": "Shadowless — лёгкая программа с открытым исходным кодом для записи игр и рабочего стола в Windows. Мгновенный повтор хранит последние секунды или минуты в циклическом буфере и сохраняет их по глобальной горячей клавише. Режим «Запись» пишет непрерывный файл, пока вы его не остановите.\n\nShadowless даёт удобный захват без громоздкого интерфейса для стриминга. Режим рабочего стола автоматически переключается на обнаруженную игру, пока она активна, и возвращается к рабочему столу после Alt+Tab. Game Capture записывает игры, но не записывает рабочий стол.\n\nСбой захвата не должен незаметно отключать запись. Shadowless следит за конвейером и пытается восстановить его после закрытия игры, потери источника, ошибки кодировщика, сбоя видеодрайвера или зависшего завершения захвата. Защищённый контент может отображаться чёрным, но Shadowless рассчитан на восстановление обычной записи после него.\n\nМожно выбрать AV1, HEVC или H.264 в зависимости от аппаратных кодировщиков видеокарты. Поддерживаются частота от 30 до 240 FPS, разрешение до 4K, системный звук или звук обнаруженной игры, микрофон, раздельные аудиодорожки, маршрутизация отдельных приложений, регулировка громкости, усиление микрофона, папки по играм и глобальные клавиши, включая F13-F24.\n\nПросматривайте сохранённые клипы в Shadowless, фильтруйте их по игре или режиму записи и удаляйте по одному или группой. Масштабируемый встроенный плеер поддерживает переход между клипами, регулировку громкости, одновременное воспроизведение всех выбранных дорожек и полноэкранный режим. В этом же плеере можно обрезать клип, выбрать дорожки и параметры экспорта, сохранить копию или перезаписать оригинал.\n\nДоступно пять акцентных цветов. Shadowless запускается в области уведомлений Windows, может стартовать вместе с системой и показывает необязательный индикатор захвата. Записи и диагностика остаются на компьютере. Shadowless не загружает видео или личные данные.",
       "Features": [
         "Циклический буфер мгновенного повтора до 15 минут",
         "Непрерывная запись игр и рабочего стола",
@@ -92,7 +92,7 @@
         "Раздельные папки для разных игр",
         "Одиннадцать языков интерфейса"
       ],
-      "ReleaseNotes": "Captail 0.2.4 объединяет воспроизведение и обрезку в одном окне: шкала времени, аудиодорожки и сохранение всегда доступны. При экспорте можно выбрать формат, разрешение, видеокодек, битрейт и аудиокодек. Быстрее работает список клипов, заметнее выделяется воспроизводимый клип, значки окон и ярлыков соответствуют цвету интерфейса. Обновлены медиакомпоненты и подготовка захвата рабочего стола на поддерживаемых версиях Windows.",
+      "ReleaseNotes": "Shadowless 0.2.4 объединяет воспроизведение и обрезку в одном окне: шкала времени, аудиодорожки и сохранение всегда доступны. При экспорте можно выбрать формат, разрешение, видеокодек, битрейт и аудиокодек. Быстрее работает список клипов, заметнее выделяется воспроизводимый клип, значки окон и ярлыков соответствуют цвету интерфейса. Обновлены медиакомпоненты и подготовка захвата рабочего стола на поддерживаемых версиях Windows.",
       "Keywords": [
         "мгновенный повтор",
         "запись игр",
@@ -102,8 +102,8 @@
         "буфер повтора",
         "запись AV1"
       ],
-      "LicenseTerms": "GNU General Public License v2.0 или новее. Исходный код и лицензия: https://github.com/FaulMit/captail",
-      "CopyrightAndTrademarkInfo": "Copyright © 2026 faulmit и участники проекта Captail.",
+      "LicenseTerms": "GNU General Public License v2.0 или новее. Исходный код и лицензия: https://github.com/Zefth051/Shadowless",
+      "CopyrightAndTrademarkInfo": "Copyright © 2026 faulmit и участники проекта Shadowless.",
       "DevStudio": "faulmit"
     }
   }

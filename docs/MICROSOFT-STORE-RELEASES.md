@@ -1,6 +1,6 @@
 # Microsoft Store releases
 
-Captail Store packages are built and published by the `Microsoft Store release`
+Shadowless Store packages are built and published by the `Microsoft Store release`
 GitHub Actions workflow. Store publishing is intentionally separate from the
 ordinary GitHub Release workflow.
 
@@ -27,7 +27,7 @@ expiration date and update `AZURE_AD_APPLICATION_SECRET` in GitHub.
 1. Merge the release-ready code into `main`.
 2. Open **Actions** and select **Microsoft Store release**.
 3. Select **Run workflow** from `main`.
-4. Enter the three-part Captail version, for example `0.2.1`.
+4. Enter the three-part Shadowless version, for example `0.2.1`.
 5. Leave **Internal MSIX identity** empty for a normal release. The workflow
    then uses `0.2.1.0`. For a Store-only republish of the same visible version,
    enter a higher four-part identity ending in `.0`, for example `0.2.2.0`.

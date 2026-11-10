@@ -9,14 +9,14 @@ Without a microphone, only tracks 1 and 2 are encoded. Without system capture,
 microphone-only capture uses track 1.
 
 Separate mode requires the process-loopback capability and captures across
-output devices. With no detected game it excludes Captail itself and keeps
+output devices. With no detected game it excludes Shadowless itself and keeps
 track 2 silent. For multiple independent instances of the detected executable,
 the oldest root is used consistently for inclusion and exclusion; other
 instances remain on the system track. PID creation time protects restarts.
 
 In explicit Game Capture, mixed mode routes the executable detected by the
 video hook through process loopback. This follows games that use a non-default
-Windows output device. If process loopback is unavailable, Captail keeps the
+Windows output device. If process loopback is unavailable, Shadowless keeps the
 device-loopback fallback.
 
 Advanced mode maps executable roots to recording tracks. Selected processes,
@@ -35,7 +35,7 @@ up to six tracks for both.
 - `ProcessAudioReconciler`: desired routes versus active OBS sources.
 - `ProcessAudioMonitor`: health/recovery cadence.
 - `ProcessAudioRoutingWindow`: selection and track UI.
-- `native/ProcessAudio`: Captail OBS process-loopback source.
+- `native/ProcessAudio`: Shadowless OBS process-loopback source.
 - `ObsReplayEngine`: mixers, track names, and source ownership.
 
 ## Invariants
@@ -54,7 +54,7 @@ up to six tracks for both.
 ```powershell
 .\tools\TestIssue41Fixes.ps1
 .\tools\TestIssue41Followup.ps1
-dotnet build .\Captail.sln -c Release --no-restore
+dotnet build .\Shadowless.sln -c Release --no-restore
 ```
 
 For native routing changes, also run `tools/ProcessAudioFoundationQa` and the

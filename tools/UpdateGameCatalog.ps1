@@ -1,6 +1,6 @@
 param(
     [string]$Revision = "main",
-    [string]$OutputPath = (Join-Path $PSScriptRoot "..\src\Captail\Assets\GameCatalog.json")
+    [string]$OutputPath = (Join-Path $PSScriptRoot "..\src\Shadowless\Assets\GameCatalog.json")
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,7 +19,7 @@ if ($Revision -notmatch "^[0-9a-f]{40}$") {
 }
 
 $sourceUrl = "https://raw.githubusercontent.com/markterence/discord-quest-completer/$Revision/src/assets/gamelist.json"
-$temporaryPath = Join-Path ([IO.Path]::GetTempPath()) "captail-gamelist-$Revision.json"
+$temporaryPath = Join-Path ([IO.Path]::GetTempPath()) "shadowless-gamelist-$Revision.json"
 
 try {
     Invoke-WebRequest -UseBasicParsing $sourceUrl -OutFile $temporaryPath

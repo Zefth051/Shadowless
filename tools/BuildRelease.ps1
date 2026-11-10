@@ -26,14 +26,14 @@ if (-not $outputRoot.StartsWith($repoPrefix, [StringComparison]::OrdinalIgnoreCa
 
 $stagingRoot = Join-Path $outputRoot "staging"
 $dotnetArtifacts = Join-Path $stagingRoot "dotnet"
-$portableName = "Captail-$Version"
+$portableName = "Shadowless-$Version"
 $publishDirectory = Join-Path $stagingRoot $portableName
 $portableArchive = Join-Path $outputRoot "$portableName-Portable-win-x64.zip"
-$setupName = "Captail-$Version-Setup-win-x64.exe"
+$setupName = "Shadowless-$Version-Setup-win-x64.exe"
 $setupPath = Join-Path $outputRoot $setupName
 $checksumPath = Join-Path $outputRoot "SHA256SUMS.txt"
-$project = Join-Path $repoRoot "src\Captail\Captail.csproj"
-$installerScript = Join-Path $repoRoot "installer\Captail.iss"
+$project = Join-Path $repoRoot "src\Shadowless\Shadowless.csproj"
+$installerScript = Join-Path $repoRoot "installer\Shadowless.iss"
 
 foreach ($path in @($stagingRoot, $portableArchive, $setupPath, $checksumPath)) {
     $resolved = [IO.Path]::GetFullPath($path)
@@ -46,7 +46,7 @@ foreach ($path in @($stagingRoot, $portableArchive, $setupPath, $checksumPath)) 
 }
 New-Item -ItemType Directory -Force -Path $publishDirectory | Out-Null
 
-Write-Host "Publishing Captail $Version..."
+Write-Host "Publishing Shadowless $Version..."
 dotnet restore $project `
     --locked-mode `
     --runtime win-x64 `
@@ -73,15 +73,15 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
-$captailExe = Join-Path $publishDirectory "Captail.exe"
-if (-not (Test-Path -LiteralPath $captailExe)) {
-    throw "Published Captail.exe not found."
+$shadowlessExe = Join-Path $publishDirectory "Shadowless.exe"
+if (-not (Test-Path -LiteralPath $shadowlessExe)) {
+    throw "Published Shadowless.exe not found."
 }
 if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory "obs.dll"))) {
     throw "Published OBS runtime not found."
 }
 if (-not (Test-Path -LiteralPath (
-        Join-Path $publishDirectory "obs-plugins\64bit\captail-process-audio.dll"))) {
+        Join-Path $publishDirectory "obs-plugins\64bit\shadowless-process-audio.dll"))) {
     throw "Published process-audio plugin not found."
 }
 if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory "ffmpeg\ffmpeg.exe"))) {

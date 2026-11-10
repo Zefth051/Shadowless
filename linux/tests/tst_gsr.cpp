@@ -5,15 +5,48 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QLocalServer>
+#include <QRegularExpression>
 #include <QSignalSpy>
 #include <QTest>
+#include <QFileDevice>
 
-using namespace Captail;
+using namespace Shadowless;
 
 class GsrTests : public QObject {
     Q_OBJECT
     const GsrCapabilities supported{"6.1.5", "nvidia", "wayland", {"h264", "hevc"}, {"DP-1", "portal"}};
 private slots:
+    void waitsForCompositionBeforeReportingReady() {
+        QTemporaryDir directory;
+        const auto program = directory.filePath("recorder.py");
+        QFile script(program); QVERIFY(script.open(QIODevice::WriteOnly));
+        script.write(R"(#!/usr/bin/python
+import sys,socket,time,json,os,pathlib
+server=socket.socket(socket.AF_UNIX);server.bind(sys.argv[sys.argv.index('-ipc')+1]);server.listen(8)
+pathlib.Path(__file__+'.ready').touch()
+time.sleep(.5)
+overlay=socket.socket(socket.AF_UNIX);overlay.bind(os.environ['SHADOWLESS_OVERLAY_SOCKET']);overlay.listen(1)
+running=True
+while running:
+    peer,_=server.accept();data=b''
+    while b'\n' not in data:
+        part=peer.recv(4096)
+        if not part:break
+        data+=part
+    if data:
+        request=json.loads(data);peer.sendall(json.dumps({'id':request['id'],'result':'ok'}).encode()+b'\n')
+        if request['name']=='stop':running=False
+    peer.close()
+)");
+        script.close(); QVERIFY(script.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        const auto plugin = directory.filePath("trusted.so"); QFile binary(plugin); QVERIFY(binary.open(QIODevice::WriteOnly)); binary.write("fixture"); binary.close();
+        GsrOptions options; options.systemAudio = false; options.source = "DP-1"; options.outputDirectory = directory.path(); options.overlayPlugin = plugin;
+        GsrCapture engine(nullptr, program); QSignalSpy started(&engine, &GsrCapture::started), stopped(&engine, &GsrCapture::stopped);
+        engine.start(options, supported);
+        QTRY_VERIFY(QFile::exists(program + ".ready")); QTest::qWait(200); QCOMPARE(started.size(), 0);
+        QTRY_COMPARE_WITH_TIMEOUT(started.size(), 1, 2000);
+        engine.stop(); QTRY_COMPARE_WITH_TIMEOUT(stopped.size(), 1, 2000);
+    }
     void capabilities() {
         auto info = GsrCapabilities::parse(
             "section=system_info\ndisplay_server|wayland\ngsr_version|6.1.5\n"
@@ -63,6 +96,25 @@ private slots:
         QVERIFY(!args.contains("-r"));
         QVERIFY(value("-o").startsWith(options.outputDirectory + "/Recording_"));
         QVERIFY(value("-o").endsWith(".mp4"));
+        options.overlayPlugin = "/tmp/trusted shadowless plugin.so";
+        args = options.arguments("/tmp/engine.sock");
+        QCOMPARE(value("-p"), options.overlayPlugin);
+        QCOMPARE(value("-cursor"), "no");
+    }
+
+    void routesSelectedAudioWithoutRecordingTheDesktopTwice() {
+        GsrOptions options;
+        options.outputDirectory = "/tmp/clips";
+        options.audioOutput = "studio.monitor";
+        options.audioInput = "usb-mic";
+        options.microphone = true;
+        QCOMPARE(options.audioTracks(), QStringList{"device:studio.monitor|device:usb-mic"});
+        options.applicationAudio = true;
+        options.applicationTracks = {{"Browser", 2}, {"Game", 1}, {"Voice Chat", 2}};
+        QVERIFY(options.validate(supported).isEmpty());
+        QCOMPARE(options.audioTracks(), QStringList({"app:Game|device:usb-mic", "app:Browser|app:Voice Chat"}));
+        options.applicationTracks.insert("Other|default_output", 1);
+        QVERIFY(!options.validate(supported).isEmpty());
     }
 
     void ipcReplies_data() {
@@ -115,8 +167,8 @@ private slots:
     }
 
     void failedLaunch() {
-        GsrCapture engine(nullptr, "/no/such/captail-gsr-engine");
-        GsrOptions options; options.outputDirectory = QDir::tempPath();
+        GsrCapture engine(nullptr, "/no/such/shadowless-gsr-engine");
+        GsrOptions options; options.systemAudio = false; options.outputDirectory = QDir::tempPath();
         QSignalSpy failed(&engine, &GsrCapture::error);
         engine.start(options, supported);
         QTRY_VERIFY_WITH_TIMEOUT(!failed.isEmpty(), 1500);
@@ -131,15 +183,87 @@ private slots:
         QTest::newRow("hevc") << QString("hevc");
     }
 
+    void liveAudioLevels_data() {
+        QTest::addColumn<bool>("applications");
+        QTest::addColumn<bool>("sharedTrack");
+        QTest::newRow("desktop devices") << false << false;
+        QTest::newRow("selected app and mic") << true << false;
+        QTest::newRow("selected app mixed with mic") << true << true;
+    }
+
+    void liveAudioLevels() {
+        const auto output = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_OUTPUT");
+        const auto input = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_INPUT");
+        const auto app = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_APP");
+        if (output.isEmpty() || input.isEmpty() || app.isEmpty())
+            QSKIP("Requires explicit synthetic PipeWire output, input and application fixtures.");
+        QFETCH(bool, applications);
+        QFETCH(bool, sharedTrack);
+        QTemporaryDir clips;
+        QString queryError;
+        const auto caps = GsrCapabilities::probe(&queryError);
+        QVERIFY2(queryError.isEmpty(), qPrintable(queryError));
+        GsrOptions options;
+        options.source = qEnvironmentVariable("SHADOWLESS_GSR_SOURCE", "DP-1");
+        options.outputDirectory = clips.path();
+        options.audioOutput = output;
+        options.audioInput = input;
+        options.microphone = true;
+        options.separateAudioTracks = true;
+        options.applicationAudio = applications;
+        options.applicationTracks.insert(app, 1);
+        options.microphoneTrack = sharedTrack ? 1 : 2;
+        GsrCapture engine;
+        QSignalSpy started(&engine, &GsrCapture::started), saved(&engine, &GsrCapture::clipSaved);
+        QSignalSpy errors(&engine, &GsrCapture::error), stopped(&engine, &GsrCapture::stopped);
+        engine.start(options, caps);
+        QTRY_VERIFY_WITH_TIMEOUT(!started.isEmpty() || !errors.isEmpty(), 10000);
+        QVERIFY2(errors.isEmpty(), errors.isEmpty() ? "" : qPrintable(errors[0][0].toString()));
+        QTest::qWait(2800);
+        engine.saveReplay(2);
+        QTRY_COMPARE_WITH_TIMEOUT(saved.size(), 1, 10000);
+        options.levels.systemVolume = 50;
+        options.levels.microphoneMuted = true;
+        engine.setAudioLevels(options.levels);
+        QTest::qWait(4400);
+        engine.saveReplay(2);
+        QTRY_COMPARE_WITH_TIMEOUT(saved.size(), 2, 10000);
+        engine.stop();
+        QTRY_COMPARE_WITH_TIMEOUT(stopped.size(), 1, 10000);
+        QCOMPARE(started.size(), 1);
+        QVERIFY2(errors.isEmpty(), errors.isEmpty() ? "" : qPrintable(errors[0][0].toString()));
+
+        const auto meanVolume = [](const QString &path, int track, int frequency = 0) {
+            const QString filter = frequency == 0 ? "volumedetect" :
+                QString("bandpass=f=%1:width_type=h:w=12,volumedetect").arg(frequency);
+            QProcess process;
+            process.start("ffmpeg", {"-hide_banner", "-i", path, "-map", QString("0:a:%1").arg(track),
+                                     "-af", filter, "-f", "null", "-"});
+            if (!process.waitForFinished(5000) || process.exitCode() != 0) return 0.0;
+            const auto match = QRegularExpression("mean_volume: (-?[0-9.]+) dB").match(
+                QString::fromUtf8(process.readAllStandardError()));
+            return match.captured(1).toDouble();
+        };
+        const double firstOutput = meanVolume(saved[0][0].toString(), 0, sharedTrack ? 641 : 0);
+        const double firstMic = meanVolume(saved[0][0].toString(), sharedTrack ? 0 : 1, sharedTrack ? 883 : 0);
+        const double lastOutput = meanVolume(saved[1][0].toString(), 0, sharedTrack ? 641 : 0);
+        const double lastMic = meanVolume(saved[1][0].toString(), sharedTrack ? 0 : 1, sharedTrack ? 883 : 0);
+        qInfo() << "Track means before and after:" << firstOutput << firstMic << lastOutput << lastMic;
+        QVERIFY(firstOutput < -10 && firstOutput > -40);
+        QVERIFY(firstMic < -10 && firstMic > -40);
+        QVERIFY(qAbs((firstOutput - lastOutput) - (applications ? 0.0 : 6.0)) < 2.0);
+        QVERIFY(lastMic < (sharedTrack ? -48.0 : -80.0));
+    }
+
     void liveCapture() {
-        if (qEnvironmentVariable("CAPTAIL_GSR_LIVE") != "1")
-            QSKIP("Set CAPTAIL_GSR_LIVE=1 to record the selected monitor and system audio.");
+        if (qEnvironmentVariable("SHADOWLESS_GSR_LIVE") != "1")
+            QSKIP("Set SHADOWLESS_GSR_LIVE=1 to record the selected monitor and system audio.");
         QFETCH(QString, codec);
         QString queryError;
         auto capabilities = GsrCapabilities::probe(&queryError);
         QVERIFY2(queryError.isEmpty(), qPrintable(queryError));
         if (!capabilities.codecs.contains(codec)) QSKIP("Hardware codec is unavailable on this GPU.");
-        const auto root = qEnvironmentVariable("CAPTAIL_QA_OUTPUT", QDir::currentPath() + "/live-clips");
+        const auto root = qEnvironmentVariable("SHADOWLESS_QA_OUTPUT", QDir::currentPath() + "/live-clips");
         const auto output = QDir(root).filePath(QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss-zzz-") + codec);
         QVERIFY(QDir().mkpath(output));
         QFile log(QDir(output).filePath("capture.log"));
@@ -150,7 +274,7 @@ private slots:
         QSignalSpy clips(&engine, &GsrCapture::clipSaved), errors(&engine, &GsrCapture::error);
         QSignalSpy recording(&engine, &GsrCapture::recordingChanged);
         GsrOptions options;
-        options.source = qEnvironmentVariable("CAPTAIL_GSR_SOURCE", "DP-1");
+        options.source = qEnvironmentVariable("SHADOWLESS_GSR_SOURCE", "DP-1");
         options.outputDirectory = output;
         options.codec = codec;
         options.bufferSeconds = 10;
@@ -166,10 +290,13 @@ private slots:
         QTest::qWait(3000);
         engine.stopReplayRecording();
         QTRY_COMPARE_WITH_TIMEOUT(clips.size(), 2, 10000);
+        engine.startReplayRecording();
+        QTRY_VERIFY_WITH_TIMEOUT(recording.last()[0].toBool(), 5000);
+        QTest::qWait(2000);
         engine.saveReplay(2);
-        // Stop must wait for this save instead of killing a pending snapshot.
+        // Stop must finish the snapshot and the simultaneous recording.
         engine.stop();
-        QTRY_COMPARE_WITH_TIMEOUT(clips.size(), 3, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(clips.size(), 4, 10000);
         QTRY_COMPARE_WITH_TIMEOUT(stopped.size(), 1, 10000);
         QVERIFY(!engine.active());
         QVERIFY(!engine.running());
@@ -179,7 +306,7 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(started.size(), 2, 15000);
         QTest::qWait(3000);
         engine.stop();
-        QTRY_COMPARE_WITH_TIMEOUT(clips.size(), 4, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(clips.size(), 5, 10000);
         QTRY_COMPARE_WITH_TIMEOUT(stopped.size(), 2, 10000);
         QVERIFY2(errors.isEmpty(), errors.isEmpty() ? "" : qPrintable(errors[0][0].toString()));
         for (const auto &saved : clips) {

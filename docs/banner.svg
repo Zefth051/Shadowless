@@ -17,7 +17,7 @@
   <circle cx="176" cy="160" r="55" stroke="url(#accent)" stroke-width="11" stroke-linecap="round" stroke-dasharray="280 70"/>
   <circle cx="176" cy="160" r="11" fill="#65D9BD"/>
   <circle cx="176" cy="160" r="92" stroke="#65D9BD" stroke-opacity=".09" stroke-width="16" filter="url(#glow)"/>
-  <text x="300" y="145" fill="#F1F5F4" font-family="Segoe UI, Inter, sans-serif" font-size="76" font-weight="700" letter-spacing="-2">Captail</text>
+  <text x="300" y="145" fill="#F1F5F4" font-family="Segoe UI, Inter, sans-serif" font-size="76" font-weight="700" letter-spacing="-2">Shadowless</text>
   <text x="304" y="204" fill="#98A6A8" font-family="Segoe UI, Inter, sans-serif" font-size="28" font-weight="500">Instant replay that stays on.</text>
   <rect x="304" y="233" width="244" height="5" rx="2.5" fill="url(#accent)"/>
   <text x="1030" y="282" fill="#5D6A6D" font-family="Segoe UI, Inter, sans-serif" font-size="18" text-anchor="end">Windows · Open source · libobs</text>

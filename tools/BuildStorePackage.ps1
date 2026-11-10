@@ -28,7 +28,7 @@ if (-not $outputRoot.StartsWith($repoPrefix, [StringComparison]::OrdinalIgnoreCa
 }
 
 $packageVersion = if ($IdentityVersion) { $IdentityVersion } else { "$Version.0" }
-$packageName = "Captail-$packageVersion-x64"
+$packageName = "Shadowless-$packageVersion-x64"
 $stagingRoot = Join-Path $outputRoot "staging"
 $dotnetArtifacts = Join-Path $stagingRoot "dotnet"
 $packageRoot = Join-Path $stagingRoot "package"
@@ -37,7 +37,7 @@ $msixPath = Join-Path $outputRoot "$packageName.msix"
 $uploadPath = Join-Path $outputRoot "$packageName.msixupload"
 $uploadZipPath = Join-Path $outputRoot "$packageName.zip"
 $checksumPath = Join-Path $outputRoot "SHA256SUMS.txt"
-$project = Join-Path $repoRoot "src\Captail\Captail.csproj"
+$project = Join-Path $repoRoot "src\Shadowless\Shadowless.csproj"
 $storeFfmpegRoot = Join-Path $repoRoot "runtime\ffmpeg-store-static"
 $acquireFfmpeg = Join-Path $repoRoot "tools\AcquireFfmpegRuntime.ps1"
 $testFfmpegIsolation = Join-Path $repoRoot "tools\TestStoreFfmpegIsolation.ps1"
@@ -48,7 +48,7 @@ $testStoreLifecycle =
 $testStoreIconAssets =
     Join-Path $repoRoot "tools\TestStoreIconAssets.ps1"
 $manifestTemplate = Join-Path $repoRoot "packaging\msix\AppxManifest.xml.template"
-$iconPath = Join-Path $repoRoot "src\Captail\Assets\Captail.ico"
+$iconPath = Join-Path $repoRoot "src\Shadowless\Assets\Shadowless.ico"
 
 foreach ($path in @(
     $stagingRoot,
@@ -85,7 +85,7 @@ if (-not (Test-Path -LiteralPath $MakePriPath -PathType Leaf)) {
     throw "MakePri.exe not found. Install Windows SDK or pass -MakePriPath."
 }
 
-Write-Host "Publishing Captail $Version for Microsoft Store..."
+Write-Host "Publishing Shadowless $Version for Microsoft Store..."
 & $testStoreLifecycle
 & $acquireFfmpeg -Destination $storeFfmpegRoot -Flavor Static
 dotnet restore $project `
@@ -118,10 +118,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 foreach ($requiredPath in @(
-    (Join-Path $packageRoot "Captail.exe"),
-    (Join-Path $packageRoot "CaptailObsBridge.dll"),
+    (Join-Path $packageRoot "Shadowless.exe"),
+    (Join-Path $packageRoot "ShadowlessObsBridge.dll"),
     (Join-Path $packageRoot "obs.dll"),
-    (Join-Path $packageRoot "obs-plugins\64bit\captail-process-audio.dll"),
+    (Join-Path $packageRoot "obs-plugins\64bit\shadowless-process-audio.dll"),
     (Join-Path $packageRoot "libmpv-2.dll"),
     (Join-Path $packageRoot "ffmpeg\ffmpeg.exe"),
     (Join-Path $packageRoot "ffmpeg\ffprobe.exe"))) {
@@ -266,7 +266,7 @@ if ($LASTEXITCODE -ne 0) {
 & $MakePriPath new `
     /pr $packageRoot `
     /cf $priConfigPath `
-    /in "faulmit.Captail" `
+    /in "Zefth051.Shadowless" `
     /of $resourceIndexPath `
     /o
 if ($LASTEXITCODE -ne 0) {
@@ -291,7 +291,7 @@ if ($LASTEXITCODE -ne 0) {
 [xml]$validatedManifest = Get-Content -Raw (
     Join-Path $validationRoot "AppxManifest.xml")
 $identity = $validatedManifest.Package.Identity
-if ($identity.Name -ne "faulmit.Captail" -or
+if ($identity.Name -ne "Zefth051.Shadowless" -or
     $identity.Publisher -ne "CN=1BD9448E-C83F-401D-B530-ED5258C6319A" -or
     $identity.Version -ne $packageVersion -or
     $identity.ProcessorArchitecture -ne "x64") {

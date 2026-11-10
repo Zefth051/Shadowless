@@ -15,7 +15,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $sourcePath = (Resolve-Path -LiteralPath $Source -ErrorAction Stop).Path
 if ([string]::IsNullOrWhiteSpace($Output)) {
     $Output = Join-Path $repoRoot `
-        "artifacts\readme-media\captail-showcase-av1-4k-240.mkv"
+        "artifacts\readme-media\shadowless-showcase-av1-4k-240.mkv"
 }
 $outputPath = [System.IO.Path]::GetFullPath($Output)
 
@@ -27,7 +27,7 @@ function Find-BundledTool {
         Sort-Object LastWriteTimeUtc -Descending |
         Select-Object -First 1
     if ($null -eq $tool) {
-        throw "$Name not found under artifacts. Build or extract Captail first."
+        throw "$Name not found under artifacts. Build or extract Shadowless first."
     }
     return $tool.FullName
 }
@@ -98,8 +98,8 @@ $arguments = @(
     "-g", "240",
     "-pix_fmt", "yuv420p",
     "-c:a", "copy",
-    "-metadata", "title=Captail README showcase fixture",
-    "-metadata", "comment=Upscaled from real Captail 240 FPS replay; documentation fixture, not native 4K capture evidence"
+    "-metadata", "title=Shadowless README showcase fixture",
+    "-metadata", "comment=Upscaled from real Shadowless 240 FPS replay; documentation fixture, not native 4K capture evidence"
 )
 if ($audioStreams.Count -ge 1) {
     $arguments += @("-metadata:s:a:0", "title=System audio")

@@ -1,0 +1,9 @@
+QT += core gui network testlib
+CONFIG += console testcase c++17
+CONFIG -= app_bundle
+TARGET = shadowless-overlay-tests
+CONFIG += link_pkgconfig
+PKGCONFIG += libavformat libavcodec libavutil libswscale
+SOURCES += ../tst_overlays.cpp ../../overlays/layer.cpp ../../overlays/media.cpp ../../settings/settings.cpp ../../plugins/compositor.cpp ../../overlays/overlay_client.cpp ../../platform/hyprland/bindings.cpp
+HEADERS += ../../overlays/layer.h ../../overlays/media.h ../../settings/settings.h ../../plugins/compositor.h ../../overlays/overlay_client.h
+QMAKE_CXXFLAGS += -Wall -Wextra -Werror

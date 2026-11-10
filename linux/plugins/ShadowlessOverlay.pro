@@ -1,0 +1,10 @@
+QT += core gui
+QT -= widgets
+TEMPLATE = lib
+CONFIG += shared c++17 link_pkgconfig
+TARGET = shadowless-overlay
+PKGCONFIG += libavformat libavcodec libavutil libswscale
+LIBS += -lGL -lpthread
+SOURCES += plugin.cpp compositor.cpp ../overlays/layer.cpp ../overlays/media.cpp
+HEADERS += compositor.h ../overlays/layer.h ../overlays/media.h
+QMAKE_CXXFLAGS += -Wall -Wextra -Werror

@@ -1,5 +1,5 @@
 param(
-    [string]$OutputPath = (Join-Path $PSScriptRoot '..\src\Captail\Assets\Captail.ico'),
+    [string]$OutputPath = (Join-Path $PSScriptRoot '..\src\Shadowless\Assets\Shadowless.ico'),
     [string]$Color = '#45C9A7'
 )
 

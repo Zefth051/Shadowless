@@ -4,13 +4,13 @@ Date: 2026-11-10. Status: exploratory prototype; no production migration approve
 
 ## Intent and constraints
 
-Test Captail on Linux using GPU Screen Recorder's actual capture pipeline,
-retaining Captail's visual identity and core replay workflow, with Linux-specific
+Test Shadowless on Linux using GPU Screen Recorder's actual capture pipeline,
+retaining Shadowless's visual identity and core replay workflow, with Linux-specific
 settings. The user requested a separate branch and clarified that the Linux
 application should be native without needing to port Microsoft frameworks.
 
 The experiment lives in the `linux/` subtree on `experiment/linux-gsr`, based on
-committed Windows HEAD `5f633f5`. The original `captail-fork` worktree and all its
+committed Windows HEAD `5f633f5`. The original `shadowless-fork` worktree and all its
 pending Windows changes were left intact. Those uncommitted changes are not
 silently included in this branch. The existing icon, theme tokens, and English
 resource strings are embedded as inert data, not loaded by WPF.
@@ -22,13 +22,13 @@ resource strings are embedded as inert data, not loaded by WPF.
    runtime. Reconstructs the interface; existing C# application logic is not
    automatically reused. Qt is an engineering choice for this experiment.
 2. **Rust or C++ / GTK.** Also native and viable. It would still require rebuilding
-   WPF controls; no clear advantage for preserving this custom Captail layout in
+   WPF controls; no clear advantage for preserving this custom Shadowless layout in
    the initial capture experiment.
 3. **C# / Avalonia with GSR.** Could retain more C# logic, but adds a .NET runtime
    and was set aside after the user clarified the preference for a native Linux
    branch. No C# backend was retained.
 
-GSR is launched by Captail, not operated through GSR's own GUI. Captail constructs
+GSR is launched by Shadowless, not operated through GSR's own GUI. Shadowless constructs
 capture options, supervises the child process, sends JSON requests, waits for
 save completion, and presents the resulting clips. This exercises GSR's complete
 capture/encoding method. Extracting/linking GSR internals, copying its source, or

@@ -14,10 +14,10 @@ function Require([string]$text, [string]$pattern, [string]$message) {
     }
 }
 
-$hotkeys = Read-Text "src\Captail\HotkeyManager.cs"
-$overlay = Read-Text "src\Captail\OverlayNotificationWindow.xaml.cs"
-$indicator = Read-Text "src\Captail\ReplayStatusIndicatorWindow.xaml.cs"
-$app = Read-Text "src\Captail\App.xaml.cs"
+$hotkeys = Read-Text "src\Shadowless\HotkeyManager.cs"
+$overlay = Read-Text "src\Shadowless\OverlayNotificationWindow.xaml.cs"
+$indicator = Read-Text "src\Shadowless\ReplayStatusIndicatorWindow.xaml.cs"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
 
 Require $hotkeys 'WhKeyboardLl' `
     "F13-F24 need a low-level keyboard fallback for fullscreen applications."

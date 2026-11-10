@@ -35,7 +35,7 @@ overlay notifications, and recording indicator.
 .\tools\TestStartupUiSurfaces.ps1
 .\tools\TestLocalizedLayout.ps1
 .\tools\TestNextFeatureRegression.ps1
-dotnet build .\Captail.sln -c Release --no-restore
+dotnet build .\Shadowless.sln -c Release --no-restore
 ```
 
 For visual changes, inspect real windows at supported localized layouts. A

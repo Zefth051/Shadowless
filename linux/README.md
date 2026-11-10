@@ -1,120 +1,153 @@
-# Captail Linux / GSR spike
+# Shadowless for Linux
 
-Experimental native Linux application on `experiment/linux-gsr`. This is a
-feasibility prototype, not a complete port or release. The Linux executable uses
-C++17 and Qt 6 Widgets/Network; it does not use .NET, WPF, Wine, or OBS.
-
-Captail owns an installed `gpu-screen-recorder` process and controls it using
-GSR's newline-delimited JSON protocol over a private Unix socket. Actual screen
-capture, GPU color conversion, encoding, audio capture, and replay buffering are
-performed by GSR. This is process integration of the real GSR pipeline, not a
-new FFmpeg screen-capture implementation or an in-process GSR library.
+Native C++17 / Qt 6 application for **Hyprland on Wayland**. Shadowless owns its
+control overlay, settings, library, and media-layer editor. An external
+`gpu-screen-recorder` process performs capture/encoding/replay buffering; a
+Shadowless plugin composites media layers.
+The initial capture experiment is documented in `docs/LINUX_GSR_SPIKE.md`.
 
 ## Build and run
 
-Required: a C++17 compiler, GNU Make, `qmake6`, Qt 6 Core/Gui/Widgets/Network/Test,
-GPU Screen Recorder **with IPC support** (tested with 6.1.5), and FFmpeg/ffprobe.
-Qt's Wayland platform plugin is needed for a native Wayland window.
-
-From the repository root:
+Required: GNU Make, a C++17 compiler, qmake6, Qt 6 Core/Gui/Widgets/Network/DBus/
+Concurrent/Test, the Qt SVG image plugin, the native Qt Wayland plugin, LayerShellQt (tested 6.8.2), OpenGL
+headers, FFmpeg development libraries (`libavformat`, `libavcodec`, `libavutil`,
+`libswscale`), FFmpeg/ffprobe executables, and GSR with IPC/plugin support
+(tested 6.1.5, including `/usr/include/gsr/plugin.h`).
+Desktop and microphone capture also use PipeWire, pipewire-pulse, `pw-loopback`
+and `pactl`.
 
 ```sh
-mkdir -p .qa/linux-build
-cd .qa/linux-build
-qmake6 ../../linux/Captail.pro
-make -j4
-./tests/captail-gsr-tests
-./app/captail-linux
+./linux/build.sh
+./linux/run.sh
+./linux/run.sh --background
 ```
 
-Use `QT_QPA_PLATFORM=wayland ./app/captail-linux` to explicitly select native
-Wayland. An X11 Qt session is also possible, but was not tested in this spike.
-This prototype has no install step or startup service. It starts with capture
-off; press **Start** to begin and **Stop** to finish. Closing the window stops
-capture and waits for a pending save.
+`build.sh` builds the app, plugin, and offline tests under `.qa/linux-build`.
+Set `SHADOWLESS_BUILD_DIR` to select another output directory. An installed
+LayerShellQt is used normally; `SHADOWLESS_LAYERSHELL_PREFIX=/path/to/prefix` selects
+a development installation with `include/` and `lib/`. An existing local
+`.qa/deps/usr` development prefix is detected automatically. Dependencies are
+not downloaded or installed by the build script. This target does not build
+the Windows solution.
 
-GSR itself must be correctly installed for the chosen capture method. Direct
-monitor capture uses GSR's existing KMS helper and permissions; portal capture
-uses the desktop's screen-selection/consent dialog. Captail does not run as root,
-change helper capabilities, or alter desktop settings.
+Closing/hiding the panel keeps the application and capture running. Use the
+tray menu or `./linux/run.sh --quit` to exit cleanly. Capture starts off.
 
-## Included
+## Controls and configuration
 
-- Captail's dark/mint visual palette, status card, replay/recording selector,
-  save action, recent clip cards, and thumbnails, rebuilt with native Qt widgets.
-- Existing Captail icon, color tokens, and English strings embedded as data.
-  The XAML files are read as XML; no Microsoft UI runtime is loaded.
-- Monitor/portal choices and H.264/HEVC/AV1 options filtered by the current
-  `gpu-screen-recorder --info` hardware report. No silent CPU fallback.
-- Replay in RAM, continuous recording, frame rate, automatic/CBR bitrate,
-  MP4/MKV, default system/microphone inputs, and mixed/separate audio tracks.
-- Asynchronous capture start/save/stop. Saved paths are accepted after GSR's
-  completion reply and a non-empty output file is present.
-- Clips open in the system video player. `Ctrl+Shift+F10` saves a replay while
-  the Captail window is focused; this is not a desktop-global shortcut.
+The dashboard follows the Windows fork's two-column layout. Capture, audio,
+and the composition switch are on the left, and recent clips are on the right.
+The video summary and save path open their respective settings. Recent clips
+open in the desktop's default video player. Directory scans run off the UI
+thread and unchanged clips reuse thumbnails while Shadowless is running.
 
-Settings are separate from Windows: Qt writes
-`$XDG_CONFIG_HOME/Captail/LinuxGsrSpike.conf` (normally
-`~/.config/Captail/LinuxGsrSpike.conf`). The initial output directory is the
-desktop's Videos directory under `Captail`; the microphone is off initially.
-Configuration changes require stopping capture first.
+- Alt+Z: toggle the overlay. Escape returns from a subpage, then hides it.
+- Ctrl+Shift+F10: save the last ten seconds (or the smaller configured buffer).
+- Alt+F10: start/stop capture. The dashboard also selects replay or recording.
+- **Start recording** appears while replay is active. GSR saves the recording
+  and replay clips from the same capture process. Stopping capture finalizes
+  an active recording.
+- Settings exposes configurable shortcuts, capture options, and the optional
+  passive status indicator.
+- `--toggle`, `--show`, `--hide`, `--save`, `--capture`, and `--quit` address the
+  running instance. A second process does not create a second recorder.
 
-## Intentionally outside this spike
+Shortcuts register through the desktop portal. Shadowless installs temporary
+Hyprland bindings using the current Lua API or the legacy keyword API. Existing
+conflicting bindings are preserved and reported in Settings. Bindings owned by
+Shadowless are removed on clean exit and restored after compositor config reload.
+No unrelated Hyprland config file is edited. The first launch creates a hidden
+`~/.local/share/applications/io.github.zefth051.Shadowless.desktop` identity required
+by the portal; it does not enable autostart.
 
-The WPF UI is not binary-portable. This native reconstruction preserves a subset
-of its design and workflow; it is not feature parity. Windows code remains in
-the repository and is not compiled into the Linux target.
+Settings are saved to `$XDG_CONFIG_HOME/Shadowless/Shadowless.conf` (normally
+`~/.config/Shadowless/Shadowless.conf`). On first launch, settings from the
+earlier Captail Linux build are copied if present. Existing clip paths are
+preserved. New installations default to Videos/Shadowless. Microphone capture
+is off by default.
 
-The Linux UI does not expose DXGI/WGC, Windows GPU preferences, Windows process
-loopback audio, Microsoft Store updates, Windows game hooks, or OBS overlays.
-Desktop-global shortcuts, tray behavior, app-specific audio routing, game
-detection, recovery/watchdog policy, the embedded player/editor, export/trim,
-localization beyond reused English strings, HDR, scaling, packaging, and bundled
-GSR are not implemented. Some of these are supported by GSR itself and can be
-added to Captail after this experiment.
+Video settings offer FPS and bitrate presets and a Custom field for each.
+The mouse wheel scrolls the settings page without changing control values.
+Use **Appearance → Accent color** to select a color, then save to apply it.
 
-High frame rates above 60 FPS are experimental. The installed GSR capability
-report does not establish real performance or game compatibility. This spike
-does not claim FPS/latency superiority over OBS. Replay clip duration can exceed
-the requested number of seconds because a decodable clip needs a keyframe.
+## Audio
+
+Open **Audio settings** to select the desktop output and microphone. Default
+devices are resolved when capture starts. Change routing with capture stopped.
+Desktop and microphone can mix into one track or use separate tracks.
+
+**Selected applications** captures the apps assigned to tracks in the table.
+Start playback in an app, then refresh to find it. Sources on the same track
+mix, unused tracks are omitted, and the microphone can use any track. Choose
+AAC or Opus and an automatic or fixed audio bitrate.
+
+The dashboard adjusts volume and mute during capture. These controls affect
+the private recording routes, including the microphone in application mode.
+Microphone boost is configurable up to 20 dB.
+
+## Capture overlays
+
+Open **Capture overlays**, browse for local media or enter an absolute path,
+and add it. PNG, JPEG, BMP, WebP, GIF, MP4, WebM, MOV, and MKV are accepted.
+Animated images/videos loop silently; only their video frames are decoded.
+The top list item draws above later layers. Enable composition with the master
+switch, then use visibility, Up/Down, opacity, position, and fit-box controls.
+Drag the selected box to move it. Position percentages describe available travel:
+100% aligns the layer to the right/bottom edge. Fit boxes preserve media aspect
+ratio and remain inside the canvas. There are at most 16 layers.
+
+Edits apply after a short debounce and save after successful validation/application.
+A failed asset load preserves the previous recorded scene. Existing buffered
+frames and clips are never rewritten. Layers continue in captured frames while
+the panel is hidden. The editor shows a labeled 16:9 composition canvas, not a
+live desktop preview. Closing the editor releases preview media and its timer.
+
+Static media decodes once and reuses its GPU texture. Animation decoding runs
+on a worker; render callbacks consume frame snapshots without file reads or
+blocking on decoder locks. Layer frames are capped at 1920x1080 to bound upload
+and cache costs. Larger/animated assets and multiple layers still cost resources.
+
+## Status indicator and current limits
+
+The passive indicator is experimental and **disabled by default**. When enabled,
+it shows buffering, recording, and replay-save state in a small surface with no
+keyboard or pointer input. It updates on state changes, without animation or a
+per-frame timer. It is separate from the recorded media-layer composition.
+
+GSR 6.1.5's plugin path cannot draw certain external cursor textures. This
+preview explicitly disables recording the mouse cursor when loading the Shadowless
+plugin. This does not disable mouse input. Monitor capture can include the open
+control overlay and status indicator; exclusion is not promised.
+
+Only Hyprland is targeted. KDE/GNOME/X11 compatibility, HDR composition, webcam
+layers, game hooks, packaging, and the Windows video editor remain outside this
+preview. Fullscreen application tests do not establish compatibility with every game.
 
 ## Verification
 
-Offline tests run real Unix socket peers and cover capability filtering,
-validation, argument translation, mixed/separate audio arguments, fragmented
-replies, engine errors, wrong request IDs, malformed replies, timeouts, and
-failed process launch.
+`build.sh` runs the GSR offline suite, layer/media/socket tests, and offscreen
+UI/controller regression tests. UI tests isolate settings and disable their
+session bus; expected offscreen/DBus warnings do not establish compositor support.
+Existing GSR live tests remain opt-in and include system audio.
 
-The live suite **records the selected screen and default system audio**. It
-never enables the microphone. To run it, from `.qa/linux-build`:
+The separate composition test **records the selected monitor without audio**:
 
 ```sh
-CAPTAIL_GSR_LIVE=1 \
-CAPTAIL_GSR_SOURCE=DP-1 \
-CAPTAIL_QA_OUTPUT="$PWD/../linux-gsr/native" \
-./tests/captail-gsr-tests
+python linux/tests/live_overlays.py \
+  --plugin .qa/linux-build/plugins/libshadowless-overlay.so \
+  --source DP-1 --output "$PWD/.qa/overlay-live"
 ```
 
-Replace `DP-1` with a source reported by
-`gpu-screen-recorder --list-capture-options`. Choosing `portal` requires
-interacting with the desktop permission dialog; that path was not tested.
-H.264 and HEVC live cases skip codecs the GPU does not advertise. Each case
-saves two replays, records during replay, then restarts the same adapter in
-continuous mode. One replay save is immediately followed by Stop to exercise
-pending-save shutdown. Files are checked with ffprobe and fully decoded with
-FFmpeg. Logs and probe JSON remain beside the test clips.
-
-See [the experiment report](../docs/LINUX_GSR_SPIKE.md) for measured results and
-the next integration decisions.
+It compares baseline, disabled plugin composition, static, animated, and continuous
+recording cases; checks fixture position/orientation and full FFmpeg decoding;
+and stores short recorder CPU/RSS measurements beside clips. CPU is expressed
+as a percentage of one core. It does not measure game FPS or GPU execution time.
+See `docs/LINUX_HYPRLAND_OVERLAY.md` for actual coverage and remaining checks.
 
 ## License
 
-Captail source retains the repository's GPL-2.0-or-later license. Qt and other
-libraries retain their licenses. GSR is an external GPL-3.0-only program and has
-not been copied into this repository or bundled by this experiment. A future
-distributable must include the required third-party notices, licenses, and
-corresponding source/offers applicable to the actual package.
-
-References: [GSR documentation](https://git.dec05eba.com/gpu-screen-recorder/about/),
-the installed `man gpu-screen-recorder` IPC section, and
-[Qt local sockets](https://doc.qt.io/qt-6/qlocalsocket.html).
+Shadowless source retains GPL-2.0-or-later. Qt, LayerShellQt, FFmpeg and other
+libraries retain their respective licenses. GSR remains an external GPL-3.0-only
+program; its source was not copied into this implementation. The LayerShellQt
+development package in ignored `.qa/` is not a distributable. Review notices,
+licenses, and source requirements when preparing an actual package.

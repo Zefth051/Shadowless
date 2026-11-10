@@ -3,8 +3,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using Captail;
-using Captail.Interop;
+using Shadowless;
+using Shadowless.Interop;
 
 namespace ProcessAudioQa;
 
@@ -178,7 +178,7 @@ internal sealed class Options
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Captail.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "Shadowless.sln")))
                 return directory.FullName;
             directory = directory.Parent;
         }
@@ -186,12 +186,12 @@ internal sealed class Options
         directory = new(Environment.CurrentDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Captail.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "Shadowless.sln")))
                 return directory.FullName;
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Captail repository root was not found.");
+        throw new DirectoryNotFoundException("Shadowless repository root was not found.");
     }
 }
 
@@ -279,10 +279,10 @@ internal sealed class ObsSession : IDisposable
             throw new InvalidOperationException("wasapi_process_output_capture was not registered.");
         if (options.WatchedExecutables.Count > 0)
         {
-            if (!HasInputType("captail_process_audio_capture"))
+            if (!HasInputType("shadowless_process_audio_capture"))
             {
                 throw new InvalidOperationException(
-                    "captail_process_audio_capture was not registered.");
+                    "shadowless_process_audio_capture was not registered.");
             }
             _reconciler = new ProcessAudioReconciler(
                 CreatePidProbe,
@@ -327,7 +327,7 @@ internal sealed class ObsSession : IDisposable
             string sourceId;
             if (rule.Identity is ProcessIdentity identity)
             {
-                sourceId = "captail_process_audio_capture";
+                sourceId = "shadowless_process_audio_capture";
                 ObsNative.obs_data_set_int(settings, "target_pid", identity.ProcessId);
                 ObsNative.obs_data_set_bool(settings, "exclude_target", _options.ExcludeTarget);
                 ObsNative.obs_data_set_int(
@@ -748,9 +748,9 @@ internal sealed class QaLogBridge : IDisposable
         _logs = logs;
         _library = NativeLibrary.Load(path);
         var install = Marshal.GetDelegateForFunctionPointer<InstallDelegate>(
-            NativeLibrary.GetExport(_library, "captail_install_obs_log_handler"));
+            NativeLibrary.GetExport(_library, "shadowless_install_obs_log_handler"));
         _remove = Marshal.GetDelegateForFunctionPointer<RemoveDelegate>(
-            NativeLibrary.GetExport(_library, "captail_remove_obs_log_handler"));
+            NativeLibrary.GetExport(_library, "shadowless_remove_obs_log_handler"));
         _callback = OnLog;
         if (!install(_callback))
             throw new InvalidOperationException("Could not install the OBS log bridge.");

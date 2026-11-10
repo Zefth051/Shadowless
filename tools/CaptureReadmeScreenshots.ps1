@@ -1,5 +1,5 @@
 param(
-    [string]$CaptailExe,
+    [string]$ShadowlessExe,
     [string]$ReplayFile,
     [string]$OutputDirectory,
     [string]$ExpectedVersion,
@@ -23,7 +23,7 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $OutputDirectory = Join-Path $repoRoot "docs"
 }
 
-function Resolve-CaptailExecutable {
+function Resolve-ShadowlessExecutable {
     param([string]$RequestedPath)
 
     if (-not [string]::IsNullOrWhiteSpace($RequestedPath)) {
@@ -32,12 +32,12 @@ function Resolve-CaptailExecutable {
     }
 
     $candidates = @(
-        Get-ChildItem -Path (Join-Path $repoRoot "artifacts") -Filter Captail.exe -File -Recurse -ErrorAction SilentlyContinue
-        Get-ChildItem -Path (Join-Path $repoRoot "src\Captail\bin\Release") -Filter Captail.exe -File -Recurse -ErrorAction SilentlyContinue
+        Get-ChildItem -Path (Join-Path $repoRoot "artifacts") -Filter Shadowless.exe -File -Recurse -ErrorAction SilentlyContinue
+        Get-ChildItem -Path (Join-Path $repoRoot "src\Shadowless\bin\Release") -Filter Shadowless.exe -File -Recurse -ErrorAction SilentlyContinue
     ) | Sort-Object LastWriteTimeUtc -Descending
 
     if ($candidates.Count -eq 0) {
-        throw "Captail.exe not found. Pass -CaptailExe with exact release-candidate executable."
+        throw "Shadowless.exe not found. Pass -ShadowlessExe with exact release-candidate executable."
     }
 
     return $candidates[0].FullName
@@ -47,7 +47,7 @@ function Wait-Until {
     param(
         [scriptblock]$Condition,
         [int]$TimeoutSeconds = 20,
-        [string]$FailureMessage = "Timed out waiting for Captail."
+        [string]$FailureMessage = "Timed out waiting for Shadowless."
     )
 
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
@@ -154,15 +154,15 @@ function Set-SettingsScrollPercent {
     Start-Sleep -Milliseconds 450
 }
 
-function Get-CaptailRoot {
+function Get-ShadowlessRoot {
     param([System.Diagnostics.Process]$Process)
 
     $handle = Wait-Until -TimeoutSeconds 30 `
-        -FailureMessage "Captail did not create a main window." `
+        -FailureMessage "Shadowless did not create a main window." `
         -Condition {
             $Process.Refresh()
             if ($Process.HasExited) {
-                throw "Captail exited before its window was ready (exit code $($Process.ExitCode))."
+                throw "Shadowless exited before its window was ready (exit code $($Process.ExitCode))."
             }
             if ($Process.MainWindowHandle -ne [IntPtr]::Zero) {
                 $Process.MainWindowHandle
@@ -199,13 +199,13 @@ function Capture-Window {
 
     $rect = New-Object NativeMethods+RECT
     if (-not [NativeMethods]::GetWindowRect($handle, [ref]$rect)) {
-        throw "GetWindowRect failed for Captail window."
+        throw "GetWindowRect failed for Shadowless window."
     }
 
     $width = $rect.Right - $rect.Left
     $height = $rect.Bottom - $rect.Top
     if ($width -lt 100 -or $height -lt 100) {
-        throw "Invalid Captail window bounds: ${width}x${height}."
+        throw "Invalid Shadowless window bounds: ${width}x${height}."
     }
 
     [NativeMethods]::SetCursorPos(0, 0) | Out-Null
@@ -230,7 +230,7 @@ function Capture-Window {
                     $rect.Top,
                     [NativeMethods]::Srccopy -bor [NativeMethods]::CaptureBlt)
                 if (-not $copied) {
-                    throw "BitBlt failed for Captail window."
+                    throw "BitBlt failed for Shadowless window."
                 }
             }
             finally {
@@ -263,10 +263,10 @@ function Capture-Window {
     Write-Host "Captured $Path"
 }
 
-function Stop-CaptailInstance {
+function Stop-ShadowlessInstance {
     param([string]$Executable)
 
-    $running = @(Get-Process Captail -ErrorAction SilentlyContinue)
+    $running = @(Get-Process Shadowless -ErrorAction SilentlyContinue)
     if ($running.Count -eq 0) {
         return
     }
@@ -274,8 +274,8 @@ function Stop-CaptailInstance {
     $shutdown = Start-Process -FilePath $Executable `
         -ArgumentList "--shutdown-existing" -PassThru -WindowStyle Hidden
     $shutdown.WaitForExit(15000) | Out-Null
-    Wait-Until -TimeoutSeconds 15 -FailureMessage "Captail did not shut down cleanly." `
-        -Condition { if (-not (Get-Process Captail -ErrorAction SilentlyContinue)) { $true } } | Out-Null
+    Wait-Until -TimeoutSeconds 15 -FailureMessage "Shadowless did not shut down cleanly." `
+        -Condition { if (-not (Get-Process Shadowless -ErrorAction SilentlyContinue)) { $true } } | Out-Null
 }
 
 function Resolve-ReplayFile {
@@ -412,7 +412,7 @@ function Open-FirstReplayAction {
     [NativeMethods]::SetCursorPos(0, 0) | Out-Null
 }
 
-function Find-CaptailChildWindow {
+function Find-ShadowlessChildWindow {
     param(
         [System.Diagnostics.Process]$Process,
         [string]$AutomationId,
@@ -541,19 +541,19 @@ public static class NativeMethods
 }
 "@
 
-$CaptailExe = Resolve-CaptailExecutable -RequestedPath $CaptailExe
+$ShadowlessExe = Resolve-ShadowlessExecutable -RequestedPath $ShadowlessExe
 if ($SkipPlayer -and $PlayerOnly) {
     throw "-SkipPlayer and -PlayerOnly cannot be used together."
 }
-$actualVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($CaptailExe).ProductVersion
+$actualVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($ShadowlessExe).ProductVersion
 if (-not [string]::IsNullOrWhiteSpace($ExpectedVersion) -and
     -not $actualVersion.StartsWith($ExpectedVersion, [StringComparison]::OrdinalIgnoreCase)) {
-    throw "Expected Captail $ExpectedVersion, found '$actualVersion' in $CaptailExe"
+    throw "Expected Shadowless $ExpectedVersion, found '$actualVersion' in $ShadowlessExe"
 }
 
-$runningBefore = @(Get-Process Captail -ErrorAction SilentlyContinue | Select-Object -First 1)
+$runningBefore = @(Get-Process Shadowless -ErrorAction SilentlyContinue | Select-Object -First 1)
 $runningPath = if ($runningBefore.Count -gt 0) { $runningBefore[0].Path } else { $null }
-$configDirectory = Join-Path $env:APPDATA "Captail"
+$configDirectory = Join-Path $env:APPDATA "Shadowless"
 $configPath = Join-Path $configDirectory "config.json"
 $configBackupPath = Join-Path $configDirectory "config.json.bak"
 $hadConfig = Test-Path -LiteralPath $configPath
@@ -567,9 +567,9 @@ $demoAudioProcess = $null
 $generatedRecordingPaths = @()
 
 try {
-    Stop-CaptailInstance -Executable $CaptailExe
+    Stop-ShadowlessInstance -Executable $ShadowlessExe
     if (-not $hadConfig) {
-        throw "Captail config not found at $configPath. Launch Captail once before screenshot capture."
+        throw "Shadowless config not found at $configPath. Launch Shadowless once before screenshot capture."
     }
 
     $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
@@ -606,9 +606,9 @@ try {
     }
     $config | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $configPath -Encoding UTF8
 
-    Write-Host "Capturing Captail $actualVersion from $CaptailExe"
-    $automationProcess = Start-Process -FilePath $CaptailExe -PassThru
-    $root = Get-CaptailRoot -Process $automationProcess
+    Write-Host "Capturing Shadowless $actualVersion from $ShadowlessExe"
+    $automationProcess = Start-Process -FilePath $ShadowlessExe -PassThru
+    $root = Get-ShadowlessRoot -Process $automationProcess
     Start-Sleep -Seconds 4
 
     if (-not $PlayerOnly) {
@@ -622,15 +622,15 @@ try {
         Start-Sleep -Milliseconds 600
 
         Set-SettingsScrollPercent -Root $root -Percent 34
-        Capture-Window -Root $root -Path (Join-Path $OutputDirectory "captail-settings-video.png")
+        Capture-Window -Root $root -Path (Join-Path $OutputDirectory "shadowless-settings-video.png")
 
         Set-SettingsScrollPercent -Root $root -Percent 66
-        Capture-Window -Root $root -Path (Join-Path $OutputDirectory "captail-settings-audio.png")
+        Capture-Window -Root $root -Path (Join-Path $OutputDirectory "shadowless-settings-audio.png")
 
         $configureAudioButton = Find-AutomationElement -Root $root `
             -AutomationId "ConfigureAudioRoutingButton"
         Invoke-AutomationElement -Element $configureAudioButton
-        $routingRoot = Find-CaptailChildWindow -Process $automationProcess `
+        $routingRoot = Find-ShadowlessChildWindow -Process $automationProcess `
             -AutomationId "ProcessAudioSearchBox" `
             -FailureMessage "Application audio routing window did not open."
         if ($null -ne $demoAudioProcess) {
@@ -642,14 +642,14 @@ try {
         }
         Start-Sleep -Seconds 2
         Capture-Window -Root $routingRoot `
-            -Path (Join-Path $OutputDirectory "captail-audio-routing.png")
+            -Path (Join-Path $OutputDirectory "shadowless-audio-routing.png")
         Close-AutomationWindow -Window $routingRoot
         Start-Sleep -Milliseconds 500
 
         $doneButton = Find-AutomationElement -Root $root -AutomationId "DoneButton"
         Invoke-AutomationElement -Element $doneButton
         Start-Sleep -Seconds 3
-        Capture-Window -Root $root -Path (Join-Path $OutputDirectory "captail-main.png")
+        Capture-Window -Root $root -Path (Join-Path $OutputDirectory "shadowless-main.png")
 
         $recordingDirectory = if ($null -ne $resolvedReplay) {
             Split-Path -Parent $resolvedReplay
@@ -670,7 +670,7 @@ try {
         Invoke-AutomationElement -Element $captureToggle
         Start-Sleep -Seconds 6
         Capture-Window -Root $root `
-            -Path (Join-Path $OutputDirectory "captail-feature-recording.png")
+            -Path (Join-Path $OutputDirectory "shadowless-feature-recording.png")
         Invoke-AutomationElement -Element $captureToggle
         Start-Sleep -Seconds 3
         $generatedRecordingPaths = @(
@@ -691,16 +691,16 @@ try {
         if ($null -eq $resolvedReplay) {
             throw "No replay found. Pass -ReplayFile or use -SkipPlayer."
         }
-        Assert-ShowcaseReplay -Path $resolvedReplay -Executable $CaptailExe `
+        Assert-ShowcaseReplay -Path $resolvedReplay -Executable $ShadowlessExe `
             -AllowMismatch $AllowNonShowcaseReplay.IsPresent
 
         $editorProcess = Get-Process -Id $automationProcess.Id
         Open-FirstReplayAction -Root $root -ReplayPath $resolvedReplay
-        $playerRoot = Find-CaptailChildWindow -Process $editorProcess `
+        $playerRoot = Find-ShadowlessChildWindow -Process $editorProcess `
             -AutomationId "PlayButton" `
             -FailureMessage "Replay player window did not open."
         Start-Sleep -Seconds 4
-        Capture-Window -Root $playerRoot -Path (Join-Path $OutputDirectory "captail-player.png")
+        Capture-Window -Root $playerRoot -Path (Join-Path $OutputDirectory "shadowless-player.png")
     }
 }
 finally {
@@ -708,10 +708,10 @@ finally {
         Stop-Process -Id $demoAudioProcess.Id -Force -ErrorAction SilentlyContinue
     }
     try {
-        Stop-CaptailInstance -Executable $CaptailExe
+        Stop-ShadowlessInstance -Executable $ShadowlessExe
     }
     catch {
-        Write-Warning "Captail shutdown during cleanup failed: $($_.Exception.Message)"
+        Write-Warning "Shadowless shutdown during cleanup failed: $($_.Exception.Message)"
     }
 
     if (-not $KeepRecording) {

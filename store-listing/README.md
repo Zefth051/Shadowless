@@ -1,6 +1,6 @@
 # Microsoft Store listing
 
-This directory is the source of truth for Captail's English and Russian
+This directory is the source of truth for Shadowless's English and Russian
 Microsoft Store listings.
 
 - `listing.json` contains descriptions, features, search keywords, license
@@ -16,7 +16,7 @@ or diagnostic logs in listing files or screenshots.
 
 ## Updating a release
 
-1. Refresh real Captail screenshots in `docs/`.
+1. Refresh real Shadowless screenshots in `docs/`.
 2. Run `./tools/New-StoreListingScreenshots.ps1`.
 3. Review every file in `images/`.
 4. Update `ReleaseVersion` and both localized `ReleaseNotes` values in

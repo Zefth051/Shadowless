@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Captail is currently in early preview. Security fixes are applied to the latest published version only.
+Shadowless is currently in early preview. Security fixes are applied to the latest published version only.
 
 ## Reporting a vulnerability
 
@@ -10,7 +10,7 @@ Do not open a public issue for a security vulnerability.
 
 Use GitHub's **Report a vulnerability** option in the repository Security tab. Include:
 
-- Affected Captail version
+- Affected Shadowless version
 - Reproduction steps or proof of concept
 - Security impact
 - Suggested mitigation, if known

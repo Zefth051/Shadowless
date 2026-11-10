@@ -1,4 +1,5 @@
 #include "gsr_capture.h"
+#include "audio.h"
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -10,7 +11,7 @@
 #include <csignal>
 #include <unistd.h>
 
-namespace Captail {
+namespace Shadowless {
 
 GsrCapabilities GsrCapabilities::parse(const QString &output) {
     GsrCapabilities result;
@@ -64,17 +65,55 @@ QString GsrOptions::validate(const GsrCapabilities &capabilities) const {
     if (bitrateMbps < 0 || bitrateMbps > 100) return "Bitrate must be automatic or between 1 and 100 Mbps.";
     if (container != "mp4" && container != "mkv") return "Choose MP4 or MKV.";
     if (outputDirectory.trimmed().isEmpty()) return "Choose an output directory.";
+    static const QRegularExpression deviceId("^[A-Za-z0-9_][A-Za-z0-9_.:-]*$");
+    if ((!audioOutput.isEmpty() && (!audioOutput.endsWith(".monitor") || !deviceId.match(audioOutput).hasMatch()))
+        || (!audioInput.isEmpty() && (audioInput.endsWith(".monitor") || !deviceId.match(audioInput).hasMatch())))
+        return "Choose a valid audio device.";
+    if (levels.systemVolume < 0 || levels.systemVolume > 100 || levels.microphoneVolume < 0
+        || levels.microphoneVolume > 100 || levels.microphoneBoost < 0 || levels.microphoneBoost > 20)
+        return "Audio levels are out of range.";
+    if (audioCodec != "aac" && audioCodec != "opus") return "Choose AAC or Opus audio.";
+    if (audioBitrateKbps != 0 && (audioBitrateKbps < 32 || audioBitrateKbps > 320))
+        return "Audio bitrate must be automatic or between 32 and 320 kbps.";
+    if (microphoneTrack < 1 || microphoneTrack > 6) return "Choose a valid microphone track.";
+    if (applicationAudio && applicationTracks.isEmpty()) return "Choose at least one application to record.";
+    for (auto it = applicationTracks.cbegin(); it != applicationTracks.cend(); ++it) {
+        if (it.key().trimmed().isEmpty() || it.key().contains('|') || it.key().contains('\n')
+            || it.key().contains('\r') || it.value() < 1 || it.value() > 6)
+            return "Choose a valid application and track.";
+    }
     return {};
+}
+
+QStringList GsrOptions::audioTracks() const {
+    const auto source = [](const QString &device, const QString &fallback) {
+        return device.isEmpty() ? fallback : "device:" + device;
+    };
+    const auto mic = microphone ? source(audioInput, "default_input") : QString();
+    QStringList tracks;
+    if (applicationAudio) {
+        QMap<int, QStringList> grouped;
+        for (auto it = applicationTracks.cbegin(); it != applicationTracks.cend(); ++it)
+            grouped[it.value()].append("app:" + it.key());
+        if (!mic.isEmpty()) grouped[microphoneTrack].append(mic);
+        for (const auto &group : grouped) tracks.append(group.join('|'));
+    } else {
+        if (systemAudio) tracks.append(source(audioOutput, "default_output"));
+        if (!mic.isEmpty()) tracks.append(mic);
+        if (!separateAudioTracks && tracks.size() > 1) tracks = {tracks.join('|')};
+    }
+    return tracks;
 }
 
 QStringList GsrOptions::arguments(const QString &socketPath) const {
     QStringList args{"-w", source, "-f", QString::number(frameRate), "-k", codec,
-        "-c", container, "-ac", "aac", "-fallback-cpu-encoding", "no", "-ipc", socketPath};
-    QStringList audio;
-    if (systemAudio) audio << "default_output";
-    if (microphone) audio << "default_input";
-    if (separateAudioTracks) { for (const auto &device : audio) args << "-a" << device; }
-    else if (!audio.isEmpty()) args << "-a" << audio.join('|');
+        "-c", container, "-ac", audioCodec, "-ab", QString::number(audioBitrateKbps),
+        "-fallback-cpu-encoding", "no", "-ipc", socketPath};
+    if (!overlayPlugin.isEmpty()) {
+        // shortcut: GSR 6.1.5 cannot compose external cursor textures; restore cursor capture when its plugin path supports them.
+        args << "-p" << overlayPlugin << "-cursor" << "no";
+    }
+    for (const auto &track : audioTracks()) args << "-a" << track;
     if (bitrateMbps > 0) args << "-bm" << "cbr" << "-q" << QString::number(bitrateMbps * 1000);
     const QString output = QDir(outputDirectory).absolutePath();
     if (continuousRecording) {
@@ -137,7 +176,13 @@ void GsrRequest::finish(bool success, const QString &data) {
     emit finished(success, data);
 }
 
-GsrCapture::GsrCapture(QObject *parent, const QString &program) : QObject(parent), m_program(program) {
+GsrCapture::GsrCapture(QObject *parent, const QString &program)
+    : QObject(parent), m_program(program), m_audio(std::make_unique<CaptureAudio>()) {
+    connect(m_audio.get(), &CaptureAudio::ready, this, &GsrCapture::startRecorder);
+    connect(m_audio.get(), &CaptureAudio::failed, this, [this](const QString &message) {
+        emit error(message);
+        stop();
+    });
     m_process.setProcessChannelMode(QProcess::MergedChannels);
     m_readyTimer.setInterval(100);
     m_startTimeout.setSingleShot(true);
@@ -146,6 +191,7 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program) : QObject(parent
     connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError failure) {
         if (failure == QProcess::FailedToStart) {
             m_readyTimer.stop(); m_startTimeout.stop();
+            m_audio->stop();
             emit error("Cannot start GPU Screen Recorder: " + m_process.errorString());
             emit stopped();
         }
@@ -153,6 +199,7 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program) : QObject(parent
     connect(&m_process, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
         readLog();
         m_readyTimer.stop(); m_startTimeout.stop(); m_stopTimeout.stop();
+        m_audio->stop();
         const bool expected = m_stopping && code == 0 && status == QProcess::NormalExit;
         m_ready = false; m_stopping = false; m_stopQueued = false; m_replayRecording = false;
         if (!expected) emit error(QString("GPU Screen Recorder stopped (exit %1).\n%2").arg(code).arg(m_logTail.join('\n')));
@@ -161,6 +208,7 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program) : QObject(parent
     });
     connect(&m_readyTimer, &QTimer::timeout, this, [this] {
         if (!QFileInfo::exists(m_socketPath)) return;
+        if (!m_options.overlayPlugin.isEmpty() && !QFileInfo::exists(overlaySocketPath())) return;
         QLocalSocket probe;
         probe.connectToServer(m_socketPath);
         if (!probe.waitForConnected(25)) return;
@@ -169,7 +217,10 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program) : QObject(parent
         emit started();
     });
     connect(&m_startTimeout, &QTimer::timeout, this, [this] {
-        emit error("GPU Screen Recorder did not become ready within 60 seconds. Check capture permissions.");
+        const bool missingCompositor = !m_options.overlayPlugin.isEmpty() && !QFileInfo::exists(overlaySocketPath());
+        emit error(missingCompositor
+            ? "The Shadowless composition plugin did not become ready.\n" + m_logTail.join('\n')
+            : "GPU Screen Recorder did not become ready within 60 seconds. Check capture permissions.");
         stop();
     });
     connect(&m_stopTimeout, &QTimer::timeout, this, [this] {
@@ -184,7 +235,7 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program) : QObject(parent
 GsrCapture::~GsrCapture() {
     // Normal window close uses asynchronous stop(); this is only the final cleanup path.
     disconnect(&m_process, nullptr, this, nullptr);
-    if (active()) {
+    if (m_process.state() != QProcess::NotRunning) {
         ::kill(static_cast<pid_t>(m_process.processId()), SIGINT);
         if (!m_process.waitForFinished(5000)) { m_process.kill(); m_process.waitForFinished(1000); }
     }
@@ -194,16 +245,33 @@ void GsrCapture::start(const GsrOptions &options, const GsrCapabilities &capabil
     if (active() || m_request) { emit error("Capture is already active or finishing a command."); return; }
     const auto validation = options.validate(capabilities);
     if (!validation.isEmpty()) { emit error(validation); return; }
+    if (!options.overlayPlugin.isEmpty() && !QFileInfo(options.overlayPlugin).isFile()) {
+        emit error("Shadowless's overlay plugin is missing: " + options.overlayPlugin); return;
+    }
     if (!m_runtime.isValid() || !QDir().mkpath(options.outputDirectory)) {
         emit error("Cannot create the capture runtime or output directory."); return;
     }
     m_options = options;
+    m_preparingAudio = true;
+    m_audio->start(options);
+}
+
+void GsrCapture::startRecorder(const QString &output, const QString &input) {
+    if (!m_preparingAudio) return;
+    m_preparingAudio = false;
+    auto options = m_options;
+    if (!output.isEmpty()) options.audioOutput = output;
+    if (!input.isEmpty()) options.audioInput = input;
     m_socketPath = m_runtime.filePath("gsr.sock");
     QFile::remove(m_socketPath);
+    QFile::remove(overlaySocketPath());
+    auto environment = QProcessEnvironment::systemEnvironment();
+    environment.insert("SHADOWLESS_OVERLAY_SOCKET", overlaySocketPath());
+    m_process.setProcessEnvironment(environment);
     m_ready = false; m_stopping = false; m_stopQueued = false; m_replayRecording = false;
     m_logTail.clear();
-    m_process.start(m_program, options.arguments(m_socketPath));
     m_readyTimer.start(); m_startTimeout.start(60000);
+    m_process.start(m_program, options.arguments(m_socketPath));
 }
 
 void GsrCapture::saveReplay(int seconds) {
@@ -220,9 +288,24 @@ void GsrCapture::startReplayRecording() {
 
 void GsrCapture::stopReplayRecording() { request("stop-replay-recording"); }
 
+void GsrCapture::setAudioLevels(const AudioLevels &levels) {
+    if (active()) m_audio->setLevels(levels);
+}
+
 void GsrCapture::stop() {
     if (!active() || m_stopping) return;
+    if (m_preparingAudio) {
+        m_preparingAudio = false;
+        m_audio->stop();
+        emit stopped();
+        return;
+    }
     if (m_request) { m_stopQueued = true; return; }
+    if (m_replayRecording) {
+        m_stopQueued = true;
+        stopReplayRecording();
+        return;
+    }
     m_readyTimer.stop(); m_startTimeout.stop();
     m_stopping = true;
     m_stopTimeout.start(15000);
@@ -240,6 +323,7 @@ void GsrCapture::request(const QString &name, const QJsonValue &data) {
         m_request = nullptr;
         command->deleteLater();
         if (!success) {
+            if (name == "stop-replay-recording" && m_stopQueued) m_replayRecording = false;
             emit error(result);
             if (name == "stop" && active()) ::kill(static_cast<pid_t>(m_process.processId()), SIGINT);
         } else {
@@ -273,4 +357,4 @@ void GsrCapture::readLog() {
     }
 }
 
-} // namespace Captail
+} // namespace Shadowless

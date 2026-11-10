@@ -1,5 +1,5 @@
-using Captail;
-using Captail.Interop;
+using Shadowless;
+using Shadowless.Interop;
 using System.Text.Json;
 
 namespace ProcessAudioFoundationQa;
@@ -362,7 +362,7 @@ internal static class Program
         Equal(
             Localization.Format("L.Library.AudioTrackNumber", 1),
             ClipEditorWindow.AudioLabel(
-                new AudioTrackInfo(1, 0, "aac", "Captail Audio 1", 2),
+                new AudioTrackInfo(1, 0, "aac", "Shadowless Audio 1", 2),
                 2));
     }
 
@@ -832,13 +832,13 @@ internal static class Program
         var config = new Config
         {
             OrganizeReplaysByGame = true,
-            OutputDirectory = @"C:\Captail",
+            OutputDirectory = @"C:\Shadowless",
         };
         Equal(
-            @"C:\Captail\PEAK",
+            @"C:\Shadowless\PEAK",
             ReplayPaths.CaptureDirectory(config, @"C:\Games\PEAK\peak.exe"));
         Equal(
-            @"C:\Captail\game",
+            @"C:\Shadowless\game",
             ReplayPaths.CaptureDirectory(config, @"C:\Games\Unknown\game.exe"));
     }
 

@@ -11,7 +11,7 @@ audio-track selection, timeline/waveforms, and stream-copy trim.
   validates every file operation against replay root.
 - Preview sidebar and main library request all clips.
 - Sidebar combines collection/game and recording-mode filters. Mode is inferred
-  from Captail's Replay_ and Recording_ filenames; renamed/imported clips are
+  from Shadowless's Replay_ and Recording_ filenames; renamed/imported clips are
   shown as unknown. Changing filters clears deletion marks.
 - Checkboxes mark clips independently of playback. Batch deletion uses the
   existing confirmation and Recycle Bin path; failures retain remaining clips.
@@ -35,18 +35,18 @@ audio-track selection, timeline/waveforms, and stream-copy trim.
 
 ## Primary files
 
-- `src/Captail/ClipEditorWindow.xaml`
-- `src/Captail/ClipEditorWindow.xaml.cs`
-- `src/Captail/MpvHost.cs`
-- `src/Captail/ReplayLibrary.cs`
-- `src/Captail/FfmpegAdapter.cs`
+- `src/Shadowless/ClipEditorWindow.xaml`
+- `src/Shadowless/ClipEditorWindow.xaml.cs`
+- `src/Shadowless/MpvHost.cs`
+- `src/Shadowless/ReplayLibrary.cs`
+- `src/Shadowless/FfmpegAdapter.cs`
 
 ## Validation
 
 ```powershell
 .\tools\TestCapturePlayerRegression.ps1
 .\tools\TestNextFeatureRegression.ps1
-dotnet build .\Captail.sln -c Release --no-restore
+dotnet build .\Shadowless.sln -c Release --no-restore
 ```
 
 Use `--qa-replay-player`, `--qa-replay-navigation`, `--qa-audio-mix`,

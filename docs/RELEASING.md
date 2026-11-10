@@ -1,6 +1,6 @@
-# Releasing Captail
+# Releasing Shadowless
 
-Captail releases are built entirely by GitHub Actions on a pinned Windows runner.
+Shadowless releases are built entirely by GitHub Actions on a pinned Windows runner.
 
 Each release contains:
 
@@ -25,7 +25,7 @@ Before running the workflow:
 .\tools\New-ReleaseNotes.ps1 `
   -Version 0.2.0 `
   -PreviousTag v0.1.9 `
-  -OutputPath "$env:TEMP\captail-release-notes.md"
+  -OutputPath "$env:TEMP\shadowless-release-notes.md"
 ```
 
 Commit and merge the changelog before dispatching the release. The workflow stops if it cannot find a non-empty section matching the requested version.
@@ -38,13 +38,13 @@ From GitHub:
 2. Select **Build release**.
 3. Click **Run workflow**.
 4. Enter a semantic version without `v`, for example `0.2.0`.
-5. Keep **Pre-release** enabled while Captail is in preview.
+5. Keep **Pre-release** enabled while Shadowless is in preview.
 
 From GitHub CLI:
 
 ```powershell
 gh workflow run release.yml `
-  --repo FaulMit/captail `
+  --repo Zefth051/Shadowless `
   --ref main `
   -f version=0.2.0 `
   -f prerelease=true
@@ -95,6 +95,6 @@ Build an upload-ready package locally:
 Store packaging uses self-contained FFmpeg tools and rejects package-root DLL
 collisions before creating the Partner Center upload archive.
 
-Upload `artifacts\store\0.2.0\Captail-0.2.0.0-x64.msixupload` in Partner
+Upload `artifacts\store\0.2.0\Shadowless-0.2.0.0-x64.msixupload` in Partner
 Center. Full identity, validation, update-channel, and submission instructions
 are in [`packaging/msix/README.md`](../packaging/msix/README.md).

@@ -19,12 +19,12 @@ capabilities, output lifecycle, recovery, and capture notifications.
 
 ## Primary files
 
-- `src/Captail/App.xaml.cs`
-- `src/Captail/Config.cs`
-- `src/Captail/ObsReplayEngine.cs`
-- `src/Captail/ObsNative.cs`
-- `src/Captail/Interop/CaptureInterop.cs`
-- `src/Captail/ReplayPaths.cs`
+- `src/Shadowless/App.xaml.cs`
+- `src/Shadowless/Config.cs`
+- `src/Shadowless/ObsReplayEngine.cs`
+- `src/Shadowless/ObsNative.cs`
+- `src/Shadowless/Interop/CaptureInterop.cs`
+- `src/Shadowless/ReplayPaths.cs`
 - `native/ObsBridge/`
 
 ## Invariants
@@ -42,7 +42,7 @@ capabilities, output lifecycle, recovery, and capture notifications.
 .\tools\TestCapturePlayerRegression.ps1
 .\tools\TestIssue41Fixes.ps1
 .\tools\TestFullscreenOverlayHotkeys.ps1
-dotnet build .\Captail.sln -c Release --no-restore
+dotnet build .\Shadowless.sln -c Release --no-restore
 ```
 
 Use relevant `--qa-game-*`, `--qa-replay-*`, or recording QA entry points for

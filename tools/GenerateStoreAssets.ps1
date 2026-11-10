@@ -71,7 +71,7 @@ function Set-HighQualityGraphics {
     $Graphics.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::AntiAlias
 }
 
-function Draw-CaptailMark {
+function Draw-ShadowlessMark {
     param(
         [Drawing.Graphics]$Graphics,
         [Drawing.RectangleF]$Bounds,
@@ -110,7 +110,7 @@ function Draw-CaptailMark {
     }
 }
 
-function New-CaptailMaster {
+function New-ShadowlessMaster {
     param(
         [int]$Size,
         [bool]$Transparent
@@ -161,7 +161,7 @@ function New-CaptailMaster {
         else {
             [Drawing.Color]::FromArgb(255, 99, 224, 189)
         }
-        Draw-CaptailMark `
+        Draw-ShadowlessMark `
             -Graphics $graphics `
             -Bounds $markBounds `
             -Color $markColor
@@ -255,7 +255,7 @@ function New-WideLogo {
     try {
         Set-HighQualityGraphics $graphics
         $graphics.Clear([Drawing.Color]::FromArgb(255, 18, 23, 26))
-        Draw-CaptailMark `
+        Draw-ShadowlessMark `
             -Graphics $graphics `
             -Bounds ([Drawing.RectangleF]::new(91, 16, 128, 118)) `
             -Color ([Drawing.Color]::FromArgb(255, 99, 224, 189))
@@ -267,20 +267,20 @@ function New-WideLogo {
     }
 }
 
-$tileMaster = New-CaptailMaster -Size 1024 -Transparent $false
-$markMaster = New-CaptailMaster -Size 1024 -Transparent $true
+$tileMaster = New-ShadowlessMaster -Size 1024 -Transparent $false
+$markMaster = New-ShadowlessMaster -Size 1024 -Transparent $true
 try {
     $tileMaster.Save(
-        (Join-Path $masterDirectory "Captail-AppTile-1024x1024.png"),
+        (Join-Path $masterDirectory "Shadowless-AppTile-1024x1024.png"),
         [Drawing.Imaging.ImageFormat]::Png)
     $markMaster.Save(
-        (Join-Path $masterDirectory "Captail-Mark-1024x1024.png"),
+        (Join-Path $masterDirectory "Shadowless-Mark-1024x1024.png"),
         [Drawing.Imaging.ImageFormat]::Png)
 
     foreach ($size in @(300, 150, 71)) {
         Save-ScaledPng `
             -Source $tileMaster `
-            -Path (Join-Path $storeDirectory ("Captail-AppTile-{0}x{0}.png" -f $size)) `
+            -Path (Join-Path $storeDirectory ("Shadowless-AppTile-{0}x{0}.png" -f $size)) `
             -Width $size `
             -Height $size
     }
@@ -288,12 +288,12 @@ try {
     foreach ($size in @(16, 20, 24, 32, 40, 44, 48, 50, 64, 71, 96, 128, 150, 256, 300, 310, 512, 1024)) {
         Save-ScaledPng `
             -Source $tileMaster `
-            -Path (Join-Path $windowsDirectory ("Captail-AppTile-{0}x{0}.png" -f $size)) `
+            -Path (Join-Path $windowsDirectory ("Shadowless-AppTile-{0}x{0}.png" -f $size)) `
             -Width $size `
             -Height $size
         Save-ScaledPng `
             -Source $markMaster `
-            -Path (Join-Path $windowsDirectory ("Captail-Mark-{0}x{0}.png" -f $size)) `
+            -Path (Join-Path $windowsDirectory ("Shadowless-Mark-{0}x{0}.png" -f $size)) `
             -Width $size `
             -Height $size
     }
@@ -319,18 +319,18 @@ finally {
     $tileMaster.Dispose()
 }
 
-$bannerMasterPath = Join-Path $masterDirectory "Captail-SuperBanner-Generated-Source.png"
+$bannerMasterPath = Join-Path $masterDirectory "Shadowless-SuperBanner-Generated-Source.png"
 Copy-Item -LiteralPath $resolvedBannerSource -Destination $bannerMasterPath
 $banner = [Drawing.Image]::FromFile($resolvedBannerSource)
 try {
     Save-CoverPng `
         -Source $banner `
-        -Path (Join-Path $storeDirectory "Captail-SuperBanner-1920x1080.png") `
+        -Path (Join-Path $storeDirectory "Shadowless-SuperBanner-1920x1080.png") `
         -Width 1920 `
         -Height 1080
     Save-CoverPng `
         -Source $banner `
-        -Path (Join-Path $storeDirectory "Captail-SuperBanner-3840x2160.png") `
+        -Path (Join-Path $storeDirectory "Shadowless-SuperBanner-3840x2160.png") `
         -Width 3840 `
         -Height 2160
 }
@@ -339,9 +339,9 @@ finally {
 }
 
 & (Join-Path $PSScriptRoot "GenerateAppIcon.ps1") `
-    -OutputPath (Join-Path $windowsDirectory "Captail.ico") | Out-Null
+    -OutputPath (Join-Path $windowsDirectory "Shadowless.ico") | Out-Null
 
-$previewPath = Join-Path $previewDirectory "Captail-Store-Asset-Pack-Preview.png"
+$previewPath = Join-Path $previewDirectory "Shadowless-Store-Asset-Pack-Preview.png"
 $preview = [Drawing.Bitmap]::new(
     1440,
     1360,
@@ -355,11 +355,11 @@ try {
     $mutedBrush = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(255, 151, 163, 169))
     $whiteBrush = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(255, 236, 241, 243))
     try {
-        $previewGraphics.DrawString("Captail Store Asset Pack", $titleFont, $whiteBrush, 54, 35)
+        $previewGraphics.DrawString("Shadowless Store Asset Pack", $titleFont, $whiteBrush, 54, 35)
         $previewGraphics.DrawString("Store listing logos", $labelFont, $mutedBrush, 58, 102)
         $x = 58
         foreach ($size in @(300, 150, 71)) {
-            $path = Join-Path $storeDirectory ("Captail-AppTile-{0}x{0}.png" -f $size)
+            $path = Join-Path $storeDirectory ("Shadowless-AppTile-{0}x{0}.png" -f $size)
             $image = [Drawing.Image]::FromFile($path)
             try {
                 $displaySize = if ($size -eq 300) { 260 } elseif ($size -eq 150) { 180 } else { 120 }
@@ -374,7 +374,7 @@ try {
 
         $previewGraphics.DrawString("Windows and Xbox super banner", $labelFont, $mutedBrush, 58, 510)
         $bannerPreview = [Drawing.Image]::FromFile(
-            (Join-Path $storeDirectory "Captail-SuperBanner-1920x1080.png"))
+            (Join-Path $storeDirectory "Shadowless-SuperBanner-1920x1080.png"))
         try {
             $previewGraphics.DrawImage($bannerPreview, 58, 560, 1324, 745)
         }
@@ -396,7 +396,7 @@ finally {
 }
 
 $readme = @'
-# Captail Store Asset Pack
+# Shadowless Store Asset Pack
 
 Ready-to-upload graphics for Microsoft Partner Center and Windows packaging.
 
@@ -404,11 +404,11 @@ Ready-to-upload graphics for Microsoft Partner Center and Windows packaging.
 
 | Partner Center field | File |
 | --- | --- |
-| App tile icon 1:1, 300 x 300 | `StoreListing/Captail-AppTile-300x300.png` |
-| App tile icon 1:1, 150 x 150 | `StoreListing/Captail-AppTile-150x150.png` |
-| App tile icon 1:1, 71 x 71 | `StoreListing/Captail-AppTile-71x71.png` |
-| Windows and Xbox super banner | `StoreListing/Captail-SuperBanner-1920x1080.png` |
-| Windows and Xbox super banner, 4K | `StoreListing/Captail-SuperBanner-3840x2160.png` |
+| App tile icon 1:1, 300 x 300 | `StoreListing/Shadowless-AppTile-300x300.png` |
+| App tile icon 1:1, 150 x 150 | `StoreListing/Shadowless-AppTile-150x150.png` |
+| App tile icon 1:1, 71 x 71 | `StoreListing/Shadowless-AppTile-71x71.png` |
+| Windows and Xbox super banner | `StoreListing/Shadowless-SuperBanner-1920x1080.png` |
+| Windows and Xbox super banner, 4K | `StoreListing/Shadowless-SuperBanner-3840x2160.png` |
 
 Use either super banner, not both. Both versions contain no product name, as required by Partner Center.
 
@@ -416,10 +416,10 @@ Use either super banner, not both. Both versions contain no product name, as req
 
 - `Master`: 1024 x 1024 tile, transparent mark, and generated banner source.
 - `MSIX`: package logos plus default, dark-theme, and light-theme target-size variants.
-- `Windows`: common PNG sizes and multi-resolution `Captail.ico`.
+- `Windows`: common PNG sizes and multi-resolution `Shadowless.ico`.
 - `Preview`: contact sheet for quick visual review.
 
-All files are PNG except `Captail.ico`, use the Captail graphite/mint palette, and are generated without third-party marks.
+All files are PNG except `Shadowless.ico`, use the Shadowless graphite/mint palette, and are generated without third-party marks.
 '@
 [IO.File]::WriteAllText(
     (Join-Path $outputRoot "README.md"),
@@ -433,11 +433,11 @@ Mode: built-in image generation, followed by deterministic local resizing and ic
 
 ## Banner generation prompt
 
-Create a premium abstract 16:9 Microsoft Store super banner for Captail, a lightweight instant replay recorder. Use a deep graphite matte background, subtle rounded layers, a horizontal replay-buffer timeline, restrained waveform details, and mint-teal frame trails. Convey continuous capture, stability, and smooth high-frame-rate motion. Keep important elements inside the central 80% safe area. Use Captail colors `#111719`, `#182024`, `#283238`, `#63E0BD`, and muted teal. No text, product name, letters, numbers, third-party logos, game screenshots, people, devices, cyberpunk, excessive glow, rainbow colors, noisy particles, fake UI text, or watermark.
+Create a premium abstract 16:9 Microsoft Store super banner for Shadowless, a lightweight instant replay recorder. Use a deep graphite matte background, subtle rounded layers, a horizontal replay-buffer timeline, restrained waveform details, and mint-teal frame trails. Convey continuous capture, stability, and smooth high-frame-rate motion. Keep important elements inside the central 80% safe area. Use Shadowless colors `#111719`, `#182024`, `#283238`, `#63E0BD`, and muted teal. No text, product name, letters, numbers, third-party logos, game screenshots, people, devices, cyberpunk, excessive glow, rainbow colors, noisy particles, fake UI text, or watermark.
 
 ## Targeted symbol edit prompt
 
-Replace only the central circular arrow with Captail's brand motif: a thick mint circular ring with one clean gap near the upper-right, rounded ends, and a solid mint capture dot centered inside. Remove the arrowhead. Preserve composition, graphite background, timeline, waveform, frame trails, lighting, colors, and all other elements. No text or watermark.
+Replace only the central circular arrow with Shadowless's brand motif: a thick mint circular ring with one clean gap near the upper-right, rounded ends, and a solid mint capture dot centered inside. Remove the arrowhead. Preserve composition, graphite background, timeline, waveform, frame trails, lighting, colors, and all other elements. No text or watermark.
 '@
 [IO.File]::WriteAllText(
     (Join-Path $outputRoot "GENERATION-NOTES.md"),
@@ -482,13 +482,13 @@ $checksumLines = foreach ($file in Get-ChildItem -LiteralPath $outputRoot -Recur
     $checksumLines,
     [Text.Encoding]::ASCII)
 
-$zipPath = Join-Path $artifactsRoot "Captail-Store-Assets.zip"
+$zipPath = Join-Path $artifactsRoot "Shadowless-Store-Assets.zip"
 if (Test-Path -LiteralPath $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force
 }
 Compress-Archive -Path (Join-Path $outputRoot "*") -DestinationPath $zipPath -CompressionLevel Optimal
 
-Write-Host "Captail Store asset pack ready: $outputRoot"
+Write-Host "Shadowless Store asset pack ready: $outputRoot"
 Write-Host "ZIP: $zipPath"
 Get-ChildItem -LiteralPath $storeDirectory -File |
     Select-Object Name, Length

@@ -7,8 +7,8 @@ $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName PresentationCore
 
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$languageRoot = Join-Path $repoRoot "src\Captail\Languages"
-$settingsPath = Join-Path $repoRoot "src\Captail\SettingsWindow.xaml"
+$languageRoot = Join-Path $repoRoot "src\Shadowless\Languages"
+$settingsPath = Join-Path $repoRoot "src\Shadowless\SettingsWindow.xaml"
 $statusTitleKeys = @(
     "L.Status.Enabled",
     "L.Status.Disabled",
@@ -132,7 +132,7 @@ foreach ($file in $files) {
 
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Error $_ -ErrorAction Continue }
-    throw "Localized Captail layout exceeds available space."
+    throw "Localized Shadowless layout exceeds available space."
 }
 
 Write-Host "$($files.Count) localization dictionaries fit protected UI regions."

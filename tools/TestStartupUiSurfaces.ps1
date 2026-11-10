@@ -18,9 +18,9 @@ function Assert-Contains(
     }
 }
 
-$app = Read-Text "src\Captail\App.xaml.cs"
-$indicator = Read-Text "src\Captail\ReplayStatusIndicatorWindow.xaml.cs"
-$settings = Read-Text "src\Captail\SettingsWindow.xaml"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
+$indicator = Read-Text "src\Shadowless\ReplayStatusIndicatorWindow.xaml.cs"
+$settings = Read-Text "src\Shadowless\SettingsWindow.xaml"
 
 Assert-Contains $app `
     '_tray\.ForceCreate\(enablesEfficiencyMode:\s*false\)' `

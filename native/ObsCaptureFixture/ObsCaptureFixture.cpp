@@ -32,7 +32,7 @@ int WINAPI wWinMain(
     WNDCLASSW window_class{};
     window_class.hInstance = instance;
     window_class.lpfnWndProc = window_proc;
-    window_class.lpszClassName = L"CaptailObsCaptureFixture";
+    window_class.lpszClassName = L"ShadowlessObsCaptureFixture";
     window_class.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
     if (!RegisterClassW(&window_class))
         return 1;
@@ -44,7 +44,7 @@ int WINAPI wWinMain(
     HWND window = CreateWindowExW(
         WS_EX_TOPMOST,
         window_class.lpszClassName,
-        L"Captail OBS Capture Fixture",
+        L"Shadowless OBS Capture Fixture",
         window_style,
         0,
         0,
@@ -141,7 +141,7 @@ int WINAPI wWinMain(
             const double measured_fps = measurement_frames /
                 std::chrono::duration<double>(measurement_elapsed).count();
             wchar_t title[96]{};
-            swprintf_s(title, L"Captail Capture Fixture - %.1f FPS", measured_fps);
+            swprintf_s(title, L"Shadowless Capture Fixture - %.1f FPS", measured_fps);
             SetWindowTextW(window, title);
             measurement_start = measurement_now;
             measurement_frames = 0;

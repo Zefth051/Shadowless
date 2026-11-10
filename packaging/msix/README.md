@@ -1,16 +1,16 @@
 # Microsoft Store package
 
-This package channel is separate from Captail's GitHub Installer and Portable
-releases. Microsoft Store installs and updates this build. Captail's GitHub
+This package channel is separate from Shadowless's GitHub Installer and Portable
+releases. Microsoft Store installs and updates this build. Shadowless's GitHub
 self-updater is disabled at compile time and guarded again at runtime whenever
 Windows reports package identity.
 
 ## Partner Center identity
 
-- Package name: `faulmit.Captail`
+- Package name: `Zefth051.Shadowless`
 - Publisher: `CN=1BD9448E-C83F-401D-B530-ED5258C6319A`
 - Publisher display name: `faulmit`
-- Package family name: `faulmit.Captail_ryepxmzt2jqew`
+- Package family name: `Zefth051.Shadowless_ryepxmzt2jqew`
 - Package SID: `S-1-15-2-2570374564-3604720510-221884595-2273346317-2344629589-1903721979-2982860682`
 - Store product ID: `9PKVNVLKPTPS`
 - Store protocol link: `ms-windows-store://pdp/?productid=9PKVNVLKPTPS`
@@ -30,8 +30,8 @@ From repository root:
 Output:
 
 ```text
-artifacts\store\0.2.0\Captail-0.2.0.0-x64.msix
-artifacts\store\0.2.0\Captail-0.2.0.0-x64.msixupload
+artifacts\store\0.2.0\Shadowless-0.2.0.0-x64.msix
+artifacts\store\0.2.0\Shadowless-0.2.0.0-x64.msixupload
 artifacts\store\0.2.0\SHA256SUMS.txt
 ```
 
@@ -51,7 +51,7 @@ libraries return or either command-line tool cannot start.
 
 ## Versioning
 
-MSIX requires four numeric components. Captail `0.2.0` becomes package version
+MSIX requires four numeric components. Shadowless `0.2.0` becomes package version
 `0.2.0.0`. Every Store submission must use a strictly higher package version.
 Never reuse a version already submitted to Partner Center.
 

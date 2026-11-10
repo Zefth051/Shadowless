@@ -5,14 +5,14 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $assemblyPath = Join-Path $repoRoot `
-    "src\Captail\bin\Debug\net10.0-windows10.0.22621.0\win-x64\Captail.dll"
+    "src\Shadowless\bin\Debug\net10.0-windows10.0.22621.0\win-x64\Shadowless.dll"
 if (-not (Test-Path -LiteralPath $assemblyPath)) {
-    throw "Build Captail before running diagnostic-log QA."
+    throw "Build Shadowless before running diagnostic-log QA."
 }
 
 [Reflection.Assembly]::LoadFrom($assemblyPath) | Out-Null
-$exporter = [Captail.Config].Assembly.GetType(
-    "Captail.DiagnosticLogExporter",
+$exporter = [Shadowless.Config].Assembly.GetType(
+    "Shadowless.DiagnosticLogExporter",
     $true)
 $method = $exporter.GetMethod(
     "CreateExcerpt",
@@ -25,7 +25,7 @@ if ($null -eq $method) {
 }
 
 $tempPath = Join-Path ([IO.Path]::GetTempPath()) `
-    "captail-diagnostic-export-$([Guid]::NewGuid().ToString('N')).log"
+    "shadowless-diagnostic-export-$([Guid]::NewGuid().ToString('N')).log"
 try {
     $sample = @"
 17:00:00.000 OBS pipeline: version=0.1.10, gpu=NVIDIA GeForce RTX 5070, encoder=NVENC, fps=240
