@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible Captail problem
+description: Report a reproducible Shadowless problem
 title: "[Bug]: "
 labels:
   - bug
@@ -7,12 +7,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for testing Captail. Detailed hardware and recording information makes early-preview bugs much easier to reproduce.
+        Thanks for testing Shadowless. Detailed hardware and recording information makes early-preview bugs much easier to reproduce.
 
   - type: input
     id: version
     attributes:
-      label: Captail version
+      label: Shadowless version
       description: Find this on the GitHub Release page or in file properties.
       placeholder: "0.1.0"
     validations:
@@ -60,7 +60,7 @@ body:
     attributes:
       label: Reproduction steps
       placeholder: |
-        1. Start Captail
+        1. Start Shadowless
         2. Select ...
         3. Launch ...
         4. Press ...
@@ -85,7 +85,7 @@ body:
     id: logs
     attributes:
       label: Relevant log output
-      description: Captail prefills a short sanitized excerpt. Review it before submitting; the complete local log is never attached.
+      description: Shadowless prefills a short sanitized excerpt. Review it before submitting; the complete local log is never attached.
       render: text
 
   - type: checkboxes
@@ -97,5 +97,5 @@ body:
           required: true
         - label: I removed personal or sensitive information from attached logs.
           required: true
-        - label: I understand that Captail is currently an early preview.
+        - label: I understand that Shadowless is currently an early preview.
           required: true

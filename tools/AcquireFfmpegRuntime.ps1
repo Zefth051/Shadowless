@@ -61,7 +61,7 @@ if (-not $Destination.StartsWith(
 }
 
 $archive = Join-Path $env:TEMP $archiveName
-$extract = Join-Path $env:TEMP "Captail-FFmpeg-$PID-$([Guid]::NewGuid().ToString('N'))"
+$extract = Join-Path $env:TEMP "Shadowless-FFmpeg-$PID-$([Guid]::NewGuid().ToString('N'))"
 try {
     if (Test-Path -LiteralPath $archive) {
         $existingHash = Get-Sha256Hex $archive

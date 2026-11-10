@@ -38,6 +38,8 @@ env:
   RELEASE_VERSION: ${{ inputs.version }}
   STORE_IDENTITY_VERSION: ${{ inputs.identity_version }}
   STORE_OUTPUT: artifacts/store/${{ inputs.version }}
+  SHADOWLESS_STORE_PACKAGE_NAME: ${{ vars.SHADOWLESS_STORE_PACKAGE_NAME }}
+  SHADOWLESS_STORE_PUBLISHER: ${{ vars.SHADOWLESS_STORE_PUBLISHER }}
 
 jobs:
   build:
@@ -75,7 +77,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
           cache: true
-          cache-dependency-path: src/Captail/packages.lock.json
+          cache-dependency-path: src/Shadowless/packages.lock.json
 
       - name: Acquire minimal OBS runtime
         shell: pwsh
@@ -130,7 +132,7 @@ jobs:
       - name: Upload Store package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: Captail-${{ inputs.version }}-Microsoft-Store
+          name: Shadowless-${{ inputs.version }}-Microsoft-Store
           path: |
             ${{ env.STORE_OUTPUT }}/*.msixupload
             ${{ env.STORE_OUTPUT }}/SHA256SUMS.txt
@@ -158,11 +160,13 @@ jobs:
       - name: Validate publishing context
         shell: pwsh
         run: |
-          if ($env:GITHUB_REF -ne 'refs/heads/main') {
-            throw "Partner Center uploads are allowed only from main; current ref: $env:GITHUB_REF"
+          if ($env:GITHUB_REF -ne 'refs/heads/windows') {
+            throw "Partner Center uploads are allowed only from windows; current ref: $env:GITHUB_REF"
           }
 
           $required = @{
+            SHADOWLESS_STORE_PACKAGE_NAME = $env:SHADOWLESS_STORE_PACKAGE_NAME
+            SHADOWLESS_STORE_PUBLISHER = $env:SHADOWLESS_STORE_PUBLISHER
             STORE_PRODUCT_ID = $env:STORE_PRODUCT_ID
             STORE_TENANT_ID = $env:STORE_TENANT_ID
             STORE_CLIENT_ID = $env:STORE_CLIENT_ID
@@ -182,7 +186,7 @@ jobs:
       - name: Download Store package
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: Captail-${{ inputs.version }}-Microsoft-Store
+          name: Shadowless-${{ inputs.version }}-Microsoft-Store
           path: store-package
 
       - name: Verify downloaded package
@@ -293,7 +297,7 @@ jobs:
             "$env:RELEASE_VERSION.0"
           }
           @"
-          ## Captail $env:RELEASE_VERSION
+          ## Shadowless $env:RELEASE_VERSION
 
           Package $action.
 

@@ -10,16 +10,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$targetRoot = [IO.Path]::GetFullPath("D:\Captail-0.1.10")
-$backupRoot = [IO.Path]::GetFullPath("D:\Captail-0.1.10.__previous")
+$targetRoot = [IO.Path]::GetFullPath("D:\Shadowless-0.1.10")
+$backupRoot = [IO.Path]::GetFullPath("D:\Shadowless-0.1.10.__previous")
 if (-not $ArtifactRoot) {
     $ArtifactRoot = Join-Path $repoRoot "artifacts\test\manual-$Version"
 }
 $artifactRoot = [IO.Path]::GetFullPath($ArtifactRoot)
-$sourceRoot = Join-Path $artifactRoot "staging\Captail-$Version"
+$sourceRoot = Join-Path $artifactRoot "staging\Shadowless-$Version"
 
-if ($targetRoot -cne "D:\Captail-0.1.10" -or
-    $backupRoot -cne "D:\Captail-0.1.10.__previous") {
+if ($targetRoot -cne "D:\Shadowless-0.1.10" -or
+    $backupRoot -cne "D:\Shadowless-0.1.10.__previous") {
     throw "Unexpected test deployment path."
 }
 
@@ -36,13 +36,13 @@ if (-not $SkipBuild) {
         -SkipInstaller
 }
 
-$sourceExe = Join-Path $sourceRoot "Captail.exe"
+$sourceExe = Join-Path $sourceRoot "Shadowless.exe"
 if (-not (Test-Path -LiteralPath $sourceExe)) {
     throw "Published test build not found: $sourceExe"
 }
 
 $runningFromTarget = @(
-    Get-Process Captail -ErrorAction SilentlyContinue |
+    Get-Process Shadowless, Shadowless -ErrorAction SilentlyContinue |
         Where-Object {
             $_.Path -and $_.Path.StartsWith(
                 $targetRoot + [IO.Path]::DirectorySeparatorChar,
@@ -50,12 +50,16 @@ $runningFromTarget = @(
         }
 )
 if ($runningFromTarget.Count -gt 0) {
-    & (Join-Path $targetRoot "Captail.exe") --shutdown-existing
+    $existingExe = Join-Path $targetRoot "Shadowless.exe"
+    if (-not (Test-Path -LiteralPath $existingExe)) {
+        $existingExe = Join-Path $targetRoot "Shadowless.exe"
+    }
+    & $existingExe --shutdown-existing
     $shutdownDeadline = [DateTime]::UtcNow.AddSeconds(15)
     do {
         Start-Sleep -Milliseconds 250
         $stillRunning = @(
-            Get-Process Captail -ErrorAction SilentlyContinue |
+            Get-Process Shadowless, Shadowless -ErrorAction SilentlyContinue |
                 Where-Object {
                     $_.Path -and $_.Path.StartsWith(
                         $targetRoot + [IO.Path]::DirectorySeparatorChar,
@@ -65,7 +69,7 @@ if ($runningFromTarget.Count -gt 0) {
     } while ($stillRunning.Count -gt 0 -and
         [DateTime]::UtcNow -lt $shutdownDeadline)
     if ($stillRunning.Count -gt 0) {
-        throw "Test Captail instance is still running."
+        throw "Test Shadowless instance is still running."
     }
 }
 
@@ -84,11 +88,14 @@ try {
         -Force
 
     foreach ($required in @(
-        "Captail.exe",
-        "CaptailObsBridge.dll",
-        "obs.dll",
-        "libmpv-2.dll",
-        "ffmpeg\ffmpeg.exe")) {
+        "Shadowless.exe",
+        "runtime\Shadowless.exe",
+        "runtime\ShadowlessObsBridge.dll",
+        "runtime\obs-plugins\64bit\image-source.dll",
+        "runtime\obs-plugins\64bit\obs-filters.dll",
+        "runtime\obs.dll",
+        "runtime\libmpv-2.dll",
+        "runtime\ffmpeg\ffmpeg.exe")) {
         if (-not (Test-Path -LiteralPath (Join-Path $targetRoot $required))) {
             throw "Missing deployed file: $required"
         }
@@ -108,7 +115,7 @@ if (Test-Path -LiteralPath $backupRoot) {
     Remove-Item -LiteralPath $backupRoot -Recurse -Force
 }
 
-$exeInfo = (Get-Item -LiteralPath (Join-Path $targetRoot "Captail.exe")).VersionInfo
+$exeInfo = (Get-Item -LiteralPath (Join-Path $targetRoot "runtime\Shadowless.exe")).VersionInfo
 $files = @(Get-ChildItem -LiteralPath $targetRoot -Recurse -File)
 $sizeBytes = ($files | Measure-Object Length -Sum).Sum
 

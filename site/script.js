@@ -65,13 +65,15 @@ async function resolveLatestDownloads() {
   downloadsResolved = true;
 
   try {
-    const response = await fetch('https://api.github.com/repos/FaulMit/captail/releases?per_page=10', {
+    const response = await fetch('https://api.github.com/repos/Zefth051/Shadowless/releases?per_page=10', {
       headers: { Accept: 'application/vnd.github+json' }
     });
     if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
 
     const releases = await response.json();
-    const release = releases.find((item) => !item.draft);
+    const release = releases.find((item) => !item.draft &&
+      item.assets?.some((asset) => /Setup-win-x64\.exe$/i.test(asset.name)) &&
+      item.assets?.some((asset) => /Portable-win-x64\.zip$/i.test(asset.name)));
     const setupAsset = release?.assets?.find((asset) => /Setup-win-x64\.exe$/i.test(asset.name));
     const portableAsset = release?.assets?.find((asset) => /Portable-win-x64\.zip$/i.test(asset.name));
     if (!release || !setupAsset || !portableAsset) throw new Error('Release assets are incomplete');
@@ -87,8 +89,8 @@ async function resolveLatestDownloads() {
         : release.tag_name;
     });
   } catch (error) {
-    downloadStatus.textContent = 'Latest verified fallback · V0.2.3';
-    console.warn('Could not resolve latest Captail release; using v0.2.3 links.', error);
+    downloadStatus.textContent = 'Check GitHub Releases for Windows builds';
+    console.warn('Could not resolve latest Shadowless release.', error);
   }
 }
 

@@ -3,7 +3,7 @@ name: Deploy landing page
 on:
   push:
     branches:
-      - main
+      - windows
     paths:
       - "site/**"
       - ".github/workflows/pages.yml"

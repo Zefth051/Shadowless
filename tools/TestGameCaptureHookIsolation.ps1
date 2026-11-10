@@ -3,13 +3,13 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $fixture = Join-Path $repoRoot `
     "native\ObsCaptureFixture\build\Release\ObsCaptureFixture.exe"
 $appRoot = Join-Path $repoRoot `
-    "src\Captail\bin\Debug\net10.0-windows10.0.22621.0\win-x64"
-$captail = Join-Path $appRoot "Captail.exe"
+    "src\Shadowless\bin\Debug\net10.0-windows10.0.22621.0\win-x64"
+$shadowless = Join-Path $appRoot "Shadowless.exe"
 $appHook = Join-Path $appRoot `
     "data\obs-plugins\win-capture\graphics-hook64.dll"
 $probe = "$appHook.qa-unlocked"
 
-foreach ($required in @($fixture, $captail, $appHook)) {
+foreach ($required in @($fixture, $shadowless, $appHook)) {
     if (-not (Test-Path -LiteralPath $required)) {
         throw "Required QA file is missing: $required"
     }
@@ -19,7 +19,7 @@ Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
 
-public static class CaptailHookQaWindow
+public static class ShadowlessHookQaWindow
 {
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
@@ -43,28 +43,28 @@ try {
 
     $shell = New-Object -ComObject WScript.Shell
     $shell.SendKeys("%")
-    [void][CaptailHookQaWindow]::ShowWindow(
+    [void][ShadowlessHookQaWindow]::ShowWindow(
         $fixtureProcess.MainWindowHandle,
         5)
-    [void][CaptailHookQaWindow]::BringWindowToTop(
+    [void][ShadowlessHookQaWindow]::BringWindowToTop(
         $fixtureProcess.MainWindowHandle)
-    [void][CaptailHookQaWindow]::SetForegroundWindow(
+    [void][ShadowlessHookQaWindow]::SetForegroundWindow(
         $fixtureProcess.MainWindowHandle)
     Start-Sleep -Seconds 1
-    if ([CaptailHookQaWindow]::GetForegroundWindow() -ne `
+    if ([ShadowlessHookQaWindow]::GetForegroundWindow() -ne `
         $fixtureProcess.MainWindowHandle) {
         throw "Could not focus D3D11 capture fixture."
     }
 
-    $captailProcess = Start-Process -FilePath $captail -PassThru -Wait `
+    $shadowlessProcess = Start-Process -FilePath $shadowless -PassThru -Wait `
         -ArgumentList @(
             "--qa-game-capture=fixture",
             "--qa-game-codec=h264",
             "--qa-game-fps=60",
             "--qa-game-resolution=1920x1080"
         )
-    if ($captailProcess.ExitCode -ne 0) {
-        throw "Captail Game Capture QA failed: $($captailProcess.ExitCode)"
+    if ($shadowlessProcess.ExitCode -ne 0) {
+        throw "Shadowless Game Capture QA failed: $($shadowlessProcess.ExitCode)"
     }
 
     Start-Sleep -Milliseconds 500
@@ -79,7 +79,7 @@ try {
                 $appRoot,
                 [System.StringComparison]::OrdinalIgnoreCase)
         }) {
-        throw "Captured process retained hook from Captail application folder."
+        throw "Captured process retained hook from Shadowless application folder."
     }
 
     Move-Item -LiteralPath $appHook -Destination $probe

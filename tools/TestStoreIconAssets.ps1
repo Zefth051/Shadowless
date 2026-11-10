@@ -107,19 +107,19 @@ finally {
     $baseBitmap.Dispose()
 }
 
-$executablePath = Join-Path $resolvedPackageRoot "Captail.exe"
+$executablePath = Join-Path $resolvedPackageRoot "Shadowless.exe"
 if (-not (Test-Path -LiteralPath $executablePath -PathType Leaf)) {
     throw "Store package executable not found: $executablePath"
 }
 
 $associatedIcon = [Drawing.Icon]::ExtractAssociatedIcon($executablePath)
 if ($null -eq $associatedIcon) {
-    throw "Captail.exe does not contain an associated icon."
+    throw "Shadowless.exe does not contain an associated icon."
 }
 try {
     $executableBitmap = $associatedIcon.ToBitmap()
     try {
-        Test-TransparentIcon -Bitmap $executableBitmap -Name "Captail.exe embedded icon"
+        Test-TransparentIcon -Bitmap $executableBitmap -Name "Shadowless.exe embedded icon"
     }
     finally {
         $executableBitmap.Dispose()

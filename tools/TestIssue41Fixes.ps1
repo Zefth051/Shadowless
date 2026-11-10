@@ -29,15 +29,15 @@ function Assert-NotContains {
 }
 
 $root = [System.IO.Path]::GetFullPath($ProjectRoot)
-$settingsXaml = Get-Content -Raw (Join-Path $root 'src\Captail\SettingsWindow.xaml')
-$settingsCode = Get-Content -Raw (Join-Path $root 'src\Captail\SettingsWindow.xaml.cs')
-$theme = Get-Content -Raw (Join-Path $root 'src\Captail\Themes\Theme.xaml')
-$notificationXaml = Get-Content -Raw (Join-Path $root 'src\Captail\OverlayNotificationWindow.xaml')
-$editorXaml = Get-Content -Raw (Join-Path $root 'src\Captail\ClipEditorWindow.xaml')
-$editorCode = Get-Content -Raw (Join-Path $root 'src\Captail\ClipEditorWindow.xaml.cs')
-$engineCode = Get-Content -Raw (Join-Path $root 'src\Captail\ObsReplayEngine.cs')
-$appCode = Get-Content -Raw (Join-Path $root 'src\Captail\App.xaml.cs')
-$project = Get-Content -Raw (Join-Path $root 'src\Captail\Captail.csproj')
+$settingsXaml = Get-Content -Raw (Join-Path $root 'src\Shadowless\SettingsWindow.xaml')
+$settingsCode = Get-Content -Raw (Join-Path $root 'src\Shadowless\SettingsWindow.xaml.cs')
+$theme = Get-Content -Raw (Join-Path $root 'src\Shadowless\Themes\Theme.xaml')
+$notificationXaml = Get-Content -Raw (Join-Path $root 'src\Shadowless\OverlayNotificationWindow.xaml')
+$editorXaml = Get-Content -Raw (Join-Path $root 'src\Shadowless\ClipEditorWindow.xaml')
+$editorCode = Get-Content -Raw (Join-Path $root 'src\Shadowless\ClipEditorWindow.xaml.cs')
+$engineCode = Get-Content -Raw (Join-Path $root 'src\Shadowless\ObsReplayEngine.cs')
+$appCode = Get-Content -Raw (Join-Path $root 'src\Shadowless\App.xaml.cs')
+$project = Get-Content -Raw (Join-Path $root 'src\Shadowless\Shadowless.csproj')
 
 Assert-Contains $theme '<Style x:Key="FooterAboutButton"[\s\S]*?<Setter Property="Margin" Value="0,3"/>' `
     'Issue #41.1: About button needs vertical footer inset.'
@@ -74,7 +74,7 @@ Assert-Contains $editorXaml 'x:Name="EditorTransportControls"' `
 Assert-NotContains $editorXaml 'x:Name="ClipInfoText"[\s\S]{0,300}MaxWidth="340"' `
     'Issue #41.5: clip metadata still has the old truncating width cap.'
 
-Assert-Contains $project '<Resource Include="Assets\\CaptailInactive.ico"' `
+Assert-Contains $project '<Resource Include="Assets\\ShadowlessInactive.ico"' `
     'Issue #41.6: inactive tray icon is not packaged.'
 Assert-Contains $appCode '_tray\.Icon = CreateIcon' `
     'Issue #41.6: tray icon does not follow replay state.'

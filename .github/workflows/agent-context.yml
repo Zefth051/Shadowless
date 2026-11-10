@@ -3,7 +3,7 @@ name: Agent context
 on:
   push:
     branches:
-      - main
+      - windows
     paths:
       - "AGENTS.md"
       - "docs/agent/**"
@@ -11,6 +11,8 @@ on:
       - "tools/TestAgentContext.ps1"
       - ".github/workflows/agent-context.yml"
   pull_request:
+    branches:
+      - windows
     paths:
       - "AGENTS.md"
       - "docs/agent/**"

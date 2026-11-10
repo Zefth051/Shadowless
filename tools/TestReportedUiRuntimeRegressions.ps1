@@ -14,13 +14,13 @@ function Require([string]$text, [string]$pattern, [string]$message) {
     }
 }
 
-$settings = Read-Text "src\Captail\SettingsWindow.xaml.cs"
-$app = Read-Text "src\Captail\App.xaml.cs"
-$engine = Read-Text "src\Captail\ObsReplayEngine.cs"
-$launcher = Read-Text "src\Captail\ExternalLinkLauncher.cs"
-$player = Read-Text "src\Captail\MpvHost.cs"
-$editor = Read-Text "src\Captail\ClipEditorWindow.xaml.cs"
-$editorXaml = Read-Text "src\Captail\ClipEditorWindow.xaml"
+$settings = Read-Text "src\Shadowless\SettingsWindow.xaml.cs"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
+$engine = Read-Text "src\Shadowless\ObsReplayEngine.cs"
+$launcher = Read-Text "src\Shadowless\ExternalLinkLauncher.cs"
+$player = Read-Text "src\Shadowless\MpvHost.cs"
+$editor = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
+$editorXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
 
 Require $settings 'L\.Status\.RecordingDisabled' `
     "Recording mode needs its own inactive status title."
@@ -59,10 +59,37 @@ Require $editor 'ResizeMode\s*=\s*ResizeMode\.NoResize' `
 Require $editor 'SwpFrameChanged' `
     "Fullscreen must notify Windows after changing native frame style."
 
-Get-ChildItem (Join-Path $repoRoot "src\Captail\Languages") `
+Require $app 'await SaveReplayGuardedAsync\(engine\);\s*PlayReplaySavedSound\(\);' `
+    "Replay confirmation sound must play only after a successful save."
+Require $app 'Replay saved sound failed:' `
+    "Sound playback failure must be logged separately from clip saving."
+$soundPath = Join-Path $repoRoot "src\Shadowless\Assets\ReplaySaved.wav"
+$sound = [IO.File]::ReadAllBytes($soundPath)
+if ([Text.Encoding]::ASCII.GetString($sound, 0, 4) -ne 'RIFF' -or
+    [Text.Encoding]::ASCII.GetString($sound, 8, 4) -ne 'WAVE' -or
+    [BitConverter]::ToInt16($sound, 20) -ne 1 -or
+    [BitConverter]::ToInt32($sound, 40) -ne $sound.Length - 44) {
+    throw "Replay saved sound must be a valid PCM WAV asset."
+}
+
+[xml]$settingsLayout = Read-Text "src\Shadowless\SettingsWindow.xaml"
+$namespaces = [Xml.XmlNamespaceManager]::new($settingsLayout.NameTable)
+$namespaces.AddNamespace('x', 'http://schemas.microsoft.com/winfx/2006/xaml')
+$fpsOptions = $settingsLayout.SelectSingleNode('//*[@x:Name="FpsOptions"]', $namespaces)
+foreach ($rate in @(30, 60, 120, 144, 240)) {
+    $button = $fpsOptions.SelectSingleNode("*[@Tag='$rate']")
+    $expectedRow = if ($rate -ge 120) { '2' } else { '' }
+    if ($null -eq $button -or $button.GetAttribute('Grid.Row') -ne $expectedRow) {
+        throw "Frame rate $rate must remain selectable in its standard or experimental row."
+    }
+}
+
+Get-ChildItem (Join-Path $repoRoot "src\Shadowless\Languages") `
     -Filter "Strings.*.xaml" |
     ForEach-Object {
         $language = [IO.File]::ReadAllText($_.FullName)
+        Require $language 'x:Key="L\.Video\.ExperimentalFrameRate"' `
+            "$($_.Name) is missing the experimental frame rate warning."
         Require $language 'x:Key="L\.Status\.RecordingDisabled"' `
             "$($_.Name) is missing Recording inactive title."
         Require $language 'x:Key="L\.Status\.RecordingIdle"' `

@@ -1,10 +1,10 @@
 # Process audio QA harness
 
 This directory contains development/QA infrastructure for process-audio
-capture. It is intentionally excluded from `Captail.sln` and does not change
-Captail's configuration, UI, encoders, or recording pipeline.
+capture. It is intentionally excluded from `Shadowless.sln` and does not change
+Shadowless's configuration, UI, encoders, or recording pipeline.
 
-`ProcessAudioQa` can load either bundled `win-wasapi.dll` sources or Captail's
+`ProcessAudioQa` can load either bundled `win-wasapi.dll` sources or Shadowless's
 PID-aware source. In PID-aware mode it takes process snapshots off the QA OBS
 thread, reconciles independent roots by executable name on that thread, and
 records each root's PID and creation time. It collects float audio blocks,
@@ -29,7 +29,7 @@ PID-aware example:
 ```powershell
 .\tools\ProcessAudioQa\bin\Release\net10.0-windows10.0.22621.0\win-x64\ProcessAudioQa.exe `
   --watch-executable ProcessAudioQaTarget.exe `
-  --plugin .\native\ProcessAudio\build\Release\captail-process-audio.dll `
+  --plugin .\native\ProcessAudio\build\Release\shadowless-process-audio.dll `
   --duration 15
 ```
 
@@ -46,11 +46,11 @@ tone. This validates native audio separation independently of game hooking.
 All reports, recordings, and OBS configuration are written below
 `.qa/process-audio`, which is ignored by Git.
 
-The Debug Captail build also accepts backend-only mux QA arguments. They do
+The Debug Shadowless build also accepts backend-only mux QA arguments. They do
 not add product UI or persisted test settings:
 
 ```powershell
-Captail.exe --qa-codecs --qa-codec=h264 --qa-audio-codec=aac `
+Shadowless.exe --qa-codecs --qa-codec=h264 --qa-audio-codec=aac `
   --qa-advanced-audio=ProcessAudioQaTarget.exe:2,ProcessAudioQaChild.exe:5 `
   --qa-record-seconds=10
 ```

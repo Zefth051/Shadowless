@@ -1,6 +1,6 @@
 # Microsoft Store releases
 
-Captail Store packages are built and published by the `Microsoft Store release`
+Shadowless Store packages are built and published by the `Microsoft Store release`
 GitHub Actions workflow. Store publishing is intentionally separate from the
 ordinary GitHub Release workflow.
 
@@ -14,9 +14,10 @@ environment secrets:
 - `AZURE_AD_APPLICATION_SECRET`
 - `SELLER_ID`
 
-Add this environment variable:
-
-- `STORE_PRODUCT_ID` = `9PKVNVLKPTPS`
+Reserve a Shadowless product in Partner Center. Set `STORE_PRODUCT_ID` in the
+production environment to that product ID. In the GitHub repository variables,
+set `SHADOWLESS_STORE_PACKAGE_NAME` and `SHADOWLESS_STORE_PUBLISHER` to the
+package identity shown in Partner Center.
 
 The Microsoft Entra application must be associated with the Partner Center
 account and assigned the `Manager` role. Rotate the client secret before its
@@ -24,10 +25,10 @@ expiration date and update `AZURE_AD_APPLICATION_SECRET` in GitHub.
 
 ## Publishing an update
 
-1. Merge the release-ready code into `main`.
+1. Merge the release-ready code into `windows`.
 2. Open **Actions** and select **Microsoft Store release**.
-3. Select **Run workflow** from `main`.
-4. Enter the three-part Captail version, for example `0.2.1`.
+3. Select **Run workflow** from `windows`.
+4. Enter the three-part Shadowless version, for example `0.2.1`.
 5. Leave **Internal MSIX identity** empty for a normal release. The workflow
    then uses `0.2.1.0`. For a Store-only republish of the same visible version,
    enter a higher four-part identity ending in `.0`, for example `0.2.2.0`.
@@ -74,7 +75,7 @@ If synchronization fails, the submission stays an uncommitted draft.
 
 ## Safety rules
 
-- Partner Center uploads run only from `main`.
+- Partner Center uploads run only from `windows`.
 - The `microsoft-store-production` environment gates access to Store credentials.
 - External actions and the Microsoft Store CLI version are pinned.
 - The package SHA-256 is verified before upload.

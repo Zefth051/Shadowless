@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 if (-not $ProjectRoot) {
-    $ProjectRoot = Join-Path $PSScriptRoot "..\src\Captail"
+    $ProjectRoot = Join-Path $PSScriptRoot "..\src\Shadowless"
 }
 $ProjectRoot = [IO.Path]::GetFullPath($ProjectRoot)
 

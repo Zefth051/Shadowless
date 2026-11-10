@@ -5,7 +5,7 @@ Status: accepted
 ## Decision
 
 Simple device audio remains default. Advanced routing is an explicit third
-audio-track mode backed by Captail's process-loopback OBS source. UI and config
+audio-track mode backed by Shadowless's process-loopback OBS source. UI and config
 remain usable when advanced capability is unavailable.
 
 ## Why

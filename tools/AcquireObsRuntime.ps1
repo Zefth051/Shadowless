@@ -17,7 +17,7 @@ if (-not $Destination) {
 if (-not $ObsRoot) {
     $archive = Join-Path $env:TEMP "OBS-Studio-$version-Windows-x64.zip"
     $extract = Join-Path $env:TEMP `
-        "Captail-OBS-$version-$PID-$([Guid]::NewGuid().ToString('N'))"
+        "Shadowless-OBS-$version-$PID-$([Guid]::NewGuid().ToString('N'))"
     $temporaryExtract = [IO.Path]::GetFullPath($extract)
     if (Test-Path -LiteralPath $archive) {
         $existingHash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
@@ -115,6 +115,8 @@ foreach ($library in $runtimeLibraries) {
 }
 
 $plugins = @(
+    "image-source",
+    "obs-filters",
     "obs-ffmpeg",
     "obs-nvenc",
     "obs-qsv11",
@@ -135,7 +137,7 @@ foreach ($plugin in $plugins) {
 Copy-Item -LiteralPath (Join-Path $ObsRoot "data\libobs") `
     -Destination $dataDestination -Recurse -Force
 
-# Captail ships English and Russian UI only. OBS plugin locale directories
+# Shadowless ships English and Russian UI only. OBS plugin locale directories
 # contain hundreds of tiny files; retaining these two locales keeps extracted
 # Portable builds compact without removing capture or encoder functionality.
 $localesToKeep = @("en-US.ini", "ru-RU.ini")

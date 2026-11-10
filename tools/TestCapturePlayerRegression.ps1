@@ -28,18 +28,18 @@ function Assert-NotContains(
     }
 }
 
-$config = Read-Text "src\Captail\Config.cs"
-$engine = Read-Text "src\Captail\ObsReplayEngine.cs"
-$native = Read-Text "src\Captail\ObsNative.cs"
-$gpuPreference = Read-Text "src\Captail\GpuPreference.cs"
-$obsBridge = Read-Text "native\ObsBridge\CaptailObsBridge.cpp"
-$player = Read-Text "src\Captail\MpvHost.cs"
-$editor = Read-Text "src\Captail\ClipEditorWindow.xaml.cs"
-$editorXaml = Read-Text "src\Captail\ClipEditorWindow.xaml"
-$ffmpeg = Read-Text "src\Captail\FfmpegAdapter.cs"
-$library = Read-Text "src\Captail\ReplayLibrary.cs"
-$settings = Read-Text "src\Captail\SettingsWindow.xaml.cs"
-$settingsXaml = Read-Text "src\Captail\SettingsWindow.xaml"
+$config = Read-Text "src\Shadowless\Config.cs"
+$engine = Read-Text "src\Shadowless\ObsReplayEngine.cs"
+$native = Read-Text "src\Shadowless\ObsNative.cs"
+$gpuPreference = Read-Text "src\Shadowless\GpuPreference.cs"
+$obsBridge = Read-Text "native\ObsBridge\ShadowlessObsBridge.cpp"
+$player = Read-Text "src\Shadowless\MpvHost.cs"
+$editor = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
+$editorXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
+$ffmpeg = Read-Text "src\Shadowless\FfmpegAdapter.cs"
+$library = Read-Text "src\Shadowless\ReplayLibrary.cs"
+$settings = Read-Text "src\Shadowless\SettingsWindow.xaml.cs"
+$settingsXaml = Read-Text "src\Shadowless\SettingsWindow.xaml"
 
 $pipelineEquals = [regex]::Match(
     $config,
@@ -69,6 +69,16 @@ Assert-Contains $library `
 
 Assert-Contains $engine '_gameVideoOutputSource' `
     "Game Capture must use a canvas-sized output source."
+Assert-NotContains $engine 'obs_scene_create\(' `
+    "Internal scenes must not remain owned by the main OBS canvas at shutdown."
+Assert-Contains $engine '_gameVideoScene = ObsNative\.obs_scene_create_private\(' `
+    "Game Capture must own its internal scene independently of the main OBS canvas."
+Assert-Contains $engine '_processAudioScene = ObsNative\.obs_scene_create_private\(' `
+    "Process audio must own its internal scene independently of the main OBS canvas."
+Assert-Contains $engine 'obs_data_set_bool\(settings,\s*"limit_framerate",\s*true\)' `
+    "Game Capture must limit frame copies to the recording frame rate."
+Assert-Contains $engine 'obs_data_set_bool\(settings,\s*"adaptive_quantization",\s*false\)' `
+    "NVENC must leave CUDA resources available to the game by disabling AQ."
 Assert-Contains $engine 'obs_sceneitem_set_bounds_type\([\s\S]*?BoundsType\.Stretch' `
     "Game Capture must stretch non-native aspect ratios to the OBS canvas."
 Assert-Contains $native 'obs_sceneitem_set_bounds\(' `
@@ -84,8 +94,8 @@ Assert-Contains $engine 'ObsSdrWhiteLevel\s*=\s*300\.0f' `
 Assert-Contains $engine 'ObsHdrNominalPeakLevel\s*=\s*1000\.0f' `
     "OBS HDR nominal peak level must use the standard 1000-nit reference."
 Assert-Contains $obsBridge 'EnumAdapterByGpuPreference\([\s\S]*?DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE' `
-    "Captail must ask DXGI for the high-performance GPU on hybrid systems."
-Assert-Contains $gpuPreference 'captail_get_high_performance_adapter_index' `
+    "Shadowless must ask DXGI for the high-performance GPU on hybrid systems."
+Assert-Contains $gpuPreference 'shadowless_get_high_performance_adapter_index' `
     "Managed capture startup must consume the native high-performance GPU selection."
 Assert-Contains $engine 'Adapter\s*=\s*_adapterIndex' `
     "OBS video must use the selected high-performance adapter instead of adapter zero."
@@ -191,7 +201,7 @@ Assert-Contains $ffmpeg '"-c:v", "libvpx-vp9"' `
 Assert-Contains $ffmpeg 'File\.Move\(temporaryPath, destinationPath, overwrite: true\)' `
     "Confirmed exports must replace existing destinations only after FFmpeg succeeds."
 
-Get-ChildItem (Join-Path $repoRoot "src\Captail\Languages") `
+Get-ChildItem (Join-Path $repoRoot "src\Shadowless\Languages") `
     -Filter "Strings.*.xaml" |
     ForEach-Object {
         $language = [IO.File]::ReadAllText($_.FullName)

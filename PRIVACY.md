@@ -1,19 +1,19 @@
-# Captail Privacy Policy
+# Shadowless Privacy Policy
 
 Effective date: August 3, 2026
 
-This policy applies to the Captail desktop application and its official
+This policy applies to the Shadowless desktop application and its official
 Microsoft Store and GitHub distributions.
 
 ## Summary
 
-Captail records instant replays locally on your Windows PC. Captail does not
+Shadowless records instant replays locally on your Windows PC. Shadowless does not
 sell personal information, include advertising or analytics, automatically
 upload recordings, or provide the developer with access to your captures.
 
 ## Information processed locally
 
-Depending on the features you enable, Captail may process:
+Depending on the features you enable, Shadowless may process:
 
 - desktop, application, or game video frames;
 - desktop or game audio;
@@ -24,11 +24,11 @@ Depending on the features you enable, Captail may process:
 - settings such as hotkeys, selected devices, and output folders.
 
 This information is processed on your device to maintain the replay buffer,
-save clips, organize recordings, show previews, and trim saved videos. Captail
-does not transmit captured video or audio to the developer or to a Captail
+save clips, organize recordings, show previews, and trim saved videos. Shadowless
+does not transmit captured video or audio to the developer or to a Shadowless
 cloud service.
 
-Captail does not attempt to bypass DRM or protected-media restrictions.
+Shadowless does not attempt to bypass DRM or protected-media restrictions.
 Protected content may appear black or unavailable in recordings.
 
 ## Local storage
@@ -36,11 +36,11 @@ Protected content may appear black or unavailable in recordings.
 Saved replays are written to the folder you select. The rolling replay buffer
 is held locally and only becomes a normal video file when you save a replay.
 
-Captail stores configuration and diagnostic logs under its local application
+Shadowless stores configuration and diagnostic logs under its local application
 data. The logical log location is:
 
 ```text
-%LOCALAPPDATA%\Captail\log.txt
+%LOCALAPPDATA%\Shadowless\log.txt
 ```
 
 Windows may map Store-package application data to a package-specific location.
@@ -52,7 +52,7 @@ report.
 
 ## Network access
 
-Captail has no telemetry, analytics, advertising, account, or cloud-storage
+Shadowless has no telemetry, analytics, advertising, account, or cloud-storage
 service.
 
 The Microsoft Store build relies on Microsoft Store for application updates
@@ -62,27 +62,27 @@ own privacy terms.
 
 Installer and Portable builds distributed through GitHub may contact the
 GitHub Releases API to check for and download updates. Those requests identify
-the Captail version and necessarily expose network information such as the IP
+the Shadowless version and necessarily expose network information such as the IP
 address to GitHub. GitHub processes that information under the
 [GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
 
-Opening a GitHub, support, or repository link from Captail launches your
+Opening a GitHub, support, or repository link from Shadowless launches your
 default web browser. The destination website then applies its own privacy
 policy.
 
-When you click **Report bug**, Captail adds its version, distribution channel,
+When you click **Report bug**, Shadowless adds its version, distribution channel,
 Windows version and build, GPU and driver version when available, and current
 recording configuration to the GitHub URL so the bug form opens prefilled. It
 also includes a short recent diagnostic excerpt after removing paths, network
 addresses, identifiers, window titles, device names, secrets, and uncontrolled
-third-party library output. Captail does not include the complete log,
+third-party library output. Shadowless does not include the complete log,
 usernames, recorded content, or files. Opening the link sends those prefilled
 values to GitHub; nothing is published until you review the form and submit the
 issue yourself.
 
 ## Permissions
 
-Captail uses only permissions needed for its recording workflow, including:
+Shadowless uses only permissions needed for its recording workflow, including:
 
 - screen and game capture;
 - system-audio and optional microphone capture;
@@ -91,26 +91,26 @@ Captail uses only permissions needed for its recording workflow, including:
 - hardware encoder detection;
 - optional startup with Windows.
 
-Microphone recording and startup with Windows can be disabled in Captail's
+Microphone recording and startup with Windows can be disabled in Shadowless's
 settings. Capture can be stopped at any time by turning Instant Replay off or
-exiting Captail.
+exiting Shadowless.
 
 ## Sharing and disclosure
 
-Captail does not sell or share local recordings, settings, or diagnostic logs.
+Shadowless does not sell or share local recordings, settings, or diagnostic logs.
 Information leaves your device only when you choose to share a replay or log,
 or when a non-Store build performs the GitHub update request described above.
 
 ## Retention and deletion
 
-You control saved replay retention. Replays can be deleted from Captail or
+You control saved replay retention. Replays can be deleted from Shadowless or
 Windows File Explorer. Configuration and logs remain locally until you delete
-them or Windows removes the application's data. Uninstalling Captail does not
+them or Windows removes the application's data. Uninstalling Shadowless does not
 guarantee removal of replay files stored in your chosen output folder.
 
 ## Children's privacy
 
-Captail is a general-purpose recording utility and is not directed to children.
+Shadowless is a general-purpose recording utility and is not directed to children.
 The developer does not knowingly collect personal information from children.
 
 ## Changes to this policy
@@ -122,6 +122,6 @@ policy changes.
 ## Contact
 
 For privacy questions, open an issue in the
-[Captail repository](https://github.com/FaulMit/captail/issues). Do not include
+[Shadowless repository](https://github.com/Zefth051/Shadowless/issues). Do not include
 recordings, logs, local paths, or other sensitive information in a public
 issue.

@@ -20,19 +20,19 @@ function Reject([string]$text, [string]$pattern, [string]$message) {
     }
 }
 
-$settings = Read-Text "src\Captail\SettingsWindow.xaml.cs"
-$settingsXaml = Read-Text "src\Captail\SettingsWindow.xaml"
-$app = Read-Text "src\Captail\App.xaml.cs"
-$config = Read-Text "src\Captail\Config.cs"
-$engine = Read-Text "src\Captail\ObsReplayEngine.cs"
-$obsNative = Read-Text "src\Captail\ObsNative.cs"
+$settings = Read-Text "src\Shadowless\SettingsWindow.xaml.cs"
+$settingsXaml = Read-Text "src\Shadowless\SettingsWindow.xaml"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
+$config = Read-Text "src\Shadowless\Config.cs"
+$engine = Read-Text "src\Shadowless\ObsReplayEngine.cs"
+$obsNative = Read-Text "src\Shadowless\ObsNative.cs"
 $manifest = Read-Text "packaging\msix\AppxManifest.xml.template"
-$player = Read-Text "src\Captail\ClipEditorWindow.xaml.cs"
-$playerXaml = Read-Text "src\Captail\ClipEditorWindow.xaml"
-$library = Read-Text "src\Captail\ReplayLibrary.cs"
-$mpvHost = Read-Text "src\Captail\MpvHost.cs"
-$indicator = Read-Text "src\Captail\ReplayStatusIndicatorWindow.xaml.cs"
-$indicatorXaml = Read-Text "src\Captail\ReplayStatusIndicatorWindow.xaml"
+$player = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
+$playerXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
+$library = Read-Text "src\Shadowless\ReplayLibrary.cs"
+$mpvHost = Read-Text "src\Shadowless\MpvHost.cs"
+$indicator = Read-Text "src\Shadowless\ReplayStatusIndicatorWindow.xaml.cs"
+$indicatorXaml = Read-Text "src\Shadowless\ReplayStatusIndicatorWindow.xaml"
 
 Reject $settings `
     'Window_Deactivated[\s\S]{0,180}AboutPopup\.IsOpen\s*=\s*false' `
@@ -48,13 +48,20 @@ Require $engine `
     "Desktop capture must prefer WGC on Windows 10 1903+ and retain Auto fallback for older systems."
 Require $engine `
     'windowsGraphicsCaptureReady\s*&&[\s\S]{0,180}MonitorCaptureMethodWgc' `
-    "Desktop capture must fall back to Auto when WGC preflight cannot complete."
+    "Desktop capture must gate WGC on successful preflight."
+Require $engine `
+    'desktopCaptureMethod == "dxgi" \|\| !windowsGraphicsCaptureReady\)[\s\S]{0,60}return MonitorCaptureMethodDxgi' `
+    "Desktop capture must force DXGI when borderless WGC access is unavailable."
 Require $app `
     'GraphicsCaptureAccess\.RequestAccessAsync\([\s\S]{0,100}GraphicsCaptureAccessKind\.Borderless' `
     "Windows 11 must request borderless WGC access on the UI thread before OBS starts."
 Require $engine `
-    '_preferredMonitorCaptureMethod\s*==\s*MonitorCaptureMethodWgc[\s\S]{0,100}\?\s*MonitorCaptureMethodAuto' `
-    "Desktop capture must start on Auto before switching the live source to WGC."
+    'long captureMethod = MonitorCaptureMethodDxgi;' `
+    "Desktop capture must start on DXGI so Auto cannot open a bordered WGC session."
+Require $app 'status == AppCapabilityAccessStatus\.Allowed' `
+    "Borderless WGC access must only be accepted when explicitly allowed."
+Require $app 'Environment\.OSVersion\.Version\.Build < 22000\)\s*return false;' `
+    "Systems without borderless preflight must use DXGI."
 Require $engine `
     'obs_source_update\(_desktopVideoSource,\s*settings\)' `
     "Desktop capture must switch the existing source to WGC without restarting output."
@@ -67,6 +74,15 @@ Require $manifest '<uap11:Capability Name="graphicsCaptureWithoutBorder"\s*/>' `
 
 Require $config 'CaptureMode\s*\{\s*get;\s*set;\s*\}\s*=\s*"replay"' `
     "Replay must remain default capture mode."
+Require $config 'DesktopCaptureMethod\s*\{\s*get;\s*set;\s*\}\s*=\s*"dxgi"' `
+    "Desktop capture must default to DXGI."
+$replayOutput = [regex]::Match(
+    $engine,
+    'private void CreateReplayBuffer\(\)(?<body>[\s\S]*?)private void ConfigureOutputEncodersAndSignals').Groups['body'].Value
+Require $replayOutput 'movflags=\+faststart' `
+    "Replay MP4 files must finalize their timeline for Windows players."
+Reject $replayOutput 'frag_keyframe|empty_moov|delay_moov' `
+    "Replay MP4 files must not use fragmented output."
 Require $engine 'CreateRecordingOutput' `
     "OBS pipeline has no continuous-recording output."
 Require $engine 'ffmpeg_muxer' `
@@ -193,7 +209,7 @@ Require $indicator 'TryFindResource\("AccentBrush"\)' `
 Require $indicatorXaml 'StateRing[\s\S]*?DynamicResource AccentBrush' `
     "Recording indicator XAML must track accent resource changes."
 
-Get-ChildItem (Join-Path $root "src\Captail\Languages") `
+Get-ChildItem (Join-Path $root "src\Shadowless\Languages") `
     -Filter "Strings.*.xaml" |
     ForEach-Object {
         $language = [IO.File]::ReadAllText($_.FullName)

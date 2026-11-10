@@ -1,0 +1,16 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="background" cx="79%" cy="42%" r="76%">
+      <stop stop-color="#213331"/>
+      <stop offset="1" stop-color="#111416"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#background)"/>
+  <path d="M0 72H1200M0 558H1200" stroke="#293336"/>
+  <circle cx="954" cy="315" r="126" fill="none" stroke="#324741" stroke-width="2"/>
+  <circle cx="954" cy="315" r="86" fill="none" stroke="#63e0bd" stroke-width="16"
+    stroke-linecap="round" stroke-dasharray="418 123" transform="rotate(-55 954 315)"/>
+  <circle cx="954" cy="315" r="18" fill="#63e0bd"/>
+  <text x="76" y="302" fill="#e7ecea" font-family="Inter, sans-serif" font-size="94" font-weight="700">Shadowless</text>
+  <text x="82" y="370" fill="#a6b0b2" font-family="Inter, sans-serif" font-size="39">An app for clipping</text>
+</svg>

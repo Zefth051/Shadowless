@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Captail\Captail.csproj" />
+    <ProjectReference Include="..\..\src\Shadowless\Shadowless.csproj" />
   </ItemGroup>
 
 </Project>

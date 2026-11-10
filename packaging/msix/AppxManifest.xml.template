@@ -8,13 +8,13 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap10 uap11 desktop rescap">
   <Identity
-    Name="faulmit.Captail"
-    Publisher="CN=1BD9448E-C83F-401D-B530-ED5258C6319A"
+    Name="__PACKAGE_NAME__"
+    Publisher="__PACKAGE_PUBLISHER__"
     Version="__PACKAGE_VERSION__"
     ProcessorArchitecture="x64" />
   <Properties>
-    <DisplayName>Captail</DisplayName>
-    <PublisherDisplayName>faulmit</PublisherDisplayName>
+    <DisplayName>Shadowless</DisplayName>
+    <PublisherDisplayName>Shadowless contributors</PublisherDisplayName>
     <Description>Lightweight instant replay recorder for Windows.</Description>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -43,27 +43,27 @@
   </Dependencies>
   <Applications>
     <Application
-      Id="Captail"
-      Executable="Captail.exe"
+      Id="Shadowless"
+      Executable="Shadowless.exe"
       uap10:RuntimeBehavior="packagedClassicApp"
       uap10:TrustLevel="mediumIL">
       <uap:VisualElements
-        DisplayName="Captail"
+        DisplayName="Shadowless"
         Description="Lightweight instant replay recorder for Windows."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
-        <uap:DefaultTile ShortName="Captail" />
+        <uap:DefaultTile ShortName="Shadowless" />
       </uap:VisualElements>
       <Extensions>
         <desktop:Extension
           Category="windows.startupTask"
-          Executable="Captail.exe"
+          Executable="Shadowless.exe"
           EntryPoint="Windows.FullTrustApplication">
           <desktop:StartupTask
-            TaskId="CaptailStartup"
+            TaskId="ShadowlessStartup"
             Enabled="false"
-            DisplayName="Captail" />
+            DisplayName="Shadowless" />
         </desktop:Extension>
       </Extensions>
     </Application>

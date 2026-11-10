@@ -1,0 +1,13 @@
+cmake_minimum_required(VERSION 3.20)
+project(ShadowlessPortableLauncher LANGUAGES CXX RC)
+
+set(SHADOWLESS_VERSION "0.0.0" CACHE STRING "Shadowless product version")
+string(REPLACE "." "," SHADOWLESS_VERSION_RESOURCE "${SHADOWLESS_VERSION}.0")
+set(SHADOWLESS_ICON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../src/Shadowless/Assets/Shadowless.ico")
+configure_file(ShadowlessLauncher.rc.in ShadowlessLauncher.rc @ONLY)
+add_executable(ShadowlessPortableLauncher WIN32 main.cpp "${CMAKE_CURRENT_BINARY_DIR}/ShadowlessLauncher.rc")
+target_compile_features(ShadowlessPortableLauncher PRIVATE cxx_std_20)
+target_compile_definitions(ShadowlessPortableLauncher PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(ShadowlessPortableLauncher PRIVATE user32)
+set_property(TARGET ShadowlessPortableLauncher PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set_target_properties(ShadowlessPortableLauncher PROPERTIES OUTPUT_NAME Shadowless)

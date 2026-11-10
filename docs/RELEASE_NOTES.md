@@ -1,4 +1,4 @@
-# Writing Captail release notes
+# Writing Shadowless release notes
 
 Release notes answer three user questions:
 
@@ -73,9 +73,9 @@ The version must match the workflow input exactly. Use `YYYY-MM-DD` for the date
 .\tools\New-ReleaseNotes.ps1 `
   -Version 0.2.0 `
   -PreviousTag v0.1.5 `
-  -OutputPath "$env:TEMP\captail-release-notes.md"
+  -OutputPath "$env:TEMP\shadowless-release-notes.md"
 
-Get-Content "$env:TEMP\captail-release-notes.md"
+Get-Content "$env:TEMP\shadowless-release-notes.md"
 ```
 
 Check that the preview:
@@ -84,7 +84,7 @@ Check that the preview:
 - includes every required user action;
 - contains no empty heading;
 - uses correct package names and compare links;
-- matches the English wording used in Captail.
+- matches the English wording used in Shadowless.
 
 ## After publishing
 

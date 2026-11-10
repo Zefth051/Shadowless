@@ -31,15 +31,15 @@ $areas = @{
             "docs/agent/KNOWN_ISSUES.md"
         )
         Paths = @(
-            "src/Captail/App.xaml.cs",
-            "src/Captail/Config.cs",
-            "src/Captail/ObsReplayEngine.cs",
-            "src/Captail/SettingsWindow.xaml.cs",
-            "src/Captail/ClipEditorWindow.xaml.cs"
+            "src/Shadowless/App.xaml.cs",
+            "src/Shadowless/Config.cs",
+            "src/Shadowless/ObsReplayEngine.cs",
+            "src/Shadowless/SettingsWindow.xaml.cs",
+            "src/Shadowless/ClipEditorWindow.xaml.cs"
         )
         Tests = @(
             ".\tools\TestAgentContext.ps1",
-            "dotnet build .\Captail.sln -c Release --no-restore"
+            "dotnet build .\Shadowless.sln -c Release --no-restore"
         )
     }
     capture = @{
@@ -48,19 +48,19 @@ $areas = @{
             "docs/agent/decisions/0001-app-owns-capture-lifecycle.md"
         )
         Paths = @(
-            "src/Captail/App.xaml.cs",
-            "src/Captail/Config.cs",
-            "src/Captail/ObsReplayEngine.cs",
-            "src/Captail/ObsNative.cs",
-            "src/Captail/Interop/CaptureInterop.cs",
-            "src/Captail/ReplayPaths.cs",
+            "src/Shadowless/App.xaml.cs",
+            "src/Shadowless/Config.cs",
+            "src/Shadowless/ObsReplayEngine.cs",
+            "src/Shadowless/ObsNative.cs",
+            "src/Shadowless/Interop/CaptureInterop.cs",
+            "src/Shadowless/ReplayPaths.cs",
             "native/ObsBridge/"
         )
         Tests = @(
             ".\tools\TestCapturePlayerRegression.ps1",
             ".\tools\TestIssue41Fixes.ps1",
             ".\tools\TestFullscreenOverlayHotkeys.ps1",
-            "dotnet build .\Captail.sln -c Release --no-restore"
+            "dotnet build .\Shadowless.sln -c Release --no-restore"
         )
     }
     audio = @{
@@ -69,61 +69,61 @@ $areas = @{
             "docs/agent/decisions/0002-advanced-audio-is-optional.md"
         )
         Paths = @(
-            "src/Captail/AudioDevices.cs",
-            "src/Captail/AudioRoutingCapabilities.cs",
-            "src/Captail/ProcessAudioMonitor.cs",
-            "src/Captail/ProcessAudioReconciler.cs",
-            "src/Captail/ProcessAudioRoutingWindow.xaml",
-            "src/Captail/ProcessAudioRoutingWindow.xaml.cs",
-            "src/Captail/ProcessAudioSessionMonitor.cs",
-            "src/Captail/ProcessIconProvider.cs",
-            "src/Captail/Interop/ProcessTopology.cs",
+            "src/Shadowless/AudioDevices.cs",
+            "src/Shadowless/AudioRoutingCapabilities.cs",
+            "src/Shadowless/ProcessAudioMonitor.cs",
+            "src/Shadowless/ProcessAudioReconciler.cs",
+            "src/Shadowless/ProcessAudioRoutingWindow.xaml",
+            "src/Shadowless/ProcessAudioRoutingWindow.xaml.cs",
+            "src/Shadowless/ProcessAudioSessionMonitor.cs",
+            "src/Shadowless/ProcessIconProvider.cs",
+            "src/Shadowless/Interop/ProcessTopology.cs",
             "native/ProcessAudio/"
         )
         Tests = @(
             ".\tools\TestIssue41Fixes.ps1",
             ".\tools\TestIssue41Followup.ps1",
-            "dotnet build .\Captail.sln -c Release --no-restore"
+            "dotnet build .\Shadowless.sln -c Release --no-restore"
         )
     }
     player = @{
         Docs = @("docs/agent/PLAYER.md")
         Paths = @(
-            "src/Captail/ClipEditorWindow.xaml",
-            "src/Captail/ClipEditorWindow.xaml.cs",
-            "src/Captail/MpvHost.cs",
-            "src/Captail/ReplayLibrary.cs",
-            "src/Captail/FfmpegAdapter.cs"
+            "src/Shadowless/ClipEditorWindow.xaml",
+            "src/Shadowless/ClipEditorWindow.xaml.cs",
+            "src/Shadowless/MpvHost.cs",
+            "src/Shadowless/ReplayLibrary.cs",
+            "src/Shadowless/FfmpegAdapter.cs"
         )
         Tests = @(
             ".\tools\TestCapturePlayerRegression.ps1",
             ".\tools\TestNextFeatureRegression.ps1",
-            "dotnet build .\Captail.sln -c Release --no-restore"
+            "dotnet build .\Shadowless.sln -c Release --no-restore"
         )
     }
     ui = @{
         Docs = @("docs/agent/UI.md")
         Paths = @(
-            "src/Captail/SettingsWindow.xaml",
-            "src/Captail/SettingsWindow.xaml.cs",
-            "src/Captail/OverlayNotificationWindow.xaml",
-            "src/Captail/OverlayNotificationWindow.xaml.cs",
-            "src/Captail/ReplayStatusIndicatorWindow.xaml",
-            "src/Captail/ReplayStatusIndicatorWindow.xaml.cs",
-            "src/Captail/DisplayIdentifierWindow.xaml",
-            "src/Captail/DisplayIdentifierWindow.xaml.cs",
-            "src/Captail/Localization.cs",
-            "src/Captail/Languages/",
-            "src/Captail/Themes/",
-            "src/Captail/ThemeManager.cs",
-            "src/Captail/HotkeyManager.cs"
+            "src/Shadowless/SettingsWindow.xaml",
+            "src/Shadowless/SettingsWindow.xaml.cs",
+            "src/Shadowless/OverlayNotificationWindow.xaml",
+            "src/Shadowless/OverlayNotificationWindow.xaml.cs",
+            "src/Shadowless/ReplayStatusIndicatorWindow.xaml",
+            "src/Shadowless/ReplayStatusIndicatorWindow.xaml.cs",
+            "src/Shadowless/DisplayIdentifierWindow.xaml",
+            "src/Shadowless/DisplayIdentifierWindow.xaml.cs",
+            "src/Shadowless/Localization.cs",
+            "src/Shadowless/Languages/",
+            "src/Shadowless/Themes/",
+            "src/Shadowless/ThemeManager.cs",
+            "src/Shadowless/HotkeyManager.cs"
         )
         Tests = @(
             ".\tools\TestReportedUiRuntimeRegressions.ps1",
             ".\tools\TestStartupUiSurfaces.ps1",
             ".\tools\TestLocalizedLayout.ps1",
             ".\tools\TestNextFeatureRegression.ps1",
-            "dotnet build .\Captail.sln -c Release --no-restore"
+            "dotnet build .\Shadowless.sln -c Release --no-restore"
         )
     }
     distribution = @{
@@ -132,12 +132,12 @@ $areas = @{
             "docs/agent/decisions/0003-release-channels-are-independent.md"
         )
         Paths = @(
-            "src/Captail/AppDataPaths.cs",
-            "src/Captail/AppDistribution.cs",
-            "src/Captail/Autostart.cs",
-            "src/Captail/DiagnosticLogExporter.cs",
-            "src/Captail/StorePackageLifecycle.cs",
-            "src/Captail/UpdateService.cs",
+            "src/Shadowless/AppDataPaths.cs",
+            "src/Shadowless/AppDistribution.cs",
+            "src/Shadowless/Autostart.cs",
+            "src/Shadowless/DiagnosticLogExporter.cs",
+            "src/Shadowless/StorePackageLifecycle.cs",
+            "src/Shadowless/UpdateService.cs",
             "packaging/",
             "store-listing/",
             ".github/workflows/release.yml",
@@ -227,7 +227,7 @@ foreach ($relativePath in @($selection.Docs) + @($selection.Paths)) {
     }
 }
 [xml]$project = Get-Content -LiteralPath (
-    Join-Path $repoRoot "src/Captail/Captail.csproj")
+    Join-Path $repoRoot "src/Shadowless/Shadowless.csproj")
 $version = [string](
     $project.Project.PropertyGroup.Version | Select-Object -First 1)
 $branch = (
@@ -251,7 +251,7 @@ $relevantStatus = @(
     }
 )
 
-Write-Output "# Captail task context: $Area"
+Write-Output "# Shadowless task context: $Area"
 Write-Output ""
 Write-Output "## Live state"
 Write-Output ""

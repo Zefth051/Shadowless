@@ -5,8 +5,8 @@ Commands run from repository root in PowerShell.
 ## Build
 
 ```powershell
-dotnet restore .\src\Captail\Captail.csproj --locked-mode
-dotnet build .\Captail.sln -c Release --no-restore
+dotnet restore .\src\Shadowless\Shadowless.csproj --locked-mode
+dotnet build .\Shadowless.sln -c Release --no-restore
 ```
 
 Do not restore on every edit when the lock file and SDK are unchanged.
@@ -33,7 +33,7 @@ Only when the user asks to test the current local work:
 .\tools\DeployTestBuild.ps1 -Version 0.1.10
 ```
 
-This safely replaces `D:\Captail-0.1.10` with a Portable build and validates
+This safely replaces `D:\Shadowless-0.1.10` with a Portable build and validates
 required runtime files. It does not publish or modify Microsoft Store state.
 
 ## GitHub release

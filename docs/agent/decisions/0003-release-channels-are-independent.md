@@ -10,7 +10,7 @@ identity, update, and publishing channels.
 ## Why
 
 Microsoft signs, installs, and updates MSIX packages through Partner Center.
-GitHub assets use Captail's ordinary updater and must remain self-contained.
+GitHub assets use Shadowless's ordinary updater and must remain self-contained.
 Combining the channels caused identity and submission mistakes.
 
 ## Consequences

@@ -1,23 +1,15 @@
 # Microsoft Store package
 
-This package channel is separate from Captail's GitHub Installer and Portable
-releases. Microsoft Store installs and updates this build. Captail's GitHub
+This package channel is separate from Shadowless's GitHub Installer and Portable
+releases. Microsoft Store installs and updates this build. Shadowless's GitHub
 self-updater is disabled at compile time and guarded again at runtime whenever
 Windows reports package identity.
 
-## Partner Center identity
+## Package identity
 
-- Package name: `faulmit.Captail`
-- Publisher: `CN=1BD9448E-C83F-401D-B530-ED5258C6319A`
-- Publisher display name: `faulmit`
-- Package family name: `faulmit.Captail_ryepxmzt2jqew`
-- Package SID: `S-1-15-2-2570374564-3604720510-221884595-2273346317-2344629589-1903721979-2982860682`
-- Store product ID: `9PKVNVLKPTPS`
-- Store protocol link: `ms-windows-store://pdp/?productid=9PKVNVLKPTPS`
-- Store web listing: <https://apps.microsoft.com/detail/9PKVNVLKPTPS>
-
-Do not change package name or publisher. Partner Center rejects packages whose
-manifest identity does not match the reserved product.
+Build-only packages default to `Zefth051.Shadowless` and `CN=Shadowless`.
+For Partner Center, supply the reserved identity with
+`SHADOWLESS_STORE_PACKAGE_NAME` and `SHADOWLESS_STORE_PUBLISHER`.
 
 ## Build
 
@@ -30,8 +22,8 @@ From repository root:
 Output:
 
 ```text
-artifacts\store\0.2.0\Captail-0.2.0.0-x64.msix
-artifacts\store\0.2.0\Captail-0.2.0.0-x64.msixupload
+artifacts\store\0.2.0\Shadowless-0.2.0.0-x64.msix
+artifacts\store\0.2.0\Shadowless-0.2.0.0-x64.msixupload
 artifacts\store\0.2.0\SHA256SUMS.txt
 ```
 
@@ -39,9 +31,7 @@ Upload `.msixupload` on Partner Center's **Packages** page. Do not publish this
 artifact as a GitHub Release. Microsoft Store signs the accepted package for
 distribution.
 
-Generated package is intentionally unsigned. It is ready for Partner Center,
-but Windows will not allow direct sideloading until a trusted test certificate
-is applied. Store customers receive Microsoft's signed package after
+The package is unsigned. Sideloading requires a trusted test certificate. Store customers receive Microsoft's signed package after
 certification.
 
 Store packages use verified self-contained FFmpeg command-line tools. This
@@ -51,7 +41,7 @@ libraries return or either command-line tool cannot start.
 
 ## Versioning
 
-MSIX requires four numeric components. Captail `0.2.0` becomes package version
+MSIX requires four numeric components. Shadowless `0.2.0` becomes package version
 `0.2.0.0`. Every Store submission must use a strictly higher package version.
 Never reuse a version already submitted to Partner Center.
 

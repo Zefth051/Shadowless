@@ -547,8 +547,8 @@ thead th { color: var(--muted); font-family: var(--font-mono); font-size: 10px; 
 thead th:first-child, tbody th { padding-left: 0; }
 tbody th { width: 19%; color: var(--text-soft); font-size: 13px; font-weight: 600; }
 tbody td { width: 27%; color: var(--text-soft); font-size: 14px; }
-th.is-captail { color: var(--mint); }
-td.is-captail { color: var(--text); background: linear-gradient(90deg, rgba(99,224,189,0.055), transparent); }
+th.is-shadowless { color: var(--mint); }
+td.is-shadowless { color: var(--text); background: linear-gradient(90deg, rgba(99,224,189,0.055), transparent); }
 .comparison-sources { margin: 22px 0 0; color: var(--muted); font-size: 11px; }
 .comparison-sources a { color: var(--text-soft); text-underline-offset: 3px; }
 

@@ -1,10 +1,14 @@
+# Shadowless - An app for clipping
+
+[Linux edition](../../tree/linux) · [Publishing both branches](docs/GITHUB.md)
+
 <p align="center">
-  <img src="docs/banner.svg" alt="Captail — instant replay that stays on" width="920">
+  <img src="docs/banner.svg" alt="Shadowless — instant replay that stays on" width="920">
 </p>
 
 <p align="center">
-  <a href="https://github.com/FaulMit/captail/actions/workflows/ci.yml"><img src="https://github.com/FaulMit/captail/actions/workflows/ci.yml/badge.svg" alt="Build"></a>
-  <a href="https://github.com/FaulMit/captail/releases"><img src="https://img.shields.io/github/v/release/FaulMit/captail?include_prereleases&sort=semver&color=65d9bd" alt="Latest release"></a>
+  <a href="https://github.com/Zefth051/Shadowless/actions/workflows/ci.yml"><img src="https://github.com/Zefth051/Shadowless/actions/workflows/ci.yml/badge.svg" alt="Build"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases"><img src="https://img.shields.io/github/v/release/Zefth051/Shadowless?include_prereleases&sort=semver&color=65d9bd" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0--or--later-65d9bd" alt="GPL-2.0-or-later"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-252b2e" alt="Windows 10/11">
 </p>
@@ -17,22 +21,21 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/FaulMit/captail/releases/latest"><img src="docs/readme-download.svg" alt="Download latest Captail release for Windows" width="286"></a>
-  <a href="https://apps.microsoft.com/detail/9PKVNVLKPTPS"><img src="docs/readme-store.svg" alt="Get Captail from Microsoft Store" width="286"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
 </p>
 
 <p align="center">
-  <a href="https://faulmit.github.io/captail/">Visit the Captail website</a>
+  <a href="https://zefth051.github.io/Shadowless/">Visit the Shadowless website</a>
   ·
-  <a href="https://github.com/FaulMit/captail/issues/new/choose">Report a problem</a>
+  <a href="https://github.com/Zefth051/Shadowless/issues/new/choose">Report a problem</a>
 </p>
 
-Captail is a focused alternative to NVIDIA ShadowPlay Instant Replay. It can keep the latest seconds or minutes in a rolling buffer or write a continuous recording until you stop it. No scenes, streaming setup, account, cloud upload, analytics, or telemetry.
+Shadowless is a fork of [Captail by FaulMit](https://github.com/FaulMit/captail) and a focused alternative to NVIDIA ShadowPlay Instant Replay. It can keep the latest seconds or minutes in a rolling buffer or write a continuous recording until you stop it. No scenes, streaming setup, account, cloud upload, analytics, or telemetry.
 
 > [!WARNING]
-> Captail `v0.2.4` is an early public preview. Recording works, but bugs and hardware-specific problems are expected. NVIDIA RTX 40 and RTX 50 series are tested; other GPUs need broader public testing.
+> Shadowless `v0.2.4` is an early public preview. Recording works, but bugs and hardware-specific problems are expected. NVIDIA RTX 40 and RTX 50 series are tested; other GPUs need broader public testing.
 
-## What's new in Captail 0.2.4?
+## What's new in Shadowless 0.2.4?
 
 - Play and trim clips in one window, with the complete timeline, audio tracks, and save actions always available.
 - Export clips with a chosen format, resolution, video codec, bitrate, and audio codec.
@@ -40,9 +43,9 @@ Captail is a focused alternative to NVIDIA ShadowPlay Instant Replay. It can kee
 - Use window and shortcut icons that match your chosen accent color.
 - Benefit from updated media runtimes and improved desktop-capture preparation on supported systems.
 
-## Is Captail for me?
+## Is Shadowless for me?
 
-Captail is for Windows players who want instant replay or focused continuous recording without running a full streaming suite or wondering whether capture silently stopped.
+Shadowless is for Windows players who want instant replay or focused continuous recording without running a full streaming suite or wondering whether capture silently stopped.
 
 It is a good fit if you want:
 
@@ -55,51 +58,51 @@ It is a good fit if you want:
 - automatic recovery after recoverable capture, game, or driver failures;
 - local files that stay on your PC.
 
-Captail is not a streaming application, scene compositor, DRM bypass, or cloud clip service.
+Shadowless is not a streaming application, scene compositor, DRM bypass, or cloud clip service.
 
 ## What does it look like?
 
+These Windows screenshots show the previous build with the original Captail branding.
 
 <p align="center">
-  <img src="docs/captail-main.png" alt="Captail main window showing replay status, audio sources, recording format, disk space, and recent replays" width="420">
-  <img src="docs/captail-feature-recording.png" alt="Captail main window showing active continuous Recording mode with AV1, 4K, and 240 FPS" width="420">
+  <img src="docs/shadowless-main.png" alt="Shadowless main window showing replay status, audio sources, recording format, disk space, and recent replays" width="420">
+  <img src="docs/shadowless-feature-recording.png" alt="Shadowless main window showing active continuous Recording mode with AV1, 4K, and 240 FPS" width="420">
 </p>
 
 <p align="center">
-  <img src="docs/captail-settings-video.png" alt="Captail video settings with hardware AV1, 80 Mbps, 3840 by 2160 resolution, and 240 FPS selected" width="390">
-  <img src="docs/captail-settings-audio.png" alt="Captail audio settings with system audio, microphone, volume controls, microphone boost, and per-application routing" width="390">
+  <img src="docs/shadowless-settings-video.png" alt="Shadowless video settings with hardware AV1, 80 Mbps, 3840 by 2160 resolution, and 240 FPS selected" width="390">
+  <img src="docs/shadowless-settings-audio.png" alt="Shadowless audio settings with system audio, microphone, volume controls, microphone boost, and per-application routing" width="390">
 </p>
 
 <p align="center">
-  <img src="docs/captail-audio-routing.png" alt="Captail application audio routing with selected apps, live level meters, application icons, microphone, and track assignments" width="620">
+  <img src="docs/shadowless-audio-routing.png" alt="Shadowless application audio routing with selected apps, live level meters, application icons, microphone, and track assignments" width="620">
 </p>
 
 <p align="center">
-  <img src="docs/captail-player.png" alt="Captail player and editor showing a real AV1 4K 240 FPS replay, trim timeline, audio tracks, output settings, and save actions" width="820">
+  <img src="docs/shadowless-player.png" alt="Shadowless player and editor showing a real AV1 4K 240 FPS replay, trim timeline, audio tracks, output settings, and save actions" width="820">
 </p>
 
 ## How do I install it?
 
-Install Captail from [Microsoft Store](https://apps.microsoft.com/detail/9PKVNVLKPTPS), or open [GitHub Releases](https://github.com/FaulMit/captail/releases) and choose a package:
+Shadowless builds produce the following Windows packages. Published builds are listed under GitHub Releases.
 
 | Package | Choose it when | Installation |
 | --- | --- | --- |
-| **Microsoft Store** | You want Microsoft-managed installation and automatic updates | Open the [Store listing](https://apps.microsoft.com/detail/9PKVNVLKPTPS) and select **Install**. |
-| `Captail-x.y.z-Setup-win-x64.exe` | You want the normal Windows experience | Run Setup. It installs Captail for your Windows account and adds an uninstaller to Windows Settings. |
-| `Captail-x.y.z-Portable-win-x64.zip` | You want a movable, self-contained folder | Extract the entire ZIP, then run `Captail.exe` inside it. Do not run it from the archive. |
+| `Shadowless-x.y.z-Setup-win-x64.exe` | You want the normal Windows experience | Run Setup. It installs Shadowless for your Windows account and adds an uninstaller to Windows Settings. |
+| `Shadowless-x.y.z-Portable-win-x64.zip` | You want a movable, self-contained folder | Extract the entire ZIP, then run `Shadowless.exe` inside it. Do not run it from the archive. |
 | `SHA256SUMS.txt` | You want to verify the download | Compare the package SHA-256 with the published value before running it. |
 
-Every Captail package includes .NET, libobs, FFmpeg, and the embedded preview player. You do not need to install OBS Studio or extra runtimes.
+Every Shadowless package includes .NET, libobs, FFmpeg, and the embedded preview player. You do not need to install OBS Studio or extra runtimes.
 
 > [!NOTE]
 > Release binaries are not Authenticode-signed yet. Windows SmartScreen may show “Unknown publisher.” Verify `SHA256SUMS.txt` and GitHub build provenance if you want to confirm the download.
 
 > [!IMPORTANT]
-> Already using Captail `0.1.3` or `0.1.4`? Their updater contains a Windows file-lock bug. Download and run the `0.1.5` Setup EXE manually once. In-app updates work normally starting with `0.1.5`.
+> Shadowless updates are installed manually.
 
 ## How do I save my first replay?
 
-1. Launch Captail. It stays available from the system tray.
+1. Launch Shadowless. It stays available from the system tray.
 2. Keep **Instant Replay** selected on the main dashboard.
 3. Open Settings and choose **Desktop** or **Game Capture**.
 4. Choose buffer length, codec, resolution, FPS, and audio sources.
@@ -113,15 +116,15 @@ Default hotkeys:
 | Save recent footage | `Ctrl+Shift+F10` |
 | Enable or disable Instant Replay | `Ctrl+Shift+F9` |
 
-Both hotkeys are configurable. Double-click the tray icon to reopen Captail.
+Both hotkeys are configurable. Double-click the tray icon to reopen Shadowless.
 
 The optional replay status indicator keeps recording state visible over games and desktop apps. It is enabled by default, can sit in any screen corner, ignores mouse input, and briefly confirms a successful save. Disable it or change its position in Replay settings.
 
-Enable **Warn when a game starts** if you want one quiet reminder when Captail detects a game while Instant Replay is disabled. The reminder never enables recording automatically.
+Enable **Warn when a game starts** if you want one quiet reminder when Shadowless detects a game while Instant Replay is disabled. The reminder never enables recording automatically.
 
-On first launch, Captail follows your Windows language when it supports it; otherwise it starts in English. Use the compact language control in the title bar to switch between English, Russian, Ukrainian, Simplified Chinese, Spanish, Brazilian Portuguese, German, French, Japanese, Korean, and Polish.
+On first launch, Shadowless follows your Windows language when it supports it; otherwise it starts in English. Use the compact language control in the title bar to switch between English, Russian, Ukrainian, Simplified Chinese, Spanish, Brazilian Portuguese, German, French, Japanese, Korean, and Polish.
 
-If similarly sized monitors are hard to distinguish, open Video settings and select **Identify displays** beside the monitor list. Captail briefly places a large number on each matching screen.
+If similarly sized monitors are hard to distinguish, open Video settings and select **Identify displays** beside the monitor list. Shadowless briefly places a large number on each matching screen.
 
 ## What does each capture mode record?
 
@@ -130,20 +133,20 @@ If similarly sized monitors are hard to distinguish, open Video settings and sel
 | **Desktop** | Records the selected monitor | Uses direct Game Capture when usable; otherwise keeps desktop video active while recognizing supported fullscreen games | Selected Windows output device |
 | **Game Capture** | Keeps a lightweight game detector ready while the replay buffer sleeps | Wakes the replay buffer and captures the detected game directly | Detected game audio |
 
-Use **Desktop** when you want continuous coverage; use **Game Capture** when privacy and low idle resource use outside games matter more. In Game Capture mode, Captail wakes the replay buffer only after a plausible game appears. When a fullscreen game cannot be hooked, Desktop mode favors uninterrupted video over pretending direct Game Capture is working.
+Use **Desktop** when you want continuous coverage; use **Game Capture** when privacy and low idle resource use outside games matter more. In Game Capture mode, Shadowless wakes the replay buffer only after a plausible game appears. When a fullscreen game cannot be hooked, Desktop mode favors uninterrupted video over pretending direct Game Capture is working.
 
 ## What happens when capture breaks?
 
-Captail supervises the recording pipeline instead of assuming that a successful start means it will remain healthy forever.
+Shadowless supervises the recording pipeline instead of assuming that a successful start means it will remain healthy forever.
 
 | Situation | Expected behavior |
 | --- | --- |
 | Game closes or crashes | Desktop mode returns to desktop capture. Game Capture mode waits for another game. |
 | You switch between game and desktop | Desktop mode follows the active capture source without stopping the buffer. |
-| A capture source temporarily disappears | Captail keeps the pipeline supervised and retries recovery. |
+| A capture source temporarily disappears | Shadowless keeps the pipeline supervised and retries recovery. |
 | Graphics driver restarts | Video may pause or go black temporarily; the watchdog attempts a controlled restart with retry delay. |
-| Recovery cannot complete | Captail reports the failure and retries instead of silently claiming that replay is active. |
-| DRM-protected video appears | Protected regions may be black. Captail does not bypass DRM and is designed to keep the buffer running. |
+| Recovery cannot complete | Shadowless reports the failure and retries instead of silently claiming that replay is active. |
+| DRM-protected video appears | Protected regions may be black. Shadowless does not bypass DRM and is designed to keep the buffer running. |
 
 Recovery reduces lost footage; it cannot guarantee frames that Windows, a game, an anti-cheat system, or a failed driver never delivered.
 
@@ -151,16 +154,16 @@ Recovery reduces lost footage; it cannot guarantee frames that Windows, a game, 
 
 The live replay buffer stores compressed video and audio packets in **RAM**. Only saved replays are written to your selected folder.
 
-- **Buffer length** controls how much recent time Captail tries to keep.
+- **Buffer length** controls how much recent time Shadowless tries to keep.
 - **Buffer limit** caps compressed replay data in RAM. If it is reached first, available replay time becomes shorter.
 - **Bitrate, resolution, FPS, and codec** affect both memory use and saved file size.
 - The dashboard shows free space on the drive containing your replay folder.
 
-After a successful save, Captail starts a new replay segment. Saving again five minutes later produces roughly five minutes of new footage instead of duplicating the previous clip.
+After a successful save, Shadowless starts a new replay segment. Saving again five minutes later produces roughly five minutes of new footage instead of duplicating the previous clip.
 
 ## Which codec should I choose?
 
-Captail detects the current GPU and driver, then hides unavailable hardware codecs.
+Shadowless detects the current GPU and driver, then hides unavailable hardware codecs.
 
 | Codec | Best for | Trade-off |
 | --- | --- | --- |
@@ -172,13 +175,13 @@ Unsure? Start with **H.264** for compatibility. Use **AV1** when your GPU and ed
 
 ## Does 240 FPS mean 240 real frames?
 
-Captail requests real frames from the capture source; it does not generate duplicates to make a file report a higher FPS.
+Shadowless requests real frames from the capture source; it does not generate duplicates to make a file report a higher FPS.
 
 - **Game Capture:** can record distinct high-rate frames when the game, GPU, encoder, and capture path can sustain them.
 - **Desktop capture:** limited by how often Windows and the monitor present new desktop frames.
 - **Slow motion:** 120–240 FPS is useful only when the source actually produces that many distinct frames.
 
-Higher FPS raises GPU load, RAM use, and file size. Captail supports 30, 60, 120, 144, and 240 FPS.
+Higher FPS raises GPU load, RAM use, and file size. Shadowless supports 30, 60, 120, 144, and 240 FPS.
 
 ## How does audio work?
 
@@ -191,11 +194,11 @@ You can record system or detected-game audio, a microphone, or both.
 - Use **Per-app routing** to select individual running applications and assign each one to an available recording track. Selected apps stay at the top, followed by apps currently playing audio and then other running processes.
 - Choose AAC in fragmented MP4 or Opus in MKV.
 
-The selected audio codec and container determine how many tracks are available. Captail shows real application icons and live level meters in the routing window, and exposes routed sources as quick toggles on the main screen.
+The selected audio codec and container determine how many tracks are available. Shadowless shows real application icons and live level meters in the routing window, and exposes routed sources as quick toggles on the main screen.
 
-Some media players play only one track from a multi-track file. Captail's clip editor previews every available track together and lets you keep or remove each track from the trimmed result.
+Some media players play only one track from a multi-track file. Shadowless's clip editor previews every available track together and lets you keep or remove each track from the trimmed result.
 
-## Can I manage and trim replays inside Captail?
+## Can I manage and trim replays inside Shadowless?
 
 Yes. The main window lists supported files from the selected replay folder in a scrollable library.
 
@@ -211,29 +214,29 @@ Yes. The main window lists supported files from the selected replay folder in a 
 
 Trimming uses stream copy when possible, avoiding a full video re-encode.
 
-## Can Captail organize clips by game?
+## Can Shadowless organize clips by game?
 
 Enable **Organize games into folders** in Storage. Replays saved while a game is detected go into a folder named after that game's executable. Replays saved while Desktop remains active stay in the main replay folder.
 
-## Does Captail send or upload my recordings?
+## Does Shadowless send or upload my recordings?
 
-No. Captail has no account, cloud upload, analytics, or telemetry. Replays, thumbnails, settings, and logs stay on your PC.
+No. Shadowless has no account, cloud upload, analytics, or telemetry. Replays, thumbnails, settings, and logs stay on your PC.
 
 GitHub builds contact the GitHub Releases API to check whether a newer version exists. They download an update package only after you click the update control. The Microsoft Store build uses Store-managed updates instead.
 
-## How is Captail different from ShadowPlay and OBS Replay Buffer?
+## How is Shadowless different from ShadowPlay and OBS Replay Buffer?
 
-| | Captail | ShadowPlay | OBS Replay Buffer |
+| | Shadowless | ShadowPlay | OBS Replay Buffer |
 | --- | --- | --- | --- |
 | Primary job | Instant replay | NVIDIA capture suite | Recording/streaming production |
 | GPU support goal | NVIDIA, AMD, Intel hardware encoders | NVIDIA | Broad through OBS |
 | Setup | Choose settings and leave it in tray | GeForce/NVIDIA App | Configure scenes, sources, and output |
 | Automatic desktop/game switching | Yes, in Desktop mode | Platform-managed | Requires scene/source setup |
-| Capture watchdog and recovery | Built around automatic supervision | Internal behavior | Not Captail's focused workflow |
+| Capture watchdog and recovery | Built around automatic supervision | Internal behavior | Not Shadowless's focused workflow |
 | Built-in replay library and trim editor | Yes | Varies by NVIDIA software version | No focused clip library |
 | Open source | Yes | No | Yes |
 
-Captail uses libobs for capture and encoding, but it is not an OBS Studio frontend. It exposes no streaming, scenes, transitions, or plugin management because those features would work against its small, single-purpose UI.
+Shadowless uses libobs for capture and encoding, but it is not an OBS Studio frontend. It exposes no streaming, scenes, transitions, or plugin management because those features would work against its small, single-purpose UI.
 
 ## Will it work on my PC?
 
@@ -253,7 +256,7 @@ Current hardware status:
 | AMD GPUs | Capability detection implemented; public hardware testing needed |
 | Intel GPUs | Capability detection implemented; public hardware testing needed |
 
-Codec options are based on detected encoder support. Captail falls back to another available codec if a previously selected encoder disappears.
+Codec options are based on detected encoder support. Shadowless falls back to another available codec if a previously selected encoder disappears.
 
 ## What are the current limitations?
 
@@ -266,13 +269,13 @@ Codec options are based on detected encoder support. Captail falls back to anoth
 
 ## What information should I include in a bug report?
 
-First check [existing issues](https://github.com/FaulMit/captail/issues), then click **Report bug** in Captail or open the [bug report form](https://github.com/FaulMit/captail/issues/new/choose).
+First check [existing issues](https://github.com/Zefth051/Shadowless/issues), then click **Report bug** in Shadowless or open the [bug report form](https://github.com/Zefth051/Shadowless/issues/new/choose).
 
-The in-app button prefills Captail version, package channel, Windows build, GPU and driver when available, recording configuration, and a short recent diagnostic excerpt. Captail removes personal paths, network addresses, identifiers, window titles, device names, secrets, and uncontrolled third-party output before opening GitHub. Review the form before submitting it; the complete local log and recorded files are never attached automatically.
+The in-app button prefills Shadowless version, package channel, Windows build, GPU and driver when available, recording configuration, and a short recent diagnostic excerpt. Shadowless removes personal paths, network addresses, identifiers, window titles, device names, secrets, and uncontrolled third-party output before opening GitHub. Review the form before submitting it; the complete local log and recorded files are never attached automatically.
 
 Include:
 
-- Captail version and Setup/Portable package type;
+- Shadowless version and Setup/Portable package type;
 - Windows version;
 - GPU model and graphics-driver version;
 - capture mode, codec, resolution, FPS, and audio configuration;
@@ -283,17 +286,17 @@ Review logs before attaching them and remove personal paths or other sensitive i
 
 Compatibility reports for older NVIDIA, AMD, and Intel GPUs are useful even when everything works.
 
-Have an improvement rather than a bug? Open **About → Feature** to use Captail's focused feature-request template.
+Have an improvement rather than a bug? Open **About → Feature** to use Shadowless's focused feature-request template.
 
 ## How do I build or contribute?
 
 Development requires Windows 10/11 x64, .NET 10 SDK, CMake 3.20+, and Visual Studio 2022 Build Tools with **Desktop development with C++**.
 
 ```powershell
-git clone https://github.com/FaulMit/captail.git
-cd captail
-dotnet restore .\src\Captail\Captail.csproj --locked-mode
-dotnet build .\Captail.sln -c Debug --no-restore
+git clone --branch windows https://github.com/Zefth051/Shadowless.git
+cd Shadowless
+dotnet restore .\src\Shadowless\Shadowless.csproj --locked-mode
+dotnet build .\Shadowless.sln -c Debug --no-restore
 ```
 
 The first build acquires the pinned OBS and FFmpeg runtimes when they are missing.
@@ -302,10 +305,10 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Release maint
 
 ## License and attribution
 
-Captail is licensed under [GNU GPL-2.0-or-later](LICENSE).
+Shadowless is licensed under [GNU GPL-2.0-or-later](LICENSE).
 
 Privacy details are documented in [PRIVACY.md](PRIVACY.md).
 
-Captail uses libobs and selected OBS Studio runtime components. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Shadowless uses libobs and selected OBS Studio runtime components. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Captail is not affiliated with or endorsed by NVIDIA or OBS Project. NVIDIA and ShadowPlay are trademarks of NVIDIA Corporation.
+Shadowless is not affiliated with or endorsed by NVIDIA or OBS Project. NVIDIA and ShadowPlay are trademarks of NVIDIA Corporation.

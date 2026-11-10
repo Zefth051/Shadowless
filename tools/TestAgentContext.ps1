@@ -40,11 +40,11 @@ if (($agentGuide -join "`n").Length -gt 5000) {
 
 $expectations = [ordered]@{
     overview = "docs/agent/ARCHITECTURE.md"
-    capture = "src/Captail/ObsReplayEngine.cs"
-    audio = "src/Captail/ProcessAudioReconciler.cs"
-    player = "src/Captail/MpvHost.cs"
-    ui = "src/Captail/SettingsWindow.xaml"
-    distribution = "src/Captail/AppDataPaths.cs"
+    capture = "src/Shadowless/ObsReplayEngine.cs"
+    audio = "src/Shadowless/ProcessAudioReconciler.cs"
+    player = "src/Shadowless/MpvHost.cs"
+    ui = "src/Shadowless/SettingsWindow.xaml"
+    distribution = "src/Shadowless/AppDataPaths.cs"
     release = "docs/RELEASING.md"
 }
 
@@ -56,7 +56,7 @@ foreach ($entry in $expectations.GetEnumerator()) {
             -MaxDocumentLines 140
     )
     $text = $output -join "`n"
-    if ($text -notmatch [regex]::Escape("# Captail task context: $($entry.Key)")) {
+    if ($text -notmatch [regex]::Escape("# Shadowless task context: $($entry.Key)")) {
         throw "Area $($entry.Key) has no context header."
     }
     if ($text -notmatch [regex]::Escape($entry.Value)) {

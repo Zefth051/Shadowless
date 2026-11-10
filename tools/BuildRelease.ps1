@@ -26,14 +26,14 @@ if (-not $outputRoot.StartsWith($repoPrefix, [StringComparison]::OrdinalIgnoreCa
 
 $stagingRoot = Join-Path $outputRoot "staging"
 $dotnetArtifacts = Join-Path $stagingRoot "dotnet"
-$portableName = "Captail-$Version"
+$portableName = "Shadowless-$Version"
 $publishDirectory = Join-Path $stagingRoot $portableName
 $portableArchive = Join-Path $outputRoot "$portableName-Portable-win-x64.zip"
-$setupName = "Captail-$Version-Setup-win-x64.exe"
+$setupName = "Shadowless-$Version-Setup-win-x64.exe"
 $setupPath = Join-Path $outputRoot $setupName
 $checksumPath = Join-Path $outputRoot "SHA256SUMS.txt"
-$project = Join-Path $repoRoot "src\Captail\Captail.csproj"
-$installerScript = Join-Path $repoRoot "installer\Captail.iss"
+$project = Join-Path $repoRoot "src\Shadowless\Shadowless.csproj"
+$installerScript = Join-Path $repoRoot "installer\Shadowless.iss"
 
 foreach ($path in @($stagingRoot, $portableArchive, $setupPath, $checksumPath)) {
     $resolved = [IO.Path]::GetFullPath($path)
@@ -46,7 +46,7 @@ foreach ($path in @($stagingRoot, $portableArchive, $setupPath, $checksumPath)) 
 }
 New-Item -ItemType Directory -Force -Path $publishDirectory | Out-Null
 
-Write-Host "Publishing Captail $Version..."
+Write-Host "Publishing Shadowless $Version..."
 dotnet restore $project `
     --locked-mode `
     --runtime win-x64 `
@@ -73,21 +73,34 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
 
-$captailExe = Join-Path $publishDirectory "Captail.exe"
-if (-not (Test-Path -LiteralPath $captailExe)) {
-    throw "Published Captail.exe not found."
+$launcherBuild = Join-Path $stagingRoot "launcher"
+cmake -S (Join-Path $repoRoot "native\PortableLauncher") -B $launcherBuild `
+    -G "Visual Studio 17 2022" -A x64 "-DSHADOWLESS_VERSION=$Version"
+if ($LASTEXITCODE -ne 0) { throw "Portable launcher configuration failed." }
+cmake --build $launcherBuild --config Release
+if ($LASTEXITCODE -ne 0) { throw "Portable launcher build failed." }
+& (Join-Path $PSScriptRoot "SetPortableLayout.ps1") `
+    -PublishDirectory $publishDirectory `
+    -LauncherPath (Join-Path $launcherBuild "Release\Shadowless.exe")
+$runtimeDirectory = Join-Path $publishDirectory "runtime"
+$shadowlessExe = Join-Path $publishDirectory "Shadowless.exe"
+if (-not (Test-Path -LiteralPath $shadowlessExe)) {
+    throw "Published Shadowless.exe not found."
 }
-if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory "obs.dll"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $runtimeDirectory "Shadowless.exe"))) {
+    throw "Published application not found in runtime directory."
+}
+if (-not (Test-Path -LiteralPath (Join-Path $runtimeDirectory "obs.dll"))) {
     throw "Published OBS runtime not found."
 }
 if (-not (Test-Path -LiteralPath (
-        Join-Path $publishDirectory "obs-plugins\64bit\captail-process-audio.dll"))) {
+        Join-Path $runtimeDirectory "obs-plugins\64bit\shadowless-process-audio.dll"))) {
     throw "Published process-audio plugin not found."
 }
-if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory "ffmpeg\ffmpeg.exe"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $runtimeDirectory "ffmpeg\ffmpeg.exe"))) {
     throw "Published FFmpeg runtime not found."
 }
-if (-not (Test-Path -LiteralPath (Join-Path $publishDirectory "libmpv-2.dll"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $runtimeDirectory "libmpv-2.dll"))) {
     throw "Published libmpv runtime not found."
 }
 

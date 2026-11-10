@@ -1,0 +1,147 @@
+<Window x:Class="Shadowless.CaptureOverlayEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Shadowless"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="{DynamicResource L.Overlays.Title}" Icon="{DynamicResource ApplicationIcon}"
+        Width="1120" Height="740" MinWidth="920" MinHeight="660"
+        WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="CanResize"
+        ShowInTaskbar="False" PreviewKeyDown="Window_PreviewKeyDown"
+        Background="{StaticResource BgWindowBrush}" Foreground="{StaticResource TextPrimaryBrush}"
+        FontFamily="{StaticResource FontUi}" FontSize="13">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6" CornerRadius="0" GlassFrameThickness="0"/>
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource SubtleButton}">
+            <Setter Property="MinHeight" Value="32"/>
+        </Style>
+        <Style TargetType="Slider" BasedOn="{StaticResource VolumeSlider}">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="TickFrequency" Value="1"/>
+            <Setter Property="IsSnapToTickEnabled" Value="True"/>
+            <Setter Property="Margin" Value="0,6,0,12"/>
+            <EventSetter Event="ValueChanged" Handler="Transform_Changed"/>
+        </Style>
+    </Window.Resources>
+    <Border BorderBrush="{StaticResource WindowBorderBrush}" BorderThickness="1">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid Margin="0,0,0,20" MouseLeftButtonDown="Header_Drag">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource L.Overlays.Title}" FontSize="22" FontWeight="SemiBold"/>
+                    <TextBlock Text="{DynamicResource L.Overlays.Subtitle}" Margin="0,6,16,0"
+                               Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <TextBlock Text="{DynamicResource L.Overlays.Enabled}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <ToggleButton x:Name="MasterToggle" Style="{StaticResource ToggleSwitch}" Click="Master_Click"
+                                  AutomationProperties.Name="{DynamicResource L.Overlays.Enabled}"/>
+                </StackPanel>
+                <Button Grid.Column="2" Content="{DynamicResource L.Close}" Click="Close_Click" VerticalAlignment="Center"/>
+            </Grid>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="280"/>
+                </Grid.ColumnDefinitions>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Background="Black" BorderBrush="{StaticResource BorderControlBrush}" BorderThickness="1">
+                        <local:CaptureOverlayPreviewHost x:Name="Preview"/>
+                    </Border>
+                    <TextBlock Grid.Row="1" Text="{DynamicResource L.Overlays.DragHint}" Margin="0,12,0,0"
+                               Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                    <TextBlock Grid.Row="2" x:Name="PerformanceText" Margin="0,8,0,0" FontFamily="{StaticResource FontMono}"
+                               FontSize="11" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap"/>
+                </Grid>
+                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,12">
+                            <Button x:Name="AddMediaButton" DockPanel.Dock="Right" Content="{DynamicResource L.Overlays.Add}" Click="Add_Click"/>
+                            <TextBlock Text="{DynamicResource L.Overlays.Layers}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock x:Name="EmptyText" Text="{DynamicResource L.Overlays.Empty}" Margin="0,0,0,12"
+                                   Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
+                        <ListBox x:Name="LayerList" Height="140" SelectionChanged="Layer_Changed" DisplayMemberPath="Name"
+                                 Background="{StaticResource BgControlBrush}" Foreground="{StaticResource TextPrimaryBrush}"
+                                 BorderBrush="{StaticResource BorderControlBrush}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="8"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="ToolTip" Value="{Binding FilePath}"/>
+                                    <Setter Property="AutomationProperties.Name" Value="{Binding Name}"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="Row" Background="Transparent" Padding="{TemplateBinding Padding}">
+                                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Row" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                        <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                        <Setter TargetName="Row" Property="BorderThickness" Value="1"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,16">
+                            <Button Content="↑" Width="36" Click="Raise_Click" ToolTip="{DynamicResource L.Overlays.Raise}" AutomationProperties.Name="{DynamicResource L.Overlays.Raise}"/>
+                            <Button Content="↓" Width="36" Margin="8,0" Click="Lower_Click" ToolTip="{DynamicResource L.Overlays.Lower}" AutomationProperties.Name="{DynamicResource L.Overlays.Lower}"/>
+                            <Button Content="{DynamicResource L.Overlays.Remove}" Click="Remove_Click"/>
+                        </StackPanel>
+                        <StackPanel x:Name="TransformPanel" IsEnabled="False">
+                            <DockPanel Margin="0,0,0,16">
+                                <ToggleButton x:Name="LayerToggle" DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}"
+                                              Click="LayerToggle_Click" AutomationProperties.Name="{DynamicResource L.Overlays.Visible}"/>
+                                <TextBlock Text="{DynamicResource L.Overlays.Visible}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock Text="{DynamicResource L.Overlays.X}"/>
+                            <Slider x:Name="XSlider" AutomationProperties.Name="{DynamicResource L.Overlays.X}" AutoToolTipPlacement="TopLeft"/>
+                            <TextBlock Text="{DynamicResource L.Overlays.Y}"/>
+                            <Slider x:Name="YSlider" AutomationProperties.Name="{DynamicResource L.Overlays.Y}" AutoToolTipPlacement="TopLeft"/>
+                            <TextBlock Text="{DynamicResource L.Overlays.Width}"/>
+                            <Slider x:Name="WidthSlider" Minimum="1" AutomationProperties.Name="{DynamicResource L.Overlays.Width}" AutoToolTipPlacement="TopLeft"/>
+                            <TextBlock Text="{DynamicResource L.Overlays.Height}"/>
+                            <Slider x:Name="HeightSlider" Minimum="1" AutomationProperties.Name="{DynamicResource L.Overlays.Height}" AutoToolTipPlacement="TopLeft"/>
+                            <TextBlock Text="{DynamicResource L.Overlays.Opacity}"/>
+                            <Slider x:Name="OpacitySlider" AutomationProperties.Name="{DynamicResource L.Overlays.Opacity}" AutoToolTipPlacement="TopLeft"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+            <Grid Grid.Row="2" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="StatusText" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"
+                           TextWrapping="Wrap" Margin="0,0,16,0" MaxHeight="64"/>
+                <Button Grid.Column="1" Content="{DynamicResource L.Overlays.Apply}" Click="Apply_Click"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

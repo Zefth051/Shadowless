@@ -9,7 +9,7 @@ param(
 
     [string]$ChangelogPath = "",
 
-    [string]$Repository = "FaulMit/captail",
+    [string]$Repository = "Zefth051/Shadowless",
 
     [string]$PreviousTag = ""
 )
@@ -43,18 +43,18 @@ $changeBody = [Regex]::Replace($changeBody, '(?m)^### ', '## ')
 
 $lines = [Collections.Generic.List[string]]::new()
 $lines.Add("> [!WARNING]")
-$lines.Add("> Captail $Version is an early public preview. Bugs and hardware-specific issues are expected.")
+$lines.Add("> Shadowless $Version is an early public preview. Bugs and hardware-specific issues are expected.")
 $lines.Add("")
 $lines.Add($changeBody)
 $lines.Add("")
 $lines.Add("## Downloads")
 $lines.Add("")
-$lines.Add("- **Installer (recommended):** ``Captail-$Version-Setup-win-x64.exe`` includes Captail, .NET, libobs, FFmpeg, and an uninstaller.")
-$lines.Add("- **Portable:** extract the entire ``Captail-$Version-Portable-win-x64.zip`` before launching ``Captail.exe``.")
+$lines.Add("- **Installer (recommended):** ``Shadowless-$Version-Setup-win-x64.exe`` includes Shadowless, .NET, libobs, FFmpeg, and an uninstaller.")
+$lines.Add("- **Portable:** extract the entire ``Shadowless-$Version-Portable-win-x64.zip`` before launching ``Shadowless.exe``.")
 $lines.Add("")
 $lines.Add("## Compatibility and feedback")
 $lines.Add("")
-$lines.Add("Captail is tested on NVIDIA GeForce RTX 40 and RTX 50 series. Older NVIDIA, AMD, and Intel hardware needs broader public testing. Report problems through [GitHub Issues](https://github.com/$Repository/issues).")
+$lines.Add("Shadowless is tested on NVIDIA GeForce RTX 40 and RTX 50 series. Older NVIDIA, AMD, and Intel hardware needs broader public testing. Report problems through [GitHub Issues](https://github.com/$Repository/issues).")
 $lines.Add("")
 $lines.Add("Release binaries are not Authenticode-signed yet. Windows may show an unknown-publisher or SmartScreen warning. Use ``SHA256SUMS.txt`` and GitHub build provenance to verify the download.")
 

@@ -1,4 +1,4 @@
-# Captail agent guide
+# Shadowless agent guide
 
 This file is a router, not a project encyclopedia. Keep it short.
 
@@ -14,7 +14,7 @@ Do not preload every file under `docs/agent`.
 
 ## Project rules
 
-- Captail is a Windows x64 WPF/.NET 9 application with native OBS components.
+- Shadowless is a Windows x64 WPF/.NET 9 application with native OBS components.
 - Use PowerShell commands. Prefer `rg` for search and `apply_patch` for edits.
 - Preserve user changes in a dirty worktree. Never reset or rewrite unrelated work.
 - Public repository text, code comments, diagnostics, and release metadata use
@@ -37,7 +37,7 @@ Do not preload every file under `docs/agent`.
 ## Baseline validation
 
 ```powershell
-dotnet build .\Captail.sln -c Release --no-restore
+dotnet build .\Shadowless.sln -c Release --no-restore
 ```
 
 Run area-specific tests from `docs/agent/WORKFLOWS.md`. When the user requests
@@ -47,4 +47,4 @@ an installed test build, deploy the ordinary Portable build with:
 .\tools\DeployTestBuild.ps1 -Version 0.1.10
 ```
 
-Target must remain `D:\Captail-0.1.10`; this is not a Microsoft Store build.
+Target must remain `D:\Shadowless-0.1.10`; this is not a Microsoft Store build.

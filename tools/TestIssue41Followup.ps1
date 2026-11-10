@@ -28,17 +28,17 @@ function Assert-NotContains(
     }
 }
 
-$app = Read-Text "src\Captail\App.xaml.cs"
-$config = Read-Text "src\Captail\Config.cs"
-$editor = Read-Text "src\Captail\ClipEditorWindow.xaml.cs"
-$engine = Read-Text "src\Captail\ObsReplayEngine.cs"
-$settingsXaml = Read-Text "src\Captail\SettingsWindow.xaml"
-$settingsCode = Read-Text "src\Captail\SettingsWindow.xaml.cs"
-$editorXaml = Read-Text "src\Captail\ClipEditorWindow.xaml"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
+$config = Read-Text "src\Shadowless\Config.cs"
+$editor = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
+$engine = Read-Text "src\Shadowless\ObsReplayEngine.cs"
+$settingsXaml = Read-Text "src\Shadowless\SettingsWindow.xaml"
+$settingsCode = Read-Text "src\Shadowless\SettingsWindow.xaml.cs"
+$editorXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
 
 Assert-NotContains $app '_activeTrayIcon|_inactiveTrayIcon' `
     "Tray icons must not be reused after TaskbarIcon disposes replaced instances."
-Assert-Contains $app 'CreateIcon\(\s*active\s*\?[\s\S]{0,160}ThemeManager\.IconAssetName[\s\S]{0,160}:\s*"CaptailInactive\.ico"\)' `
+Assert-Contains $app 'CreateIcon\(\s*active\s*\?[\s\S]{0,160}ThemeManager\.IconAssetName[\s\S]{0,160}:\s*"ShadowlessInactive\.ico"\)' `
     "Tray state changes must assign a fresh icon instance."
 Assert-Contains $app '--qa-replay-toggle' `
     "Native replay stop/start needs an unattended regression loop."
@@ -54,7 +54,7 @@ Assert-Contains $settingsCode 'PerAppAudioSource_Click' `
 Assert-Contains $settingsXaml 'L\.Help\.ApplicationAudio' `
     "Per-app audio settings need contextual help."
 
-Get-ChildItem (Join-Path $repoRoot "src\Captail\Languages") `
+Get-ChildItem (Join-Path $repoRoot "src\Shadowless\Languages") `
     -Filter "Strings.*.xaml" |
     ForEach-Object {
         $language = [IO.File]::ReadAllText($_.FullName)

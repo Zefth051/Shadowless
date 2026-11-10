@@ -1,12 +1,12 @@
-# Contributing to Captail
+# Contributing to Shadowless
 
-Captail is an early project. Bug reports, hardware compatibility results, documentation fixes, and focused pull requests are welcome.
+Shadowless is an early project. Bug reports, hardware compatibility results, documentation fixes, and focused pull requests are welcome.
 
 ## Bug reports
 
 Use the GitHub bug report form and include:
 
-- Captail version and package type
+- Shadowless version and package type
 - Windows version
 - GPU model and graphics-driver version
 - Capture source, codec, resolution, and FPS
@@ -14,7 +14,7 @@ Use the GitHub bug report form and include:
 - Exact reproduction steps
 - Expected and actual behavior
 
-Logs are stored at `%APPDATA%\Captail\log.txt`. Review logs before attaching them and remove personal paths or other sensitive information.
+Logs are stored at `%APPDATA%\Shadowless\log.txt`. Review logs before attaching them and remove personal paths or other sensitive information.
 
 ## Development setup
 
@@ -27,7 +27,7 @@ Requirements:
 
 ```powershell
 .\tools\AcquireObsRuntime.ps1
-dotnet build .\Captail.sln -c Debug
+dotnet build .\Shadowless.sln -c Debug
 ```
 
 ## Pull requests

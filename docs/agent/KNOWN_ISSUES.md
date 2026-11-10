@@ -25,7 +25,7 @@ code and open issues before claiming a problem still exists.
 
 - Both AAC/MP4 and Opus/MKV expose at most six recording tracks.
 - Advanced per-app routing requires Windows process-loopback support and the
-  bundled Captail OBS source.
+  bundled Shadowless OBS source.
 - Preview loads all selected audio tracks through a libmpv mix graph; trim can
   preserve selected tracks or merge them for one-track players.
 - Preview sidebar loads every clip from the configured output directory. Keep
@@ -36,7 +36,7 @@ code and open issues before claiming a problem still exists.
 - Public release binaries are not Authenticode-signed.
 - Store and Portable state paths differ; resolve package identity dynamically.
 - Store package identity uses four numeric fields ending in `.0`; visible
-  Captail version remains three-part.
+  Shadowless version remains three-part.
 
 ## Documentation hygiene
 

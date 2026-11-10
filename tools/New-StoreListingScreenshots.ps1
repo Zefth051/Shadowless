@@ -17,12 +17,12 @@ if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
 }
 
 $screenshots = @(
-    "captail-main.png",
-    "captail-feature-recording.png",
-    "captail-settings-video.png",
-    "captail-settings-audio.png",
-    "captail-audio-routing.png",
-    "captail-player.png"
+    "shadowless-main.png",
+    "shadowless-feature-recording.png",
+    "shadowless-settings-video.png",
+    "shadowless-settings-audio.png",
+    "shadowless-audio-routing.png",
+    "shadowless-player.png"
 )
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null

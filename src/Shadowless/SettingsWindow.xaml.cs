@@ -1,0 +1,3193 @@
+using System.Diagnostics;
+using System.ComponentModel;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using Shadowless.Interop;
+
+namespace Shadowless;
+
+public partial class SettingsWindow : Window
+{
+    private const int DashboardInitialReplayCount = 8;
+    private static readonly nint HwndTopmost = new(-1);
+
+    private readonly Config _config;
+    private readonly Action _saveReplay;
+    private readonly Func<bool, Task<bool>> _setReplayEnabled;
+    private readonly Func<bool, bool, string, string, Task<bool>> _setAudioSources;
+    private readonly Func<string?, bool, Task<bool>> _setAdvancedAudioSourceEnabled;
+    private readonly Func<Config, bool, Task<bool>> _applySettings;
+    private readonly Func<bool, CancellationToken, Task<UpdateRelease?>>
+        _checkForUpdates;
+    private readonly Func<
+        UpdateRelease,
+        IProgress<int>,
+        CancellationToken,
+        Task> _installUpdate;
+    private EncoderCapabilities _capabilities;
+    private readonly DispatcherTimer _diskTimer;
+    private readonly CancellationTokenSource _lifetimeCts = new();
+    private readonly ReplayLibrary _replayLibrary;
+    private string _outputDirectory;
+    private string _pendingSaveHotkey;
+    private string _pendingToggleHotkey;
+    private string _pendingOverlayHotkey;
+    private Button? _capturingHotkeyButton;
+    private bool _updatingUi;
+    private bool _runtimeActive;
+    private int _availableReplaySeconds;
+    private bool? _animatedRecordingState;
+    private int _deviceRefreshVersion;
+    private int _diskRefreshInProgress;
+    private int _actionInProgress;
+    private UpdateRelease? _availableUpdate;
+    private UpdateDisplayState _updateDisplayState = UpdateDisplayState.Current;
+    private int _updateProgress;
+    private bool _updateCheckInProgress;
+    private bool _updateInstallInProgress;
+    private int _libraryRefreshInProgress;
+    private ReplayClip? _pendingDeleteClip;
+    private IReadOnlyList<CaptureInterop.MonitorInfo> _monitors = [];
+    private readonly List<DisplayIdentifierWindow> _displayIdentifierWindows = [];
+    private bool _settingsDirty;
+    private bool _savedAutostartEnabled;
+    private bool _allowClose;
+    private bool _closeAfterUnsavedResolution;
+    private bool _dirtyRefreshQueued;
+    private readonly AdvancedProcessAudioAvailability _processAudioAvailability;
+    private List<ProcessAudioRoute> _pendingProcessAudioRoutes;
+    private int _pendingAdvancedMicrophoneTrack;
+    private readonly Dictionary<string, ToggleButton> _dashboardAudioButtons =
+        new(StringComparer.OrdinalIgnoreCase);
+    private string _dashboardAudioSignature = "";
+    private bool? _dashboardAdvancedAudio;
+    private int _dashboardAudioBuildVersion;
+
+    public bool Applied { get; private set; }
+    internal Action? CaptureOverlayEditorRequested { get; set; }
+    internal Func<bool, Task<string>>? SetCaptureOverlaysEnabled { get; set; }
+
+    internal void UpdateCaptureOverlayState()
+    {
+        CaptureOverlayToggle.IsChecked = _config.CaptureOverlaysEnabled;
+        CaptureOverlayStatusText.Text = Localization.Text(_config.CaptureOverlaysEnabled
+            ? "L.Overlays.Status.On" : "L.Overlays.Status.Off");
+        CaptureOverlayIcon.Opacity = _config.CaptureOverlaysEnabled ? 1 : 0.4;
+    }
+
+    private async void CaptureOverlayToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (SetCaptureOverlaysEnabled is null || !TryBeginAction())
+        {
+            UpdateCaptureOverlayState();
+            return;
+        }
+        try
+        {
+            string warnings = await SetCaptureOverlaysEnabled(CaptureOverlayToggle.IsChecked == true);
+            if (!string.IsNullOrEmpty(warnings))
+                ShowError(Localization.Text("L.Overlays.Title"), warnings);
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Capture overlay toggle", exception);
+        }
+        finally
+        {
+            UpdateCaptureOverlayState();
+            EndAction();
+        }
+    }
+
+    private void CaptureOverlays_Click(object sender, RoutedEventArgs e) =>
+        CaptureOverlayEditorRequested?.Invoke();
+
+    internal SettingsWindow(
+        Config config,
+        bool runtimeActive,
+        Action saveReplay,
+        Func<bool, Task<bool>> setReplayEnabled,
+        Func<bool, bool, string, string, Task<bool>> setAudioSources,
+        Func<string?, bool, Task<bool>> setAdvancedAudioSourceEnabled,
+        Func<Config, bool, Task<bool>> applySettings,
+        EncoderCapabilities capabilities,
+        AdvancedProcessAudioAvailability processAudioAvailability,
+        Func<bool, CancellationToken, Task<UpdateRelease?>> checkForUpdates,
+        Func<
+            UpdateRelease,
+            IProgress<int>,
+            CancellationToken,
+            Task> installUpdate)
+    {
+        _config = config;
+        _saveReplay = saveReplay;
+        _setReplayEnabled = setReplayEnabled;
+        _setAudioSources = setAudioSources;
+        _setAdvancedAudioSourceEnabled = setAdvancedAudioSourceEnabled;
+        _applySettings = applySettings;
+        _capabilities = capabilities;
+        _processAudioAvailability = processAudioAvailability;
+        _checkForUpdates = checkForUpdates;
+        _installUpdate = installUpdate;
+        _outputDirectory = config.OutputDirectory;
+        _pendingSaveHotkey = config.Hotkey;
+        _pendingToggleHotkey = config.ToggleReplayHotkey;
+        _pendingOverlayHotkey = config.OverlayHotkey;
+        _runtimeActive = runtimeActive;
+        _pendingProcessAudioRoutes = CloneProcessAudioRoutes(config.ProcessAudioRoutes);
+        _pendingAdvancedMicrophoneTrack = config.AdvancedMicrophoneTrack;
+
+        InitializeComponent();
+        SourceInitialized += (_, _) =>
+        {
+            PositionOverlay();
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(OverlayWindowProc);
+        };
+        AttachSettingsChangeTracking();
+        LanguageList.ItemsSource = Localization.SupportedLanguages;
+        UpdateLanguageMenuSelection();
+        _replayLibrary = new ReplayLibrary(new FfmpegAdapter());
+        ApplyHardwareCapabilities();
+        _diskTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _diskTimer.Tick += async (_, _) => await RefreshDiskAsync();
+        Localization.Changed += OnLanguageChanged;
+        Closed += (_, _) =>
+        {
+            Localization.Changed -= OnLanguageChanged;
+            _diskTimer.Stop();
+            _lifetimeCts.Cancel();
+            CloseDisplayIdentifiers();
+            _lifetimeCts.Dispose();
+        };
+
+        ResetDeviceLists();
+        LoadSettingsControls();
+        UpdateRuntimeState(runtimeActive);
+        RenderUpdateStatus();
+        Loaded += async (_, _) =>
+        {
+            await RunUiActionAsync(async () =>
+            {
+                await Task.WhenAll(
+                    LoadDeviceListsAsync(),
+                    LoadAutostartStateAsync(),
+                    RefreshDiskAsync(),
+                    RefreshReplayLibraryAsync());
+            });
+            if (UpdateService.SelfUpdateEnabled && !AppDistribution.IsMicrosoftStore)
+                _ = CheckForUpdatesAsync(force: false);
+        };
+        _diskTimer.Start();
+    }
+
+    private void ApplyHardwareCapabilities()
+    {
+        SetCodecAvailability(H264CodecItem, "h264", "H.264 (AVC)");
+        SetCodecAvailability(HevcCodecItem, "hevc", "H.265 (HEVC)");
+        SetCodecAvailability(Av1CodecItem, "av1", "AV1");
+
+        if (!_capabilities.Supports(_config.Codec) &&
+            _capabilities.FallbackCodec() is string fallback)
+        {
+            _config.Codec = fallback;
+        }
+        UpdateHardwareEncoderText();
+    }
+
+    public void UpdateCapabilities(EncoderCapabilities capabilities)
+    {
+        if (ReferenceEquals(_capabilities, capabilities))
+            return;
+        _capabilities = capabilities;
+        ApplyHardwareCapabilities();
+        SelectByTag(CodecBox, _config.Codec);
+        UpdateHardwareEncoderText();
+    }
+
+    private void SetCodecAvailability(
+        ComboBoxItem item,
+        string codec,
+        string label)
+    {
+        bool available = _capabilities.Supports(codec);
+        item.IsEnabled = available;
+        item.Content = available
+            ? label
+            : Localization.Format("L.Codec.UnavailableSuffix", label);
+        item.ToolTip = available
+            ? _capabilities.Preferred(codec)?.FamilyDisplayName
+            : Localization.Text("L.Codec.Unsupported");
+    }
+
+    private void CodecBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (IsInitialized)
+            UpdateHardwareEncoderText();
+    }
+
+    private void UpdateHardwareEncoderText()
+    {
+        string codec = GetSelectedTag(CodecBox, _config.Codec);
+        CodecCapability? capability = _capabilities.Preferred(codec);
+        HardwareEncoderText.Text = capability is null
+            ? _capabilities.ProbeError ??
+              Localization.Text("L.Codec.HardwareUnavailable")
+            : $"{ShortAdapterName(_capabilities.AdapterName)} · " +
+              $"{ShortEncoderName(capability.Family)}";
+        HardwareEncoderText.ToolTip = capability is null
+            ? HardwareEncoderText.Text
+            : $"{_capabilities.AdapterName} · {capability.FamilyDisplayName}";
+    }
+
+    private static string ShortAdapterName(string adapterName) =>
+        adapterName
+            .Replace("NVIDIA GeForce ", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("AMD Radeon ", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Intel(R) ", "", StringComparison.OrdinalIgnoreCase)
+            .Replace("Intel ", "", StringComparison.OrdinalIgnoreCase);
+
+    private static string ShortEncoderName(string family) =>
+        family.ToLowerInvariant() switch
+        {
+            "nvenc" => "NVENC",
+            "amf" => "AMF",
+            "qsv" => "Quick Sync",
+            _ => "HW",
+        };
+
+    private void ResetDeviceLists()
+    {
+        AudioDeviceBox.Items.Clear();
+        MicDeviceBox.Items.Clear();
+        MonitorBox.Items.Clear();
+        _monitors = [];
+        IdentifyDisplaysButton.IsEnabled = false;
+        AudioDeviceBox.Items.Add(new ComboBoxItem
+        {
+            Tag = "",
+            Content = Localization.Text("L.Audio.DefaultWindows"),
+        });
+        MicDeviceBox.Items.Add(new ComboBoxItem
+        {
+            Tag = "",
+            Content = Localization.Text("L.Audio.DefaultWindows"),
+        });
+        MonitorBox.Items.Add(new ComboBoxItem
+        {
+            Tag = "0",
+            Content = Localization.Text("L.Video.PrimaryMonitor"),
+        });
+    }
+
+    private async Task LoadDeviceListsAsync()
+    {
+        int version = Interlocked.Increment(ref _deviceRefreshVersion);
+        string systemDevice = GetSelectedTag(
+            AudioDeviceBox,
+            _config.SystemAudioDeviceId);
+        string microphoneDevice = GetSelectedTag(
+            MicDeviceBox,
+            _config.MicrophoneDeviceId);
+        string monitorId = GetSelectedTag(
+            MonitorBox,
+            _config.MonitorIndex.ToString());
+
+        DeviceListsSnapshot snapshot;
+        try
+        {
+            snapshot = await Task.Run(
+                CollectDeviceLists,
+                _lifetimeCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (version != _deviceRefreshVersion || _lifetimeCts.IsCancellationRequested)
+            return;
+
+        ResetDeviceLists();
+        foreach (var (id, name) in snapshot.RenderDevices)
+            AudioDeviceBox.Items.Add(new ComboBoxItem { Tag = id, Content = name });
+        foreach (var (id, name) in snapshot.CaptureDevices)
+            MicDeviceBox.Items.Add(new ComboBoxItem { Tag = id, Content = name });
+        if (snapshot.Monitors.Count > 0)
+        {
+            _monitors = snapshot.Monitors;
+            MonitorBox.Items.Clear();
+            foreach (var monitor in snapshot.Monitors)
+            {
+                MonitorBox.Items.Add(new ComboBoxItem
+                {
+                    Tag = monitor.Index.ToString(),
+                    Content = Localization.Format(
+                        "L.Video.MonitorFormat",
+                        monitor.Index + 1,
+                        monitor.Width,
+                        monitor.Height),
+                });
+            }
+        }
+        IdentifyDisplaysButton.IsEnabled = _monitors.Count > 0;
+
+        SelectByTag(AudioDeviceBox, systemDevice);
+        SelectByTag(MicDeviceBox, microphoneDevice);
+        SelectByTag(MonitorBox, monitorId);
+        UpdateAudioDeviceState();
+    }
+
+    private void IdentifyDisplays_Click(object sender, RoutedEventArgs e)
+    {
+        CloseDisplayIdentifiers();
+        foreach (CaptureInterop.MonitorInfo monitor in _monitors)
+        {
+            var identifier = new DisplayIdentifierWindow(
+                monitor,
+                monitor.Index + 1);
+            identifier.Owner = this;
+            identifier.Closed += (_, _) =>
+                _displayIdentifierWindows.Remove(identifier);
+            _displayIdentifierWindows.Add(identifier);
+            identifier.Show();
+        }
+    }
+
+    private void CloseDisplayIdentifiers()
+    {
+        DisplayIdentifierWindow[] identifiers =
+            _displayIdentifierWindows.ToArray();
+        _displayIdentifierWindows.Clear();
+        foreach (DisplayIdentifierWindow identifier in identifiers)
+        {
+            if (identifier.IsLoaded)
+                identifier.Close();
+        }
+    }
+
+    private static DeviceListsSnapshot CollectDeviceLists()
+    {
+        IReadOnlyList<(string Id, string Name)> renderDevices = [];
+        IReadOnlyList<(string Id, string Name)> captureDevices = [];
+        IReadOnlyList<CaptureInterop.MonitorInfo> monitors = [];
+        try
+        {
+            renderDevices = AudioDevices.ListRenderDevices();
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"Output-device list unavailable: {ex.Message}");
+        }
+        try
+        {
+            captureDevices = AudioDevices.ListCaptureDevices();
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"Microphone list unavailable: {ex.Message}");
+        }
+        try
+        {
+            monitors = CaptureInterop.EnumerateMonitors();
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"Monitor list unavailable: {ex.Message}");
+        }
+        return new DeviceListsSnapshot(renderDevices, captureDevices, monitors);
+    }
+
+    private void CaptureSourceBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (IsInitialized)
+            UpdateCaptureSourceState();
+    }
+
+    private void UpdateCaptureModeState()
+    {
+        bool recording = string.Equals(
+            GetSelectedRadioTag(DashboardCaptureModeOptions, "replay"),
+            "recording",
+            StringComparison.Ordinal);
+        ReplayOnlySettings.Visibility = recording
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        ReplayToggleHotkeySettings.Visibility = recording
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        CaptureEnabledLabel.Text = Localization.Text(
+            recording ? "L.Capture.RecordingEnabled" : "L.Replay.Instant");
+        PrimaryHotkeyLabel.Text = Localization.Text(
+            recording ? "L.Hotkey.ToggleRecording" : "L.Hotkey.SaveReplay");
+        PrimaryHotkeyHint.Text = Localization.Text(
+            recording ? "L.Hotkey.ToggleRecordingHint" : "L.Hotkey.SaveHint");
+    }
+
+    private void UpdateCaptureSourceState()
+    {
+        bool game = GetSelectedTag(CaptureSourceBox, "desktop") == "game";
+        MonitorBox.IsEnabled = true;
+        DesktopCaptureMethodRow.Visibility = game ? Visibility.Collapsed : Visibility.Visible;
+        DesktopCaptureMethodDivider.Visibility = DesktopCaptureMethodRow.Visibility;
+        SystemAudioLabel.Text = Localization.Text(
+            game ? "L.Audio.GameAudio" : "L.Audio.SystemAudio");
+        UpdateAudioRoutingState();
+        UpdateAudioDeviceState();
+    }
+
+    private void LoadSettingsControls()
+    {
+        _updatingUi = true;
+        try
+        {
+            SelectRadioByTag(DashboardCaptureModeOptions, _config.CaptureMode);
+            SelectRadioByTag(BufferOptions, _config.BufferSeconds.ToString());
+            SelectByTag(ReplaySizeLimitBox, _config.MaxReplaySizeMb.ToString());
+            SelectRadioByTag(FpsOptions, _config.FrameRate.ToString());
+            SelectByTag(CaptureSourceBox, _config.CaptureSource);
+            SelectByTag(DesktopCaptureMethodBox, _config.DesktopCaptureMethod);
+            SelectByTag(GpuPreferenceBox, _config.GpuPreference);
+            SelectByTag(CodecBox, _config.Codec);
+            CustomBitrateBox.Text = (_config.BitrateMbps > 0 ? _config.BitrateMbps : 35).ToString();
+            string bitrateTag = _config.BitrateMbps.ToString();
+            SelectByTag(BitrateBox, BitrateBox.Items.Cast<ComboBoxItem>()
+                .Any(item => item.Tag?.ToString() == bitrateTag) ? bitrateTag : "custom");
+            UpdateCustomBitrateState();
+            SelectByTag(MonitorBox, _config.MonitorIndex.ToString());
+            SelectByTag(ResolutionBox, _config.RecordingResolution);
+            SelectByTag(AudioDeviceBox, _config.SystemAudioDeviceId);
+            SelectByTag(MicDeviceBox, _config.MicrophoneDeviceId);
+            SelectByTag(AudioCodecBox, _config.AudioCodec);
+            SelectByTag(
+                AudioTrackModeBox,
+                string.Equals(
+                    _config.AudioRoutingMode,
+                    "advanced",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "advanced"
+                    : _config.SeparateAudioTracks ? "separate" : "mixed");
+
+            _pendingProcessAudioRoutes = CloneProcessAudioRoutes(
+                _config.ProcessAudioRoutes);
+            _pendingAdvancedMicrophoneTrack = _config.AdvancedMicrophoneTrack;
+
+            SettingsReplayToggle.IsChecked = _config.ReplayEnabled;
+            WarnGameOffBox.IsChecked = _config.WarnWhenGameStartsWithReplayOff;
+            RecordingIndicatorBox.IsChecked = _config.ShowRecordingIndicator;
+            SelectRadioByTag(
+                RecordingIndicatorPositionOptions,
+                _config.RecordingIndicatorPosition);
+            SystemAudioBox.IsChecked = _config.CaptureSystemAudio;
+            MicBox.IsChecked = _config.CaptureMicrophone;
+            SystemVolumeSlider.Value = Math.Clamp(_config.SystemAudioVolume, 0, 100);
+            MicVolumeSlider.Value = Math.Clamp(_config.MicrophoneVolume, 0, 100);
+            MicBoostSlider.Value = Math.Clamp(_config.MicrophoneBoostDb, 0, 20);
+            OrganizeByGameBox.IsChecked = _config.OrganizeReplaysByGame;
+            SelectRadioByTag(AccentColorOptions, _config.AccentColor);
+
+            _pendingSaveHotkey = _config.Hotkey;
+            _pendingToggleHotkey = _config.ToggleReplayHotkey;
+            _pendingOverlayHotkey = _config.OverlayHotkey;
+            OverlayHotkeyButton.Content = _pendingOverlayHotkey;
+            SaveHotkeyButton.Content = _pendingSaveHotkey;
+            ToggleHotkeyButton.Content = _pendingToggleHotkey;
+
+            _outputDirectory = _config.OutputDirectory;
+            OutputDirText.Text = _outputDirectory;
+            UpdateAudioDeviceState();
+            UpdateCaptureSourceState();
+            UpdateAudioRoutingState();
+            UpdateHardwareEncoderText();
+            UpdateCaptureModeState();
+        }
+        finally
+        {
+            _updatingUi = false;
+        }
+    }
+
+    public void UpdateRuntimeState(
+        bool active,
+        string? activeCodec = null,
+        string? activeCaptureSource = null,
+        int? availableReplaySeconds = null)
+    {
+        _runtimeActive = active;
+        if (availableReplaySeconds is not null)
+            _availableReplaySeconds = availableReplaySeconds.Value;
+        else if (!active)
+            _availableReplaySeconds = 0;
+        _updatingUi = true;
+        SelectRadioByTag(DashboardCaptureModeOptions, _config.CaptureMode);
+        ReplayToggle.IsChecked = active;
+        UpdateCaptureOverlayState();
+        SettingsReplayToggle.IsChecked = active;
+        _updatingUi = false;
+
+        bool advancedAudio = string.Equals(
+            _config.AudioRoutingMode,
+            "advanced",
+            StringComparison.OrdinalIgnoreCase);
+        string primaryAudio = Localization.Text(
+            advancedAudio
+                ? "L.Audio.ApplicationAudio"
+                : _config.CaptureSource == "game"
+                    ? "L.Audio.GameSound"
+                    : "L.Audio.SystemSound");
+        bool hasPrimaryAudio = advancedAudio
+            ? _config.ProcessAudioRoutes.Any(route => route.Enabled)
+            : _config.CaptureSystemAudio;
+        string audio = (hasPrimaryAudio, _config.CaptureMicrophone) switch
+        {
+            (true, true) when advancedAudio || _config.SeparateAudioTracks =>
+                Localization.Format("L.Audio.SeparateSuffix", primaryAudio),
+            (true, true) =>
+                Localization.Format("L.Audio.MixedWithMic", primaryAudio),
+            (true, false) => primaryAudio,
+            (false, true) => Localization.Text("L.Audio.MicrophoneLower"),
+            _ => Localization.Text("L.Audio.VideoOnly"),
+        };
+
+        bool recordingMode = string.Equals(
+            _config.CaptureMode,
+            "recording",
+            StringComparison.Ordinal);
+        StatusTitleText.Text = Localization.Text(
+            active
+                ? recordingMode ? "L.Status.Recording" : "L.Status.Enabled"
+                : recordingMode
+                    ? "L.Status.RecordingDisabled"
+                    : "L.Status.Disabled");
+        StatusDetailText.Text = active
+            ? recordingMode
+                ? Localization.Format(
+                    "L.Status.RecordingDetail",
+                    LocalizedCaptureSource(activeCaptureSource),
+                    audio)
+                : Localization.Format(
+                    "L.Status.Detail",
+                    FormatDuration(_config.BufferSeconds),
+                    LocalizedCaptureSource(activeCaptureSource),
+                    audio)
+            : Localization.Text(
+                recordingMode
+                    ? "L.Status.RecordingIdle"
+                    : "L.Status.Idle");
+        StatusRing.Stroke = FindBrush(active ? "AccentBrush" : "RingIdleBrush");
+        StatusDot.Fill = FindBrush(active ? "AccentBrush" : "RingIdleBrush");
+        SaveReplayButton.IsEnabled = recordingMode ||
+                                     (active && _availableReplaySeconds > 0);
+        AnimateRecordingState(active);
+
+        RefreshDashboardAudioLevels();
+        PrimaryAudioChipText.Text = Localization.Text(
+            advancedAudio
+                ? "L.Audio.ApplicationAudio"
+                : _config.CaptureSource == "game"
+                    ? "L.Audio.Game"
+                    : "L.Audio.System");
+        SystemSourceChip.IsEnabled = !advancedAudio && _actionInProgress == 0;
+        UpdateDashboardAudioSources(advancedAudio);
+
+        string codec = FormatCodec(activeCodec ?? _config.Codec);
+        CodecSummaryText.Text = $"{codec} · {FormatResolution(_config.RecordingResolution)}";
+        FpsSummaryText.Text = $"{_config.FrameRate} FPS";
+        SaveButtonText.Text = recordingMode
+            ? Localization.Text(
+                active ? "L.Capture.StopRecording" : "L.Capture.StartRecording")
+            : Localization.Format(
+                "L.Save.Duration",
+                FormatDuration(
+                    active && _availableReplaySeconds > 0
+                        ? Math.Max(1, _availableReplaySeconds)
+                        : _config.BufferSeconds));
+        HotkeySummaryText.Text = _config.Hotkey;
+        OutputFolderSummaryText.Text = _config.OutputDirectory;
+    }
+
+    private void UpdateDashboardAudioSources(bool advancedAudio)
+    {
+        SwitchDashboardAudioMode(advancedAudio);
+        if (!advancedAudio)
+            return;
+
+        string signature = string.Join(
+            "|",
+            _config.ProcessAudioRoutes
+                .OrderBy(route => route.Track)
+                .ThenBy(route => route.Executable, StringComparer.OrdinalIgnoreCase)
+                .Select(route =>
+                    $"{route.Executable}:{route.Track}:{route.Enabled}")) +
+            $"|mic:{_config.AdvancedMicrophoneTrack}:{_config.CaptureMicrophone}";
+        if (!string.Equals(
+                signature,
+                _dashboardAudioSignature,
+                StringComparison.Ordinal))
+        {
+            _dashboardAudioSignature = signature;
+            RebuildDashboardAudioSources();
+        }
+
+        foreach (ProcessAudioRoute route in _config.ProcessAudioRoutes)
+        {
+            if (_dashboardAudioButtons.TryGetValue(route.Executable, out ToggleButton? button))
+            {
+                button.IsChecked = route.Enabled;
+                button.IsEnabled = _actionInProgress == 0;
+            }
+        }
+        if (_dashboardAudioButtons.TryGetValue("@microphone", out ToggleButton? mic))
+        {
+            mic.IsChecked = _config.CaptureMicrophone;
+            mic.IsEnabled = _actionInProgress == 0;
+        }
+    }
+
+    private void SwitchDashboardAudioMode(bool advancedAudio)
+    {
+        if (_dashboardAdvancedAudio == advancedAudio)
+            return;
+        _dashboardAdvancedAudio = advancedAudio;
+
+        FrameworkElement incoming = advancedAudio
+            ? PerAppAudioSourcePanel
+            : SimpleAudioSourcePanel;
+        FrameworkElement outgoing = advancedAudio
+            ? SimpleAudioSourcePanel
+            : PerAppAudioSourcePanel;
+        outgoing.BeginAnimation(OpacityProperty, null);
+        outgoing.Visibility = Visibility.Collapsed;
+        incoming.Visibility = Visibility.Visible;
+        incoming.Opacity = 0;
+        if (incoming.RenderTransform is TranslateTransform translate)
+        {
+            translate.Y = 4;
+            translate.BeginAnimation(
+                TranslateTransform.YProperty,
+                new DoubleAnimation(
+                    4,
+                    0,
+                    TimeSpan.FromMilliseconds(150))
+                {
+                    EasingFunction = new CubicEase
+                    {
+                        EasingMode = EasingMode.EaseOut,
+                    },
+                });
+        }
+        incoming.BeginAnimation(
+            OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(130)));
+    }
+
+    private void RebuildDashboardAudioSources()
+    {
+        int buildVersion = ++_dashboardAudioBuildVersion;
+        PerAppAudioSourceItems.Children.Clear();
+        _dashboardAudioButtons.Clear();
+
+        foreach (ProcessAudioRoute route in _config.ProcessAudioRoutes
+                     .OrderBy(route => route.Track)
+                     .ThenBy(route => route.Executable, StringComparer.OrdinalIgnoreCase))
+        {
+            ToggleButton button = CreateDashboardAudioSourceButton(
+                route.Executable,
+                Path.GetFileNameWithoutExtension(route.Executable),
+                route.Track,
+                route.Enabled,
+                microphone: false);
+            _dashboardAudioButtons[route.Executable] = button;
+            PerAppAudioSourceItems.Children.Add(button);
+            _ = LoadDashboardProcessIconAsync(
+                button,
+                route.Executable,
+                buildVersion);
+        }
+
+    }
+
+    private ToggleButton CreateDashboardAudioSourceButton(
+        string key,
+        string displayName,
+        int track,
+        bool enabled,
+        bool microphone)
+    {
+        var content = new Grid { Width = 24, Height = 24 };
+        if (microphone)
+        {
+            content.Children.Add(new System.Windows.Shapes.Path
+            {
+                Data = (Geometry)FindResource("IconMic"),
+                Stroke = FindBrush("AccentBrush"),
+                StrokeThickness = 1.8,
+                Width = 17,
+                Height = 17,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+        }
+        else
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = BuildDashboardAudioInitials(displayName),
+                Foreground = FindBrush("AccentBrush"),
+                FontSize = 10.5,
+                FontWeight = FontWeights.ExtraBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+        }
+
+        var button = new ToggleButton
+        {
+            Style = (Style)FindResource("PerAppSourceChip"),
+            IsChecked = enabled,
+            Tag = new DashboardAudioSource(key, microphone),
+            ToolTip = $"{displayName} · " + Localization.Format(
+                "L.AdvancedAudio.TrackFormat",
+                track),
+            Content = content,
+        };
+        button.Click += PerAppAudioSource_Click;
+        return button;
+    }
+
+    private async Task LoadDashboardProcessIconAsync(
+        ToggleButton button,
+        string executable,
+        int buildVersion)
+    {
+        string? path = await Task.Run(() => FindRunningExecutablePath(executable));
+        ImageSource? icon = await ProcessIconProvider.GetAsync(path);
+        if (icon is null || buildVersion != _dashboardAudioBuildVersion ||
+            button.Content is not Grid content)
+        {
+            return;
+        }
+
+        content.Children.Clear();
+        content.Children.Add(new Image
+        {
+            Source = icon,
+            Width = 23,
+            Height = 23,
+            Stretch = Stretch.Uniform,
+            SnapsToDevicePixels = true,
+        });
+    }
+
+    private static string? FindRunningExecutablePath(string executable)
+    {
+        string processName = Path.GetFileNameWithoutExtension(executable);
+        foreach (Process process in Process.GetProcessesByName(processName))
+        {
+            using (process)
+            {
+                try
+                {
+                    string? path = process.MainModule?.FileName;
+                    if (!string.IsNullOrWhiteSpace(path))
+                        return path;
+                }
+                catch (Exception exception) when (
+                    exception is Win32Exception or InvalidOperationException or
+                        NotSupportedException)
+                {
+                    // Protected or already exited process; try another instance.
+                }
+            }
+        }
+        return null;
+    }
+
+    private static string BuildDashboardAudioInitials(string displayName)
+    {
+        string normalized = displayName.Trim();
+        if (normalized.Length == 0)
+            return "?";
+        return normalized.Length == 1
+            ? normalized.ToUpperInvariant()
+            : normalized[..2].ToUpperInvariant();
+    }
+
+    private async void PerAppAudioSource_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updatingUi || sender is not ToggleButton button ||
+            button.Tag is not DashboardAudioSource source)
+        {
+            return;
+        }
+        if (!TryBeginAction())
+        {
+            UpdateRuntimeState(_runtimeActive);
+            return;
+        }
+
+        try
+        {
+            bool applied = await _setAdvancedAudioSourceEnabled(
+                source.Microphone ? null : source.Key,
+                button.IsChecked == true);
+            if (applied)
+            {
+                if (source.Microphone)
+                {
+                    _updatingUi = true;
+                    MicBox.IsChecked = _config.CaptureMicrophone;
+                    _updatingUi = false;
+                }
+                else
+                {
+                    ProcessAudioRoute? current = _config.ProcessAudioRoutes
+                        .FirstOrDefault(route => string.Equals(
+                            route.Executable,
+                            source.Key,
+                            StringComparison.OrdinalIgnoreCase));
+                    ProcessAudioRoute? pending = _pendingProcessAudioRoutes
+                        .FirstOrDefault(route => string.Equals(
+                            route.Executable,
+                            source.Key,
+                            StringComparison.OrdinalIgnoreCase));
+                    if (current is not null && pending is not null)
+                        pending.Enabled = current.Enabled;
+                }
+                RefreshSettingsDirtyState();
+            }
+            UpdateRuntimeState(_runtimeActive);
+            AnimatePress(button);
+            if (!applied)
+            {
+                ShowError(
+                    Localization.Text("L.Error.SourceTitle"),
+                    Localization.Text("L.Error.AudioSourceMessage"));
+            }
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Advanced audio source toggle", exception);
+            UpdateRuntimeState(_runtimeActive);
+        }
+        finally
+        {
+            EndAction();
+            UpdateDashboardAudioSources(advancedAudio: true);
+        }
+    }
+
+    public void UpdateRecoveryState(string detail)
+    {
+        _runtimeActive = false;
+        _updatingUi = true;
+        ReplayToggle.IsChecked = true;
+        SettingsReplayToggle.IsChecked = true;
+        _updatingUi = false;
+
+        StatusTitleText.Text = Localization.Text("L.Status.Recovering");
+        StatusDetailText.Text = detail;
+        StatusRing.Stroke = FindBrush("ErrorBrush");
+        StatusDot.Fill = FindBrush("ErrorBrush");
+        SaveReplayButton.IsEnabled = false;
+        AnimateRecordingState(false);
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        ShowSettings();
+        SettingsScrollViewer.ScrollToTop();
+    }
+
+    private void LanguagePopup_Opened(object? sender, EventArgs e)
+    {
+        UpdateLanguageMenuSelection();
+        LanguagePopupPanel.BeginAnimation(
+            OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
+        if (LanguagePopupPanel.RenderTransform is TranslateTransform translate)
+        {
+            translate.BeginAnimation(
+                TranslateTransform.YProperty,
+                new DoubleAnimation(-5, 0, TimeSpan.FromMilliseconds(150))
+                {
+                    EasingFunction = new CubicEase
+                    {
+                        EasingMode = EasingMode.EaseOut,
+                    },
+                });
+        }
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            LanguageList.Focus();
+            if (LanguageList.ItemContainerGenerator.ContainerFromItem(
+                    LanguageList.SelectedItem) is ListBoxItem selected)
+            {
+                selected.Focus();
+            }
+        });
+    }
+
+    private void LanguagePopup_Closed(object? sender, EventArgs e)
+    {
+        LanguagePopupPanel.BeginAnimation(OpacityProperty, null);
+        LanguagePopupPanel.Opacity = 0;
+        if (LanguagePopupPanel.RenderTransform is TranslateTransform translate)
+        {
+            translate.BeginAnimation(TranslateTransform.YProperty, null);
+            translate.Y = -5;
+        }
+        UpdateLanguageMenuSelection();
+    }
+
+    private CustomPopupPlacement[] AboutPopup_Placement(
+        Size popupSize,
+        Size targetSize,
+        Point offset)
+    {
+        const double gap = 7;
+        return
+        [
+            new CustomPopupPlacement(
+                new Point(
+                    targetSize.Width - popupSize.Width,
+                    -popupSize.Height - gap),
+                PopupPrimaryAxis.Horizontal)
+        ];
+    }
+
+    private void AboutPopup_Opened(object? sender, EventArgs e)
+    {
+        AboutPopupPanel.BeginAnimation(
+            OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(110)));
+        if (AboutPopupPanel.RenderTransform is TranslateTransform translate)
+        {
+            translate.BeginAnimation(
+                TranslateTransform.YProperty,
+                new DoubleAnimation(5, 0, TimeSpan.FromMilliseconds(145))
+                {
+                    EasingFunction = new CubicEase
+                    {
+                        EasingMode = EasingMode.EaseOut,
+                    },
+                });
+        }
+        Dispatcher.BeginInvoke(
+            DispatcherPriority.Input,
+            () => GitHubButton.Focus());
+    }
+
+    private void AboutPopup_Closed(object? sender, EventArgs e)
+    {
+        AboutPopupPanel.BeginAnimation(OpacityProperty, null);
+        AboutPopupPanel.Opacity = 0;
+        if (AboutPopupPanel.RenderTransform is TranslateTransform translate)
+        {
+            translate.BeginAnimation(TranslateTransform.YProperty, null);
+            translate.Y = 5;
+        }
+    }
+
+    private void AttachSettingsChangeTracking()
+    {
+        SettingsPanel.AddHandler(
+            ToggleButton.CheckedEvent,
+            new RoutedEventHandler(SettingsControl_Changed),
+            handledEventsToo: true);
+        SettingsPanel.AddHandler(
+            ToggleButton.UncheckedEvent,
+            new RoutedEventHandler(SettingsControl_Changed),
+            handledEventsToo: true);
+        SettingsPanel.AddHandler(
+            Selector.SelectionChangedEvent,
+            new SelectionChangedEventHandler(SettingsSelection_Changed),
+            handledEventsToo: true);
+        SettingsPanel.AddHandler(
+            RangeBase.ValueChangedEvent,
+            new RoutedPropertyChangedEventHandler<double>(SettingsValue_Changed),
+            handledEventsToo: true);
+    }
+
+    private void SettingsControl_Changed(object sender, RoutedEventArgs e) =>
+        QueueSettingsDirtyRefresh();
+
+    private void SettingsSelection_Changed(
+        object sender,
+        SelectionChangedEventArgs e) =>
+        QueueSettingsDirtyRefresh();
+
+    private void SettingsValue_Changed(
+        object sender,
+        RoutedPropertyChangedEventArgs<double> e) =>
+        QueueSettingsDirtyRefresh();
+
+    private void QueueSettingsDirtyRefresh()
+    {
+        if (_updatingUi ||
+            SettingsPanel.Visibility != Visibility.Visible ||
+            _dirtyRefreshQueued)
+        {
+            return;
+        }
+
+        _dirtyRefreshQueued = true;
+        Dispatcher.BeginInvoke(() =>
+        {
+            _dirtyRefreshQueued = false;
+            RefreshSettingsDirtyState();
+        }, DispatcherPriority.DataBind);
+    }
+
+    private void RefreshSettingsDirtyState()
+    {
+        if (_updatingUi || SettingsPanel.Visibility != Visibility.Visible)
+            return;
+
+        Config pending = CreatePendingConfig();
+        bool dirty = !TryGetBitrateMbps(out _) || !SettingsValuesEqual(pending, _config) ||
+                     (AutostartBox.IsChecked == true) != _savedAutostartEnabled;
+        SetSettingsDirty(dirty);
+    }
+
+    private Config CreatePendingConfig()
+    {
+        Config candidate = _config.Clone();
+        candidate.CaptureMode = GetSelectedRadioTag(
+            DashboardCaptureModeOptions,
+            "replay");
+        candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
+        candidate.WarnWhenGameStartsWithReplayOff = WarnGameOffBox.IsChecked == true;
+        candidate.ShowRecordingIndicator = RecordingIndicatorBox.IsChecked == true;
+        candidate.RecordingIndicatorPosition = GetSelectedRadioTag(
+            RecordingIndicatorPositionOptions,
+            _config.RecordingIndicatorPosition);
+        candidate.BufferSeconds = GetSelectedRadioInt(
+            BufferOptions,
+            _config.BufferSeconds);
+        candidate.MaxReplaySizeMb = GetSelectedInt(ReplaySizeLimitBox, 0);
+        candidate.CaptureSource = GetSelectedTag(CaptureSourceBox, "desktop");
+        candidate.DesktopCaptureMethod = GetSelectedTag(DesktopCaptureMethodBox, "dxgi");
+        candidate.GpuPreference = GetSelectedTag(GpuPreferenceBox, "high-performance");
+        candidate.Codec = GetSelectedTag(CodecBox, _config.Codec);
+        candidate.BitrateMbps = TryGetBitrateMbps(out int bitrate) ? bitrate : _config.BitrateMbps;
+        candidate.FrameRate = GetSelectedRadioInt(FpsOptions, _config.FrameRate);
+        candidate.MonitorIndex = GetSelectedInt(MonitorBox, _config.MonitorIndex);
+        candidate.RecordingResolution = GetSelectedTag(ResolutionBox, "source");
+        candidate.CaptureSystemAudio = SystemAudioBox.IsChecked == true;
+        candidate.SystemAudioVolume = (int)Math.Round(SystemVolumeSlider.Value);
+        candidate.SystemAudioDeviceId = GetSelectedTag(AudioDeviceBox, "");
+        candidate.CaptureMicrophone = MicBox.IsChecked == true;
+        candidate.MicrophoneVolume = (int)Math.Round(MicVolumeSlider.Value);
+        candidate.MicrophoneBoostDb = (int)Math.Round(MicBoostSlider.Value);
+        candidate.MicrophoneDeviceId = GetSelectedTag(MicDeviceBox, "");
+        candidate.AudioCodec = GetSelectedTag(AudioCodecBox, "aac");
+        string audioTrackMode = GetSelectedTag(AudioTrackModeBox, "mixed");
+        candidate.AudioRoutingMode = audioTrackMode == "advanced"
+            ? "advanced"
+            : "simple";
+        candidate.SeparateAudioTracks = audioTrackMode == "separate";
+        candidate.ProcessAudioRoutes = CloneProcessAudioRoutes(
+            _pendingProcessAudioRoutes);
+        candidate.AdvancedMicrophoneTrack = _pendingAdvancedMicrophoneTrack;
+        if (candidate.AudioRoutingMode == "advanced")
+            candidate.CaptureSystemAudio = false;
+        candidate.OutputDirectory = _outputDirectory;
+        candidate.OrganizeReplaysByGame = OrganizeByGameBox.IsChecked == true;
+        candidate.AccentColor = GetSelectedRadioTag(
+            AccentColorOptions,
+            _config.AccentColor);
+        candidate.Hotkey = _pendingSaveHotkey;
+        candidate.ToggleReplayHotkey = _pendingToggleHotkey;
+        candidate.OverlayHotkey = _pendingOverlayHotkey;
+        return candidate;
+    }
+
+    private static bool SettingsValuesEqual(Config left, Config right) =>
+        string.Equals(left.CaptureMode, right.CaptureMode, StringComparison.Ordinal) &&
+        left.ReplayEnabled == right.ReplayEnabled &&
+        left.WarnWhenGameStartsWithReplayOff == right.WarnWhenGameStartsWithReplayOff &&
+        left.ShowRecordingIndicator == right.ShowRecordingIndicator &&
+        string.Equals(
+            left.RecordingIndicatorPosition,
+            right.RecordingIndicatorPosition,
+            StringComparison.Ordinal) &&
+        left.BufferSeconds == right.BufferSeconds &&
+        left.MaxReplaySizeMb == right.MaxReplaySizeMb &&
+        string.Equals(left.CaptureSource, right.CaptureSource, StringComparison.Ordinal) &&
+        string.Equals(left.DesktopCaptureMethod, right.DesktopCaptureMethod, StringComparison.Ordinal) &&
+        string.Equals(left.GpuPreference, right.GpuPreference, StringComparison.Ordinal) &&
+        string.Equals(left.Codec, right.Codec, StringComparison.Ordinal) &&
+        left.BitrateMbps == right.BitrateMbps &&
+        left.FrameRate == right.FrameRate &&
+        left.MonitorIndex == right.MonitorIndex &&
+        string.Equals(
+            left.RecordingResolution,
+            right.RecordingResolution,
+            StringComparison.Ordinal) &&
+        left.CaptureSystemAudio == right.CaptureSystemAudio &&
+        left.SystemAudioVolume == right.SystemAudioVolume &&
+        string.Equals(
+            left.SystemAudioDeviceId,
+            right.SystemAudioDeviceId,
+            StringComparison.Ordinal) &&
+        left.CaptureMicrophone == right.CaptureMicrophone &&
+        left.MicrophoneVolume == right.MicrophoneVolume &&
+        left.MicrophoneBoostDb == right.MicrophoneBoostDb &&
+        string.Equals(
+            left.MicrophoneDeviceId,
+            right.MicrophoneDeviceId,
+            StringComparison.Ordinal) &&
+        string.Equals(left.AudioCodec, right.AudioCodec, StringComparison.Ordinal) &&
+        left.SeparateAudioTracks == right.SeparateAudioTracks &&
+        string.Equals(
+            left.AudioRoutingMode,
+            right.AudioRoutingMode,
+            StringComparison.Ordinal) &&
+        left.AdvancedMicrophoneTrack == right.AdvancedMicrophoneTrack &&
+        ProcessAudioRoutesEqual(
+            left.ProcessAudioRoutes,
+            right.ProcessAudioRoutes) &&
+        string.Equals(
+            left.OutputDirectory,
+            right.OutputDirectory,
+            StringComparison.OrdinalIgnoreCase) &&
+        left.OrganizeReplaysByGame == right.OrganizeReplaysByGame &&
+        string.Equals(left.AccentColor, right.AccentColor, StringComparison.Ordinal) &&
+        string.Equals(left.Hotkey, right.Hotkey, StringComparison.Ordinal) &&
+        string.Equals(
+            left.ToggleReplayHotkey,
+            right.ToggleReplayHotkey,
+            StringComparison.Ordinal) &&
+        string.Equals(left.OverlayHotkey, right.OverlayHotkey, StringComparison.Ordinal);
+
+    private static List<ProcessAudioRoute> CloneProcessAudioRoutes(
+        IEnumerable<ProcessAudioRoute>? routes) =>
+        (routes ?? [])
+            .Select(route => new ProcessAudioRoute
+            {
+                Executable = route.Executable,
+                Track = route.Track,
+                Enabled = route.Enabled,
+            })
+            .OrderBy(route => route.Executable, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static bool ProcessAudioRoutesEqual(
+        IEnumerable<ProcessAudioRoute>? left,
+        IEnumerable<ProcessAudioRoute>? right)
+    {
+        ProcessAudioRoute[] leftRoutes = CloneProcessAudioRoutes(left).ToArray();
+        ProcessAudioRoute[] rightRoutes = CloneProcessAudioRoutes(right).ToArray();
+        return leftRoutes.Length == rightRoutes.Length &&
+               leftRoutes.Zip(rightRoutes).All(pair =>
+                   pair.First.Track == pair.Second.Track &&
+                   pair.First.Enabled == pair.Second.Enabled &&
+                   string.Equals(
+                       pair.First.Executable,
+                       pair.Second.Executable,
+                       StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SetSettingsDirty(bool dirty, bool animate = true)
+    {
+        _settingsDirty = dirty;
+        if (dirty)
+        {
+            UnsavedChangesBar.BeginAnimation(OpacityProperty, null);
+            UnsavedChangesTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+            if (UnsavedChangesBar.Visibility != Visibility.Visible)
+            {
+                UnsavedChangesBar.Visibility = Visibility.Visible;
+                UnsavedChangesBar.Opacity = animate ? 0 : 1;
+                UnsavedChangesTranslate.Y = animate ? -6 : 0;
+                if (animate)
+                {
+                    UnsavedChangesBar.BeginAnimation(
+                        OpacityProperty,
+                        new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150))
+                        {
+                            EasingFunction = new CubicEase
+                            {
+                                EasingMode = EasingMode.EaseOut,
+                            },
+                        });
+                    UnsavedChangesTranslate.BeginAnimation(
+                        TranslateTransform.YProperty,
+                        new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(190))
+                        {
+                            EasingFunction = new CubicEase
+                            {
+                                EasingMode = EasingMode.EaseOut,
+                            },
+                        });
+                }
+            }
+            else
+            {
+                UnsavedChangesBar.Opacity = 1;
+                UnsavedChangesTranslate.Y = 0;
+            }
+            return;
+        }
+
+        if (UnsavedChangesBar.Visibility != Visibility.Visible)
+            return;
+        UnsavedChangesBar.BeginAnimation(OpacityProperty, null);
+        UnsavedChangesTranslate.BeginAnimation(TranslateTransform.YProperty, null);
+        if (!animate)
+        {
+            UnsavedChangesBar.Visibility = Visibility.Collapsed;
+            UnsavedChangesBar.Opacity = 0;
+            UnsavedChangesTranslate.Y = -6;
+            return;
+        }
+
+        var fade = new DoubleAnimation(0, TimeSpan.FromMilliseconds(120));
+        fade.Completed += (_, _) =>
+        {
+            if (_settingsDirty)
+                return;
+            UnsavedChangesBar.Visibility = Visibility.Collapsed;
+            UnsavedChangesBar.Opacity = 0;
+            UnsavedChangesTranslate.Y = -6;
+        };
+        UnsavedChangesBar.BeginAnimation(OpacityProperty, fade);
+    }
+
+    private void PromptForUnsavedChanges(bool closeAfterResolution)
+    {
+        _closeAfterUnsavedResolution = closeAfterResolution;
+        SetSettingsDirty(true, animate: false);
+        AnimateUnsavedPrompt();
+    }
+
+    private void AnimateUnsavedPrompt()
+    {
+        WindowShakeTransform.BeginAnimation(TranslateTransform.XProperty, null);
+        var shake = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromMilliseconds(360),
+            FillBehavior = FillBehavior.Stop,
+        };
+        shake.KeyFrames.Add(new LinearDoubleKeyFrame(-8, KeyTime.FromPercent(0.12)));
+        shake.KeyFrames.Add(new LinearDoubleKeyFrame(7, KeyTime.FromPercent(0.26)));
+        shake.KeyFrames.Add(new LinearDoubleKeyFrame(-6, KeyTime.FromPercent(0.40)));
+        shake.KeyFrames.Add(new LinearDoubleKeyFrame(5, KeyTime.FromPercent(0.54)));
+        shake.KeyFrames.Add(new LinearDoubleKeyFrame(-3, KeyTime.FromPercent(0.68)));
+        shake.KeyFrames.Add(new LinearDoubleKeyFrame(3, KeyTime.FromPercent(0.82)));
+        shake.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromPercent(1)));
+        WindowShakeTransform.BeginAnimation(TranslateTransform.XProperty, shake);
+
+        UnsavedChangesBar.BeginAnimation(
+            OpacityProperty,
+            new DoubleAnimation(0.58, 1, TimeSpan.FromMilliseconds(190))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            });
+    }
+
+    private void DiscardSettings_Click(object sender, RoutedEventArgs e)
+    {
+        bool closeWindow = _closeAfterUnsavedResolution;
+        CancelHotkeyCapture();
+        LoadSettingsControls();
+        SetSettingsDirty(false, animate: false);
+        _closeAfterUnsavedResolution = false;
+        if (closeWindow)
+        {
+            _allowClose = true;
+            Close();
+        }
+        else
+        {
+            ShowDashboard();
+        }
+    }
+
+    private void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_allowClose ||
+            Application.Current.Dispatcher.HasShutdownStarted ||
+            SettingsPanel.Visibility != Visibility.Visible ||
+            !_settingsDirty)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        PromptForUnsavedChanges(closeAfterResolution: true);
+    }
+
+    private void LanguageList_MouseLeftButtonUp(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (ItemsControl.ContainerFromElement(
+                LanguageList,
+                e.OriginalSource as DependencyObject) is not ListBoxItem item)
+        {
+            return;
+        }
+
+        LanguageList.SelectedItem = item.DataContext;
+        ApplySelectedLanguage();
+    }
+
+    private void LanguageList_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter)
+            return;
+
+        ApplySelectedLanguage();
+        e.Handled = true;
+    }
+
+    private void ApplySelectedLanguage()
+    {
+        if (LanguageList.SelectedItem is not LanguageDefinition selected)
+            return;
+
+        string previousLanguage = _config.Language;
+        try
+        {
+            if (string.Equals(
+                    selected.Code,
+                    previousLanguage,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                LanguagePopup.IsOpen = false;
+                return;
+            }
+
+            _config.Language = selected.Code;
+            _config.Save();
+            Localization.SetLanguage(_config.Language);
+            UpdateLanguageMenuSelection();
+            LanguagePopup.IsOpen = false;
+            AnimatePress(LanguageButton);
+        }
+        catch (Exception exception)
+        {
+            _config.Language = previousLanguage;
+            try
+            {
+                _config.Save();
+                Localization.SetLanguage(previousLanguage);
+            }
+            catch (Exception rollbackException)
+            {
+                Log.Write($"Language rollback failed: {rollbackException}");
+            }
+            HandleUiActionError("Language change", exception);
+        }
+    }
+
+    private void UpdateLanguageMenuSelection()
+    {
+        LanguageList.SelectedItem = Localization.SupportedLanguages.FirstOrDefault(
+            language => string.Equals(
+                language.Code,
+                _config.Language,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OnLanguageChanged()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(OnLanguageChanged);
+            return;
+        }
+
+        UpdateLanguageMenuSelection();
+        _ = RunUiActionAsync(LoadDeviceListsAsync);
+        ApplyHardwareCapabilities();
+        UpdateCaptureModeState();
+        UpdateCaptureSourceState();
+        UpdateAudioRoutingState();
+        UpdateRuntimeState(_runtimeActive);
+        RenderUpdateStatus();
+        _ = RefreshDiskAsync();
+        _ = RefreshReplayLibraryAsync();
+    }
+
+    private async void GitHub_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ExternalLinkLauncher.OpenAsync(UpdateService.RepositoryUrl);
+            AnimatePress(GitHubButton);
+            AboutPopup.IsOpen = false;
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Open GitHub repository", exception);
+        }
+    }
+
+    private async void ReportBug_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ExternalLinkLauncher.OpenAsync(
+                BugReportInfo.BuildUrl(_config, _capabilities));
+            AnimatePress(ReportBugButton);
+            AboutPopup.IsOpen = false;
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Open GitHub bug report form", exception);
+        }
+    }
+
+    private async void FeatureRequest_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await ExternalLinkLauncher.OpenAsync(UpdateService.FeatureRequestUrl);
+            AnimatePress(FeatureRequestButton);
+            AboutPopup.IsOpen = false;
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Open GitHub feature request form", exception);
+        }
+    }
+
+    private async void UpdateVersion_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!UpdateService.SelfUpdateEnabled)
+            return;
+
+        if (AppDistribution.IsMicrosoftStore)
+            return;
+
+        if (_updateCheckInProgress || _updateInstallInProgress)
+            return;
+
+        AnimatePress(UpdateVersionButton);
+        if (_availableUpdate is null)
+        {
+            await CheckForUpdatesAsync(force: true);
+            return;
+        }
+
+        _updateInstallInProgress = true;
+        _updateDisplayState = UpdateDisplayState.Downloading;
+        _updateProgress = 0;
+        RenderUpdateStatus();
+
+        try
+        {
+            var progress = new Progress<int>(value =>
+            {
+                _updateProgress = Math.Clamp(value, 0, 100);
+                RenderUpdateStatus();
+            });
+            await _installUpdate(
+                _availableUpdate,
+                progress,
+                _lifetimeCts.Token);
+            _updateDisplayState = UpdateDisplayState.Installing;
+            RenderUpdateStatus();
+        }
+        catch (OperationCanceledException)
+            when (_lifetimeCts.IsCancellationRequested)
+        {
+            // Window is closing.
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Update installation failed: {exception}");
+            _updateInstallInProgress = false;
+            _updateDisplayState = UpdateDisplayState.Available;
+            RenderUpdateStatus();
+            ShowError(
+                Localization.Text("L.Update.InstallFailedTitle"),
+                exception.Message);
+        }
+    }
+
+    private async Task CheckForUpdatesAsync(bool force)
+    {
+        if (!UpdateService.SelfUpdateEnabled)
+            return;
+
+        if (AppDistribution.IsMicrosoftStore)
+            return;
+
+        if (_updateCheckInProgress || _updateInstallInProgress)
+            return;
+
+        _updateCheckInProgress = true;
+        _updateDisplayState = UpdateDisplayState.Checking;
+        RenderUpdateStatus();
+        try
+        {
+            _availableUpdate = await _checkForUpdates(
+                force,
+                _lifetimeCts.Token);
+            _updateDisplayState = _availableUpdate is null
+                ? UpdateDisplayState.Current
+                : UpdateDisplayState.Available;
+            RenderUpdateStatus();
+            if (_availableUpdate is not null)
+            {
+                AnimatePress(UpdateVersionButton);
+                var pulse = new DoubleAnimation(
+                    0.28,
+                    1,
+                    TimeSpan.FromMilliseconds(420))
+                {
+                    AutoReverse = true,
+                    RepeatBehavior = new RepeatBehavior(2),
+                };
+                UpdateStatusDot.BeginAnimation(
+                    OpacityProperty,
+                    pulse);
+            }
+        }
+        catch (OperationCanceledException)
+            when (_lifetimeCts.IsCancellationRequested)
+        {
+            // Window is closing.
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Update check failed: {exception}");
+            _availableUpdate = null;
+            _updateDisplayState = UpdateDisplayState.CheckFailed;
+            RenderUpdateStatus();
+            if (force)
+            {
+                ShowError(
+                    Localization.Text("L.Update.CheckFailedTitle"),
+                    exception.Message);
+            }
+        }
+        finally
+        {
+            _updateCheckInProgress = false;
+            if (!_lifetimeCts.IsCancellationRequested)
+                RenderUpdateStatus();
+        }
+    }
+
+    private void RenderUpdateStatus()
+    {
+        string current = UpdateService.CurrentVersionText;
+        if (!UpdateService.SelfUpdateEnabled)
+        {
+            UpdateVersionButton.IsEnabled = false;
+            UpdateVersionButton.Tag = "current";
+            UpdateStatusDot.Visibility = Visibility.Collapsed;
+            UpdateStatusText.Text = $"v{current}";
+            UpdateVersionButton.ToolTip = Localization.Text("L.Update.ForkDisabledTip");
+            return;
+        }
+
+        if (AppDistribution.IsMicrosoftStore)
+        {
+            UpdateVersionButton.IsEnabled = false;
+            UpdateVersionButton.Tag = "current";
+            UpdateStatusDot.Visibility = Visibility.Collapsed;
+            UpdateStatusText.Text = Localization.Format(
+                "L.Update.StoreManaged",
+                current);
+            UpdateVersionButton.ToolTip =
+                Localization.Text("L.Update.StoreManagedTip");
+            return;
+        }
+
+        UpdateVersionButton.IsEnabled = true;
+        string? available = _availableUpdate is null
+            ? null
+            : UpdateService.FormatVersion(_availableUpdate.Version);
+
+        UpdateVersionButton.Tag = _updateDisplayState switch
+        {
+            UpdateDisplayState.Available => "available",
+            UpdateDisplayState.Checking or
+            UpdateDisplayState.Downloading or
+            UpdateDisplayState.Installing => "busy",
+            _ => "current",
+        };
+        UpdateStatusDot.Visibility = _updateDisplayState is
+            UpdateDisplayState.Available or
+            UpdateDisplayState.Downloading or
+            UpdateDisplayState.Installing
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        switch (_updateDisplayState)
+        {
+            case UpdateDisplayState.Checking:
+                UpdateStatusText.Text =
+                    $"v{current} · {Localization.Text("L.Update.Checking")}";
+                UpdateVersionButton.ToolTip =
+                    Localization.Text("L.Update.CheckingTip");
+                break;
+            case UpdateDisplayState.Available:
+                UpdateStatusText.Text = Localization.Format(
+                    "L.Update.Available",
+                    available ?? current);
+                UpdateVersionButton.ToolTip = Localization.Format(
+                    "L.Update.AvailableTip",
+                    available ?? current);
+                break;
+            case UpdateDisplayState.Downloading:
+                UpdateStatusText.Text = Localization.Format(
+                    "L.Update.Downloading",
+                    _updateProgress);
+                UpdateVersionButton.ToolTip = Localization.Format(
+                    "L.Update.DownloadingTip",
+                    available ?? current);
+                break;
+            case UpdateDisplayState.Installing:
+                UpdateStatusText.Text =
+                    Localization.Text("L.Update.Installing");
+                UpdateVersionButton.ToolTip =
+                    Localization.Text("L.Update.InstallingTip");
+                break;
+            case UpdateDisplayState.CheckFailed:
+                UpdateStatusText.Text = $"v{current}";
+                UpdateVersionButton.ToolTip =
+                    Localization.Text("L.Update.CheckFailedTip");
+                break;
+            default:
+                UpdateStatusText.Text = $"v{current}";
+                UpdateVersionButton.ToolTip = _updateCheckInProgress
+                    ? Localization.Text("L.Update.CheckingTip")
+                    : Localization.Format(
+                        "L.Update.UpToDateTip",
+                        current);
+                break;
+        }
+    }
+
+    private async Task LoadAutostartStateAsync()
+    {
+        bool enabled = await Autostart.IsEnabledAsync();
+        _updatingUi = true;
+        try
+        {
+            AutostartBox.IsChecked = enabled;
+            _savedAutostartEnabled = enabled;
+        }
+        finally
+        {
+            _updatingUi = false;
+        }
+        RefreshSettingsDirtyState();
+    }
+
+    private void ShowSettings()
+    {
+        DashboardVolumePopup.IsOpen = false;
+        LoadSettingsControls();
+        _closeAfterUnsavedResolution = false;
+        SetSettingsDirty(false, animate: false);
+        DashboardPanel.Visibility = Visibility.Collapsed;
+        SettingsPanel.Visibility = Visibility.Visible;
+        SettingsButton.Visibility = Visibility.Collapsed;
+        CancelSettingsButton.Visibility = Visibility.Visible;
+        DoneButton.Visibility = Visibility.Visible;
+        SettingsPanel.MaxHeight = Math.Max(1, ActualHeight - 164);
+        AnimateView(SettingsPanel);
+    }
+
+    private void CodecSummary_Click(object sender, RoutedEventArgs e) =>
+        OpenSettingsAt(CodecSettingsRow, CodecBox);
+
+    private void FpsSummary_Click(object sender, RoutedEventArgs e)
+    {
+        RadioButton? selected = FpsOptions.Children.OfType<RadioButton>()
+            .FirstOrDefault(button => button.IsChecked == true);
+        OpenSettingsAt(FpsSettingsRow, selected);
+    }
+
+    private void OutputFolderSummary_Click(object sender, RoutedEventArgs e) =>
+        OpenSettingsAt(OutputFolderSettingsRow, BrowseOutputButton);
+
+    private void OpenSettingsAt(FrameworkElement target, Control? focusTarget)
+    {
+        ShowSettings();
+        SettingsScrollViewer.ScrollToTop();
+        Dispatcher.BeginInvoke(() =>
+        {
+            target.UpdateLayout();
+            Point position = target.TranslatePoint(new Point(0, 0), SettingsScrollViewer);
+            SettingsScrollViewer.ScrollToVerticalOffset(
+                Math.Max(0, SettingsScrollViewer.VerticalOffset + position.Y - 18));
+            focusTarget?.Focus();
+            AnimatePress(target);
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void ShowDashboard()
+    {
+        CancelHotkeyCapture();
+        _closeAfterUnsavedResolution = false;
+        SetSettingsDirty(false, animate: false);
+        SettingsPanel.Visibility = Visibility.Collapsed;
+        DashboardPanel.Visibility = Visibility.Visible;
+        SettingsButton.Visibility = Visibility.Visible;
+        CancelSettingsButton.Visibility = Visibility.Collapsed;
+        DoneButton.Visibility = Visibility.Collapsed;
+        UpdateRuntimeState(_runtimeActive);
+        _ = RefreshReplayLibraryAsync();
+        AnimateView(DashboardPanel);
+    }
+
+    private nint OverlayWindowProc(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
+    {
+        const int WmActivateApp = 0x001C;
+        if (message == WmActivateApp && wParam == 0)
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                GetWindowThreadProcessId(GetForegroundWindow(), out uint processId);
+                if (IsVisible && processId != 0 && processId != Environment.ProcessId)
+                {
+                    CloseDisplayIdentifiers();
+                    if (OwnedWindows.OfType<CaptureOverlayEditorWindow>().FirstOrDefault() is { } editor)
+                    {
+                        // Let the editor finish the same pending save used by Escape before closing its owner.
+                        editor.CloseOwnerOnExit = true;
+                        editor.Close();
+                    }
+                    else
+                    {
+                        Close();
+                    }
+                }
+            });
+        }
+        return 0;
+    }
+
+    private void PositionOverlay()
+    {
+        nint monitor = MonitorFromWindow(GetForegroundWindow(), 2);
+        var info = new OverlayMonitorInfo { Size = Marshal.SizeOf<OverlayMonitorInfo>() };
+        if (!GetMonitorInfo(monitor, ref info))
+            return;
+
+        SetWindowPos(new WindowInteropHelper(this).Handle, HwndTopmost,
+            info.Monitor.Left, info.Monitor.Top,
+            info.Monitor.Right - info.Monitor.Left,
+            info.Monitor.Bottom - info.Monitor.Top, 0x0040);
+        SizeChanged += (_, _) =>
+            SettingsPanel.MaxHeight = Math.Max(1, ActualHeight - 164);
+        SettingsPanel.MaxHeight = Math.Max(1, ActualHeight - 164);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct OverlayMonitorInfo
+    {
+        public int Size;
+        public OverlayRect Monitor;
+        public OverlayRect Work;
+        public uint Flags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct OverlayRect
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(nint window, out uint processId);
+
+    [DllImport("user32.dll")]
+    private static extern nint MonitorFromWindow(nint window, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(nint monitor, ref OverlayMonitorInfo info);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
+
+    private async void ReplayToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updatingUi)
+            return;
+        if (!TryBeginAction())
+        {
+            UpdateRuntimeState(_runtimeActive);
+            return;
+        }
+
+        try
+        {
+            bool active = await _setReplayEnabled(ReplayToggle.IsChecked == true);
+            UpdateRuntimeState(active);
+            AnimatePress(ReplayToggle);
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Replay toggle", exception);
+            UpdateRuntimeState(_runtimeActive);
+        }
+        finally
+        {
+            EndAction();
+        }
+    }
+
+    private async void SaveReplay_Click(object sender, RoutedEventArgs e)
+    {
+        AnimatePress(SaveReplayButton);
+        if (string.Equals(
+                _config.CaptureMode,
+                "recording",
+                StringComparison.Ordinal))
+        {
+            bool active = await _setReplayEnabled(!_runtimeActive);
+            UpdateRuntimeState(active);
+            return;
+        }
+        _saveReplay();
+    }
+
+    private async void DashboardCaptureMode_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updatingUi)
+            return;
+
+        string requestedMode = GetSelectedRadioTag(
+            DashboardCaptureModeOptions,
+            _config.CaptureMode);
+        if (string.Equals(requestedMode, _config.CaptureMode, StringComparison.Ordinal))
+            return;
+
+        if (!TryBeginAction())
+        {
+            UpdateRuntimeState(_runtimeActive);
+            return;
+        }
+
+        try
+        {
+            Config candidate = _config.Clone();
+            candidate.CaptureMode = requestedMode;
+            candidate.ReplayEnabled = false;
+            if (!await _applySettings(
+                    candidate,
+                    AutostartBox.IsChecked == true))
+            {
+                UpdateRuntimeState(_runtimeActive);
+                return;
+            }
+
+            Applied = true;
+            UpdateCaptureModeState();
+            UpdateRuntimeState(false);
+            if (sender is FrameworkElement element)
+                AnimatePress(element);
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Capture mode switch", exception);
+            UpdateRuntimeState(_runtimeActive);
+        }
+        finally
+        {
+            EndAction();
+        }
+    }
+
+    private async void SourceChip_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updatingUi)
+            return;
+        bool microphone = ReferenceEquals(sender, MicSourceChip);
+        bool captured = microphone ? _config.CaptureMicrophone : _config.CaptureSystemAudio;
+        if (captured)
+        {
+            if (microphone)
+                _dashboardMicrophoneMuted = MicSourceChip.IsChecked != true;
+            else
+                _dashboardSystemMuted = SystemSourceChip.IsChecked != true;
+            RenderDashboardAudioLevels();
+            await QueueDashboardAudioLevelsAsync();
+            return;
+        }
+        if (!TryBeginAction())
+        {
+            UpdateRuntimeState(_runtimeActive);
+            return;
+        }
+
+        try
+        {
+            bool applied = await _setAudioSources(
+                _config.CaptureSystemAudio || !microphone,
+                _config.CaptureMicrophone || microphone,
+                _config.SystemAudioDeviceId,
+                _config.MicrophoneDeviceId);
+            UpdateRuntimeState(_runtimeActive);
+            AnimatePress((FrameworkElement)sender);
+            if (!applied)
+                ShowError(
+                    Localization.Text("L.Error.SourceTitle"),
+                    Localization.Text("L.Error.AudioSourceMessage"));
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Audio source toggle", exception);
+            UpdateRuntimeState(_runtimeActive);
+        }
+        finally
+        {
+            EndAction();
+        }
+    }
+
+    private void AudioDeviceMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        var menu = (ContextMenu)sender;
+        bool isSystem = string.Equals(menu.Tag?.ToString(), "system", StringComparison.Ordinal);
+        ComboBox deviceBox = isSystem ? AudioDeviceBox : MicDeviceBox;
+        string selectedId = isSystem ? _config.SystemAudioDeviceId : _config.MicrophoneDeviceId;
+
+        menu.Items.Clear();
+        if (isSystem && _config.CaptureSource == "game")
+        {
+            menu.Items.Add(new MenuItem
+            {
+                Header = Localization.Text("L.Audio.GameCaptured"),
+                IsEnabled = false,
+                Style = (Style)FindResource("TrayMenuItem"),
+            });
+            return;
+        }
+        menu.Items.Add(new MenuItem
+        {
+            Header = Localization.Text(
+                isSystem
+                    ? "L.Audio.SystemDeviceHeader"
+                    : "L.Audio.MicDeviceHeader"),
+            IsEnabled = false,
+            FontSize = 10,
+            Foreground = FindBrush("TextMutedBrush"),
+            Style = (Style)FindResource("TrayMenuItem"),
+        });
+        menu.Items.Add(new Separator { Style = (Style)FindResource("TrayMenuSeparator") });
+
+        foreach (ComboBoxItem device in deviceBox.Items.OfType<ComboBoxItem>())
+        {
+            string id = device.Tag?.ToString() ?? "";
+            bool selected = string.Equals(id, selectedId, StringComparison.Ordinal);
+            var item = new MenuItem
+            {
+                Header = new TextBlock
+                {
+                    Text = device.Content?.ToString() ??
+                           Localization.Text("L.Audio.UnknownDevice"),
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = 290,
+                },
+                Icon = new System.Windows.Shapes.Ellipse
+                {
+                    Width = 6,
+                    Height = 6,
+                    Fill = selected ? FindBrush("AccentBrush") : Brushes.Transparent,
+                },
+                Tag = new AudioDeviceSelection(isSystem, id),
+                Style = (Style)FindResource("TrayMenuItem"),
+            };
+            item.Click += AudioDeviceMenuItem_Click;
+            menu.Items.Add(item);
+        }
+    }
+
+    private async void AudioDeviceMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (((MenuItem)sender).Tag is not AudioDeviceSelection selection)
+            return;
+        if (!TryBeginAction())
+            return;
+
+        try
+        {
+            string systemDeviceId = selection.IsSystem
+                ? selection.Id
+                : _config.SystemAudioDeviceId;
+            string microphoneDeviceId = selection.IsSystem
+                ? _config.MicrophoneDeviceId
+                : selection.Id;
+            bool applied = await _setAudioSources(
+                string.Equals(
+                    _config.AudioRoutingMode,
+                    "advanced",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? _config.CaptureSystemAudio
+                    : _config.CaptureSystemAudio,
+                _config.CaptureMicrophone,
+                systemDeviceId,
+                microphoneDeviceId);
+
+            SelectByTag(
+                selection.IsSystem ? AudioDeviceBox : MicDeviceBox,
+                selection.IsSystem
+                    ? _config.SystemAudioDeviceId
+                    : _config.MicrophoneDeviceId);
+            UpdateRuntimeState(_runtimeActive);
+            if (!applied)
+                ShowError(
+                    Localization.Text("L.Error.DeviceTitle"),
+                    Localization.Text("L.Error.AudioSourceMessage"));
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Audio device selection", exception);
+            UpdateRuntimeState(_runtimeActive);
+        }
+        finally
+        {
+            EndAction();
+        }
+    }
+
+    private void AudioToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_updatingUi)
+        {
+            UpdateAudioDeviceState();
+            UpdateAdvancedAudioSummary();
+        }
+    }
+
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!AboutPopup.IsOpen)
+        {
+            return;
+        }
+
+        DependencyObject? source = e.OriginalSource as DependencyObject;
+        // Popup is rendered in its own HWND. Treat controls inside its panel as
+        // internal clicks; closing during PreviewMouseDown used to prevent the
+        // Button Click event from ever firing.
+        if (source is not null &&
+            (AboutButton.IsAncestorOf(source) || AboutPopupPanel.IsAncestorOf(source)))
+        {
+            return;
+        }
+
+        AboutPopup.IsOpen = false;
+    }
+
+    private void UpdateAudioDeviceState()
+    {
+        bool game = GetSelectedTag(CaptureSourceBox, "desktop") == "game";
+        bool advanced = GetSelectedTag(AudioTrackModeBox, "mixed") == "advanced";
+        SimpleSystemAudioPanel.Visibility = advanced
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        AudioDeviceBox.IsEnabled = !advanced && !game && SystemAudioBox.IsChecked == true;
+        SystemVolumeRow.IsEnabled = SystemAudioBox.IsChecked == true;
+        MicDeviceBox.IsEnabled = MicBox.IsChecked == true;
+        MicVolumeRow.IsEnabled = MicBox.IsChecked == true;
+        MicBoostRow.IsEnabled = MicBox.IsChecked == true;
+    }
+
+    private void AudioTrackModeBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized)
+            return;
+        UpdateAudioRoutingState();
+        UpdateAudioDeviceState();
+    }
+
+    private void AudioCodecBox_SelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (IsInitialized)
+            UpdateAdvancedAudioSummary();
+    }
+
+    private void UpdateAudioRoutingState()
+    {
+        bool advanced = GetSelectedTag(AudioTrackModeBox, "mixed") == "advanced";
+        AdvancedAudioRoutingRow.Visibility = advanced
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        bool game = GetSelectedTag(CaptureSourceBox, "desktop") == "game";
+        AudioTrackHintText.Text = Localization.Text(
+            advanced
+                ? "L.Help.AdvancedRouting"
+                : game ? "L.Audio.GameAndMic" : "L.Audio.SystemAndMic");
+
+        bool available = _processAudioAvailability ==
+                         AdvancedProcessAudioAvailability.Available;
+        AdvancedAudioTrackItem.IsEnabled = available || advanced;
+        AdvancedAudioTrackItem.ToolTip = available
+            ? Localization.Text("L.Help.AdvancedRouting")
+            : Localization.Text(
+                _processAudioAvailability ==
+                AdvancedProcessAudioAvailability.UnsupportedWindowsVersion
+                    ? "L.Engine.ProcessAudioUnsupportedWindows"
+                    : "L.Engine.ProcessAudioSourceUnavailable");
+        UpdateAdvancedAudioSummary();
+    }
+
+    private void UpdateAdvancedAudioSummary()
+    {
+        if (!IsInitialized)
+            return;
+        int appCount = _pendingProcessAudioRoutes.Count;
+        var tracks = _pendingProcessAudioRoutes
+            .Select(route => route.Track)
+            .ToHashSet();
+        if (MicBox.IsChecked == true)
+            tracks.Add(_pendingAdvancedMicrophoneTrack);
+
+        AdvancedAudioRoutingSummaryText.Text = appCount == 0
+            ? Localization.Text("L.Audio.NoAppsSelected")
+            : Localization.Format(
+                "L.Audio.RoutingSummary",
+                appCount,
+                tracks.Count);
+    }
+
+    private void ConfigureAudioRouting_Click(object sender, RoutedEventArgs e)
+    {
+        if (_processAudioAvailability != AdvancedProcessAudioAvailability.Available)
+        {
+            ShowError(
+                Localization.Text("L.Error.AdvancedAudioTitle"),
+                Localization.Text(
+                    _processAudioAvailability ==
+                    AdvancedProcessAudioAvailability.UnsupportedWindowsVersion
+                        ? "L.Engine.ProcessAudioUnsupportedWindows"
+                        : "L.Engine.ProcessAudioSourceUnavailable"));
+            return;
+        }
+
+        try
+        {
+            var dialog = new ProcessAudioRoutingWindow(
+                _pendingProcessAudioRoutes,
+                _pendingAdvancedMicrophoneTrack,
+                MicBox.IsChecked == true,
+                AudioRoutingFormatCapabilities.For(
+                    GetSelectedTag(AudioCodecBox, "aac")))
+            {
+                Owner = this,
+            };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            _pendingProcessAudioRoutes = CloneProcessAudioRoutes(
+                dialog.ResultRoutes);
+            _pendingAdvancedMicrophoneTrack = dialog.ResultMicrophoneTrack;
+            UpdateAdvancedAudioSummary();
+            RefreshSettingsDirtyState();
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Open application audio routing failed: {exception}");
+            ShowError(
+                Localization.Text("L.Error.AdvancedAudioTitle"),
+                exception.Message);
+        }
+    }
+
+#if DEBUG
+    internal void OpenAudioRoutingForQa()
+    {
+        SelectByTag(AudioTrackModeBox, "advanced");
+        UpdateAudioRoutingState();
+        ConfigureAudioRouting_Click(this, new RoutedEventArgs());
+    }
+#endif
+
+    private void BrowseOutput_Click(object sender, RoutedEventArgs e)
+    {
+        string initialDirectory = Directory.Exists(_outputDirectory)
+            ? _outputDirectory
+            : Environment.GetFolderPath(Environment.SpecialFolder.MyVideos);
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            InitialDirectory = initialDirectory,
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        _outputDirectory = dialog.FolderName;
+        OutputDirText.Text = _outputDirectory;
+        _ = RefreshDiskAsync();
+        RefreshSettingsDirtyState();
+    }
+
+    private void HotkeyCapture_Click(object sender, RoutedEventArgs e)
+    {
+        CancelHotkeyCapture();
+        _capturingHotkeyButton = (Button)sender;
+        _capturingHotkeyButton.Content = Localization.Text("L.Hotkey.Press");
+        _capturingHotkeyButton.Focus();
+    }
+
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_capturingHotkeyButton is null)
+        {
+            if (e.Key == Key.Escape && DashboardVolumePopup.IsOpen)
+            {
+                DashboardVolumePopup_PreviewKeyDown(sender, e);
+                return;
+            }
+            if (e.Key == Key.Escape && AboutPopup.IsOpen)
+            {
+                AboutPopup.IsOpen = false;
+                AboutButton.Focus();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Escape && LanguagePopup.IsOpen)
+            {
+                LanguagePopup.IsOpen = false;
+                LanguageButton.Focus();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Escape && DeleteConfirmOverlay.Visibility == Visibility.Visible)
+            {
+                CancelDeleteReplay();
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Escape && SettingsPanel.Visibility == Visibility.Visible)
+            {
+                if (_settingsDirty)
+                    PromptForUnsavedChanges(closeAfterResolution: false);
+                else
+                    ShowDashboard();
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Escape)
+            {
+                Close();
+                e.Handled = true;
+            }
+            return;
+        }
+
+        e.Handled = true;
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Escape)
+        {
+            CancelHotkeyCapture();
+            return;
+        }
+        if (IsModifierKey(key))
+            return;
+
+        ModifierKeys modifiers = Keyboard.Modifiers;
+        if (modifiers == ModifierKeys.None && key is < Key.F1 or > Key.F24)
+        {
+            _capturingHotkeyButton.Content =
+                Localization.Text("L.Hotkey.AddModifier");
+            return;
+        }
+
+        string hotkey = FormatHotkey(modifiers, key);
+        bool captureSave = Equals(_capturingHotkeyButton.Tag, "save");
+        bool captureOverlay = Equals(_capturingHotkeyButton.Tag, "overlay");
+        if ((!captureSave && !HotkeyManager.AreDistinct(hotkey, _pendingSaveHotkey)) ||
+            (!captureOverlay && !HotkeyManager.AreDistinct(hotkey, _pendingOverlayHotkey)) ||
+            ((captureSave || captureOverlay) && !HotkeyManager.AreDistinct(hotkey, _pendingToggleHotkey)))
+        {
+            _capturingHotkeyButton.Content =
+                Localization.Text("L.Hotkey.InUse");
+            return;
+        }
+
+        if (captureSave)
+            _pendingSaveHotkey = hotkey;
+        else if (captureOverlay)
+            _pendingOverlayHotkey = hotkey;
+        else
+            _pendingToggleHotkey = hotkey;
+        _capturingHotkeyButton.Content = hotkey;
+        _capturingHotkeyButton = null;
+        RefreshSettingsDirtyState();
+    }
+
+    private void CancelHotkeyCapture()
+    {
+        if (_capturingHotkeyButton is null)
+            return;
+
+        _capturingHotkeyButton.Content = _capturingHotkeyButton.Tag switch
+        {
+            "save" => _pendingSaveHotkey,
+            "overlay" => _pendingOverlayHotkey,
+            _ => _pendingToggleHotkey,
+        };
+        _capturingHotkeyButton = null;
+    }
+
+    private async void Apply_Click(object sender, RoutedEventArgs e)
+    {
+        CancelHotkeyCapture();
+        if (!TryGetBitrateMbps(out int bitrate))
+        {
+            ShowError(
+                Localization.Text("L.Video.Bitrate"),
+                Localization.Text("L.Video.CustomBitrateError"));
+            CustomBitrateBox.Focus();
+            CustomBitrateBox.SelectAll();
+            return;
+        }
+        if (!HotkeyManager.IsValid(_pendingSaveHotkey) ||
+            !HotkeyManager.IsValid(_pendingToggleHotkey) ||
+            !HotkeyManager.IsValid(_pendingOverlayHotkey) ||
+            !HotkeyManager.AreDistinct(_pendingOverlayHotkey, _pendingSaveHotkey) ||
+            !HotkeyManager.AreDistinct(_pendingOverlayHotkey, _pendingToggleHotkey) ||
+            !HotkeyManager.AreDistinct(_pendingSaveHotkey, _pendingToggleHotkey))
+        {
+            ShowError(
+                Localization.Text("L.Error.HotkeysTitle"),
+                Localization.Text("L.Error.HotkeysMessage"));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_outputDirectory))
+        {
+            ShowError(
+                Localization.Text("L.Error.FolderTitle"),
+                Localization.Text("L.Error.FolderMessage"));
+            return;
+        }
+
+        try
+        {
+            _ = Path.GetFullPath(_outputDirectory);
+        }
+        catch
+        {
+            ShowError(
+                Localization.Text("L.Error.PathTitle"),
+                Localization.Text("L.Error.PathMessage"));
+            return;
+        }
+
+        string audioTrackMode = GetSelectedTag(AudioTrackModeBox, "mixed");
+        bool separateAudioTracks = audioTrackMode == "separate";
+        bool advancedAudio = audioTrackMode == "advanced";
+        if (advancedAudio &&
+            _processAudioAvailability != AdvancedProcessAudioAvailability.Available)
+        {
+            ShowError(
+                Localization.Text("L.Error.AdvancedAudioTitle"),
+                Localization.Text(
+                    _processAudioAvailability ==
+                    AdvancedProcessAudioAvailability.UnsupportedWindowsVersion
+                        ? "L.Engine.ProcessAudioUnsupportedWindows"
+                        : "L.Engine.ProcessAudioSourceUnavailable"));
+            return;
+        }
+        if (advancedAudio &&
+            _pendingProcessAudioRoutes.Count == 0 &&
+            MicBox.IsChecked != true)
+        {
+            ShowError(
+                Localization.Text("L.Error.AdvancedAudioTitle"),
+                Localization.Text("L.Error.AdvancedAudioEmpty"));
+            return;
+        }
+        Config candidate = _config.Clone();
+        candidate.CaptureMode = GetSelectedRadioTag(
+            DashboardCaptureModeOptions,
+            "replay");
+        candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
+        candidate.WarnWhenGameStartsWithReplayOff = WarnGameOffBox.IsChecked == true;
+        candidate.ShowRecordingIndicator =
+            RecordingIndicatorBox.IsChecked == true;
+        candidate.RecordingIndicatorPosition = GetSelectedRadioTag(
+            RecordingIndicatorPositionOptions,
+            _config.RecordingIndicatorPosition);
+        candidate.BufferSeconds =
+            GetSelectedRadioInt(BufferOptions, _config.BufferSeconds);
+        candidate.MaxReplaySizeMb = GetSelectedInt(ReplaySizeLimitBox, 0);
+        candidate.CaptureSource = GetSelectedTag(CaptureSourceBox, "desktop");
+        candidate.DesktopCaptureMethod = GetSelectedTag(DesktopCaptureMethodBox, "dxgi");
+        candidate.GpuPreference = GetSelectedTag(GpuPreferenceBox, "high-performance");
+        string selectedCodec = GetSelectedTag(CodecBox, _config.Codec);
+        if (!_capabilities.Supports(selectedCodec))
+        {
+            ShowError(
+                Localization.Text("L.Error.CodecTitle"),
+                Localization.Text("L.Error.CodecMessage"));
+            return;
+        }
+        if (!TryBeginAction())
+            return;
+
+        try
+        {
+            candidate.Codec = selectedCodec;
+            candidate.BitrateMbps = bitrate;
+            candidate.FrameRate = GetSelectedRadioInt(FpsOptions, _config.FrameRate);
+            candidate.MonitorIndex = GetSelectedInt(MonitorBox, _config.MonitorIndex);
+            candidate.RecordingResolution = GetSelectedTag(ResolutionBox, "source");
+            candidate.CaptureSystemAudio =
+                !advancedAudio && SystemAudioBox.IsChecked == true;
+            candidate.SystemAudioVolume = (int)Math.Round(SystemVolumeSlider.Value);
+            candidate.SystemAudioDeviceId = GetSelectedTag(AudioDeviceBox, "");
+            candidate.CaptureMicrophone = MicBox.IsChecked == true;
+            candidate.MicrophoneVolume = (int)Math.Round(MicVolumeSlider.Value);
+            candidate.MicrophoneBoostDb = (int)Math.Round(MicBoostSlider.Value);
+            candidate.MicrophoneDeviceId = GetSelectedTag(MicDeviceBox, "");
+            candidate.AudioCodec = GetSelectedTag(AudioCodecBox, "aac");
+            candidate.SeparateAudioTracks = separateAudioTracks;
+            candidate.AudioRoutingMode = advancedAudio ? "advanced" : "simple";
+            candidate.ProcessAudioRoutes = CloneProcessAudioRoutes(
+                _pendingProcessAudioRoutes);
+            candidate.AdvancedMicrophoneTrack = _pendingAdvancedMicrophoneTrack;
+            candidate.OutputDirectory = _outputDirectory;
+            candidate.OrganizeReplaysByGame = OrganizeByGameBox.IsChecked == true;
+            candidate.AccentColor = GetSelectedRadioTag(
+                AccentColorOptions,
+                _config.AccentColor);
+            candidate.Hotkey = _pendingSaveHotkey;
+            candidate.ToggleReplayHotkey = _pendingToggleHotkey;
+            candidate.OverlayHotkey = _pendingOverlayHotkey;
+            candidate.Normalize();
+
+            if (!await _applySettings(
+                    candidate,
+                    AutostartBox.IsChecked == true))
+                // Keep pending choices visible so the failing setting can be corrected.
+                return;
+
+            Applied = true;
+            _savedAutostartEnabled = AutostartBox.IsChecked == true;
+            SetSettingsDirty(false, animate: false);
+            _ = RefreshDiskAsync();
+            if (_closeAfterUnsavedResolution)
+            {
+                _allowClose = true;
+                Close();
+            }
+            else
+            {
+                ShowDashboard();
+            }
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Apply settings UI failed: {exception}");
+            ShowError(
+                Localization.Text("L.Error.Attention"),
+                exception.Message);
+        }
+        finally
+        {
+            EndAction();
+        }
+    }
+
+    private bool TryBeginAction()
+    {
+        if (_applyingAudioLevels)
+            return false;
+        if (Interlocked.Exchange(ref _actionInProgress, 1) != 0)
+            return false;
+
+        ReplayToggle.IsEnabled = false;
+        CaptureOverlayToggle.IsEnabled = false;
+        CaptureOverlaysButton.IsEnabled = false;
+        DashboardCaptureModeOptions.IsEnabled = false;
+        SystemSourceChip.IsEnabled = false;
+        MicSourceChip.IsEnabled = false;
+        DashboardVolumePopup.IsOpen = false;
+        SystemVolumeButton.IsEnabled = false;
+        MicrophoneVolumeButton.IsEnabled = false;
+        foreach (ToggleButton button in _dashboardAudioButtons.Values)
+            button.IsEnabled = false;
+        SettingsReplayToggle.IsEnabled = false;
+        DoneButton.IsEnabled = false;
+        CancelSettingsButton.IsEnabled = false;
+        return true;
+    }
+
+    private void EndAction()
+    {
+        Interlocked.Exchange(ref _actionInProgress, 0);
+        ReplayToggle.IsEnabled = true;
+        CaptureOverlayToggle.IsEnabled = true;
+        CaptureOverlaysButton.IsEnabled = true;
+        DashboardCaptureModeOptions.IsEnabled = true;
+        SystemSourceChip.IsEnabled = !string.Equals(
+            _config.AudioRoutingMode,
+            "advanced",
+            StringComparison.OrdinalIgnoreCase);
+        MicSourceChip.IsEnabled = true;
+        SystemVolumeButton.IsEnabled = true;
+        MicrophoneVolumeButton.IsEnabled = true;
+        foreach (ToggleButton button in _dashboardAudioButtons.Values)
+            button.IsEnabled = true;
+        SettingsReplayToggle.IsEnabled = true;
+        DoneButton.IsEnabled = true;
+        CancelSettingsButton.IsEnabled = true;
+    }
+
+    private async Task RunUiActionAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            // Window is closing.
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Background UI action", exception);
+        }
+    }
+
+    private void HandleUiActionError(string operation, Exception exception)
+    {
+        Log.Write($"{operation} failed: {exception}");
+        ShowError(
+            Localization.Text("L.Error.Attention"),
+            exception.Message);
+    }
+
+    private async Task RefreshDiskAsync()
+    {
+        if (Interlocked.Exchange(ref _diskRefreshInProgress, 1) != 0)
+            return;
+
+        string outputDirectory = _outputDirectory;
+        try
+        {
+            DiskSnapshot snapshot = await Task.Run(
+                () => ReadDiskSnapshot(outputDirectory),
+                _lifetimeCts.Token);
+            if (_lifetimeCts.IsCancellationRequested ||
+                !string.Equals(outputDirectory, _outputDirectory, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            DiskSummaryText.Text = Localization.Format(
+                "L.Storage.FreeOn",
+                FormatBytes(snapshot.FreeBytes),
+                snapshot.DriveName);
+            DiskSummaryProgress.Value = snapshot.UsedPercent;
+            DiskUsedText.Text = Localization.Format(
+                "L.Storage.Used",
+                FormatBytes(snapshot.UsedBytes));
+            DiskFreeText.Text = Localization.Format(
+                "L.Storage.Free",
+                FormatBytes(snapshot.FreeBytes));
+            DiskProgress.Value = snapshot.UsedPercent;
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Disk-space query unavailable: {exception.Message}");
+            DiskSummaryText.Text = Localization.Text("L.Storage.Unavailable");
+            DiskSummaryProgress.Value = 0;
+            DiskUsedText.Text = Localization.Text("L.Storage.NoData");
+            DiskFreeText.Text = "";
+            DiskProgress.Value = 0;
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _diskRefreshInProgress, 0);
+        }
+    }
+
+    public void NotifyReplaySaved(string path)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(() => NotifyReplaySaved(path));
+            return;
+        }
+
+        _ = RefreshReplayLibraryAsync();
+    }
+
+    private async void RefreshLibrary_Click(object sender, RoutedEventArgs e) =>
+        await RunUiActionAsync(RefreshReplayLibraryAsync);
+
+    private async Task RefreshReplayLibraryAsync()
+    {
+        if (Interlocked.Exchange(ref _libraryRefreshInProgress, 1) != 0)
+            return;
+        SetReplayLibraryState(loading: true);
+        try
+        {
+            IReadOnlyList<ReplayClip> clips = await _replayLibrary.GetRecentAsync(
+                _outputDirectory,
+                DashboardInitialReplayCount,
+                _lifetimeCts.Token);
+            if (_lifetimeCts.IsCancellationRequested)
+                return;
+
+            RecentReplaysList.ItemsSource = clips.Select(CreateReplayClipItem).ToArray();
+            SetReplayLibraryState(empty: clips.Count == 0);
+            if (clips.Count < DashboardInitialReplayCount)
+                return;
+
+            IReadOnlyList<ReplayClip> allClips = await _replayLibrary.GetRecentAsync(
+                _outputDirectory,
+                int.MaxValue,
+                _lifetimeCts.Token);
+            if (_lifetimeCts.IsCancellationRequested || allClips.Count == clips.Count)
+                return;
+
+            RecentReplaysList.ItemsSource = allClips.Select(CreateReplayClipItem).ToArray();
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            // Window is closing.
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Replay library refresh failed: {exception}");
+            RecentReplaysList.ItemsSource = null;
+            SetReplayLibraryState(error: true);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _libraryRefreshInProgress, 0);
+        }
+    }
+
+    private void SetReplayLibraryState(
+        bool loading = false,
+        bool empty = false,
+        bool error = false)
+    {
+        ReplayLibraryLoading.Visibility = loading
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ReplayLibraryEmptyText.Visibility = empty
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        ReplayLibraryErrorText.Visibility = error
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        RecentReplaysList.Visibility = !loading && !empty && !error
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private ReplayClipItem CreateReplayClipItem(ReplayClip clip)
+    {
+        string saved = clip.SavedAt.ToString("g");
+        string metadata = Localization.Format(
+            "L.Library.Metadata",
+            saved,
+            FormatFileSize(clip.SizeBytes));
+        if (!string.IsNullOrWhiteSpace(clip.Collection))
+            metadata = $"{clip.Collection} · {metadata}";
+        return new ReplayClipItem(
+            clip,
+            Path.GetFileNameWithoutExtension(clip.Name),
+            metadata,
+            FormatTimelineDuration(clip.Duration),
+            () => LoadReplayThumbnail(clip),
+            clip.Duration > TimeSpan.FromMilliseconds(200));
+    }
+
+    private static BitmapImage? LoadReplayThumbnail(ReplayClip clip)
+    {
+        if (clip.ThumbnailPath is null || !File.Exists(clip.ThumbnailPath))
+            return null;
+
+        try
+        {
+            var thumbnail = new BitmapImage();
+            thumbnail.BeginInit();
+            thumbnail.CacheOption = BitmapCacheOption.OnLoad;
+            thumbnail.UriSource = new Uri(clip.ThumbnailPath);
+            thumbnail.EndInit();
+            thumbnail.Freeze();
+            return thumbnail;
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Replay thumbnail load failed: {exception.Message}");
+            return null;
+        }
+    }
+
+    private void RevealReplay_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).DataContext is not ReplayClipItem item)
+            return;
+        try
+        {
+            _replayLibrary.Reveal(_outputDirectory, item.Clip);
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Reveal replay", exception);
+        }
+    }
+
+    private void PlayReplay_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).DataContext is not ReplayClipItem item || !item.CanTrim)
+            return;
+        var player = new ClipEditorWindow(
+            _replayLibrary,
+            _outputDirectory,
+            item.Clip,
+            savedPath =>
+            {
+                Log.Write($"Trimmed replay saved: {savedPath}");
+                _ = RefreshReplayLibraryAsync();
+            },
+            ClipWindowMode.Preview,
+            _config.PlayerVolume,
+            PersistPlayerVolume)
+        {
+            Owner = this,
+        };
+        player.ShowDialog();
+        if (player.HasDeletedReplays)
+            _ = RefreshReplayLibraryAsync();
+    }
+
+    private void PersistPlayerVolume(int volumePercent)
+    {
+        int normalized = Math.Clamp(volumePercent, 0, 100);
+        if (_config.PlayerVolume == normalized)
+            return;
+
+        _config.PlayerVolume = normalized;
+        try
+        {
+            _config.Save();
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Player volume save failed: {exception.Message}");
+        }
+    }
+
+    private void RequestDeleteReplay_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).DataContext is not ReplayClipItem item)
+            return;
+        _pendingDeleteClip = item.Clip;
+        DeleteConfirmFileText.Text = item.Clip.Name;
+        DeleteConfirmOverlay.Visibility = Visibility.Visible;
+        AnimateView(DeleteConfirmOverlay);
+    }
+
+    private void CancelDeleteReplay_Click(object sender, RoutedEventArgs e) =>
+        CancelDeleteReplay();
+
+    private void CancelDeleteReplay()
+    {
+        _pendingDeleteClip = null;
+        DeleteConfirmOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private async void ConfirmDeleteReplay_Click(object sender, RoutedEventArgs e)
+    {
+        ReplayClip? clip = _pendingDeleteClip;
+        CancelDeleteReplay();
+        if (clip is null)
+            return;
+        try
+        {
+            await Task.Run(
+                () => _replayLibrary.DeleteToRecycleBin(_outputDirectory, clip),
+                _lifetimeCts.Token);
+            await RefreshReplayLibraryAsync();
+        }
+        catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
+        {
+            // Window is closing.
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Delete replay", exception);
+        }
+    }
+
+    private static DiskSnapshot ReadDiskSnapshot(string outputDirectory)
+    {
+        string? root = Path.GetPathRoot(Path.GetFullPath(outputDirectory));
+        if (string.IsNullOrEmpty(root))
+            throw new IOException("Could not resolve the target drive.");
+
+        var drive = new DriveInfo(root);
+        long total = drive.TotalSize;
+        long free = drive.AvailableFreeSpace;
+        long used = total - free;
+        return new DiskSnapshot(
+            drive.Name.TrimEnd('\\'),
+            used,
+            free,
+            total == 0 ? 0 : used * 100d / total);
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
+    private void NoticeClose_Click(object sender, RoutedEventArgs e) => HideNotice();
+
+    public void ShowError(string title, string message)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => ShowError(title, message));
+            return;
+        }
+
+        NoticeTitleText.Text = title;
+        NoticeMessageText.Text = message;
+        NoticeBanner.Visibility = Visibility.Visible;
+        NoticeBanner.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        });
+        NoticeTranslate.BeginAnimation(TranslateTransform.YProperty,
+            new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(220))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            });
+    }
+
+    public void ClearError(string message)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => ClearError(message));
+            return;
+        }
+
+        if (string.Equals(NoticeMessageText.Text, message, StringComparison.Ordinal))
+            HideNotice();
+    }
+
+    private void HideNotice()
+    {
+        var fade = new DoubleAnimation(NoticeBanner.Opacity, 0, TimeSpan.FromMilliseconds(140));
+        fade.Completed += (_, _) =>
+        {
+            NoticeBanner.Visibility = Visibility.Collapsed;
+            NoticeBanner.Opacity = 0;
+        };
+        NoticeBanner.BeginAnimation(OpacityProperty, fade);
+    }
+
+    private void AnimateRecordingState(bool active)
+    {
+        if (_animatedRecordingState == active)
+            return;
+
+        _animatedRecordingState = active;
+        StatusRingRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+        StatusDot.BeginAnimation(OpacityProperty, null);
+        StatusRingRotation.Angle = 0;
+        StatusDot.Opacity = 1;
+        if (!active)
+            return;
+
+        StatusRingRotation.BeginAnimation(RotateTransform.AngleProperty,
+            new DoubleAnimation(0, 360, TimeSpan.FromSeconds(5))
+            {
+                RepeatBehavior = RepeatBehavior.Forever,
+            });
+        StatusDot.BeginAnimation(OpacityProperty,
+            new DoubleAnimation(1, 0.42, TimeSpan.FromSeconds(1.2))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
+            });
+    }
+
+    private static void AnimateView(FrameworkElement view)
+    {
+        var translate = new TranslateTransform(0, 8);
+        view.RenderTransform = translate;
+        view.Opacity = 0;
+        view.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+        });
+        translate.BeginAnimation(TranslateTransform.YProperty,
+            new DoubleAnimation(8, 0, TimeSpan.FromMilliseconds(220))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            });
+    }
+
+    private static void AnimatePress(FrameworkElement element)
+    {
+        element.RenderTransformOrigin = new Point(0.5, 0.5);
+        var scale = element.RenderTransform as ScaleTransform ?? new ScaleTransform(1, 1);
+        element.RenderTransform = scale;
+        var animation = new DoubleAnimation(0.97, 1, TimeSpan.FromMilliseconds(170))
+        {
+            EasingFunction = new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.18 },
+        };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, animation);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, animation);
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
+    {
+        while (current is not null)
+        {
+            if (current is T match)
+                return match;
+            current = VisualTreeHelper.GetParent(current);
+        }
+        return null;
+    }
+
+    private static bool IsModifierKey(Key key) =>
+        key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt;
+
+    private static string FormatHotkey(ModifierKeys modifiers, Key key)
+    {
+        var parts = new List<string>();
+        if (modifiers.HasFlag(ModifierKeys.Control))
+            parts.Add("Ctrl");
+        if (modifiers.HasFlag(ModifierKeys.Shift))
+            parts.Add("Shift");
+        if (modifiers.HasFlag(ModifierKeys.Alt))
+            parts.Add("Alt");
+
+        string keyName = key is >= Key.D0 and <= Key.D9
+            ? ((int)key - (int)Key.D0).ToString()
+            : key.ToString();
+        parts.Add(keyName);
+        return string.Join("+", parts);
+    }
+
+    private static string FormatCodec(string codec) => codec.ToLowerInvariant() switch
+    {
+        "h264" => "H.264",
+        "hevc" => "H.265",
+        "av1" => "AV1",
+        _ => codec.ToUpperInvariant(),
+    };
+
+    private static string FormatResolution(string resolution) =>
+        resolution.ToLowerInvariant() switch
+        {
+            "720p" => "720p",
+            "1080p" => "1080p",
+            "1440p" => "1440p",
+            "2160p" => "4K",
+            _ => Localization.Text("L.Video.SourceShort"),
+        };
+
+    private string LocalizedCaptureSource(string? activeCaptureSource)
+    {
+        if (!string.IsNullOrWhiteSpace(activeCaptureSource))
+        {
+            return activeCaptureSource;
+        }
+
+        return Localization.Text(
+            _config.CaptureSource == "game"
+                ? "L.Video.GameLower"
+                : "L.Video.DesktopLower");
+    }
+
+    private enum UpdateDisplayState
+    {
+        Current,
+        Checking,
+        Available,
+        Downloading,
+        Installing,
+        CheckFailed,
+    }
+
+    private sealed record AudioDeviceSelection(bool IsSystem, string Id);
+
+    private sealed record DeviceListsSnapshot(
+        IReadOnlyList<(string Id, string Name)> RenderDevices,
+        IReadOnlyList<(string Id, string Name)> CaptureDevices,
+        IReadOnlyList<CaptureInterop.MonitorInfo> Monitors);
+
+    private sealed record DiskSnapshot(
+        string DriveName,
+        long UsedBytes,
+        long FreeBytes,
+        double UsedPercent);
+
+    private static void SelectRadioByTag(Panel panel, string tag)
+    {
+        RadioButton? fallback = null;
+        foreach (RadioButton button in panel.Children.OfType<RadioButton>())
+        {
+            fallback ??= button;
+            if (button.Tag?.ToString() == tag)
+            {
+                button.IsChecked = true;
+                return;
+            }
+        }
+        if (fallback is not null)
+            fallback.IsChecked = true;
+    }
+
+    private static int GetSelectedRadioInt(Panel panel, int fallback)
+    {
+        RadioButton? selected = panel.Children.OfType<RadioButton>().FirstOrDefault(button => button.IsChecked == true);
+        return int.TryParse(selected?.Tag?.ToString(), out int value) ? value : fallback;
+    }
+
+    private static string GetSelectedRadioTag(Panel panel, string fallback)
+    {
+        RadioButton? selected = panel.Children
+            .OfType<RadioButton>()
+            .FirstOrDefault(button => button.IsChecked == true);
+        return selected?.Tag?.ToString() ?? fallback;
+    }
+
+    private static void SelectByTag(ComboBox box, string tag)
+    {
+        foreach (ComboBoxItem item in box.Items)
+        {
+            if (string.Equals(item.Tag?.ToString(), tag, StringComparison.OrdinalIgnoreCase))
+            {
+                box.SelectedItem = item;
+                return;
+            }
+        }
+        box.SelectedIndex = 0;
+    }
+
+    private static string GetSelectedTag(ComboBox box, string fallback) =>
+        (box.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? fallback;
+
+    private static int GetSelectedInt(ComboBox box, int fallback) =>
+        int.TryParse(GetSelectedTag(box, ""), out int value) ? value : fallback;
+
+    private void BitrateBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CustomBitratePanel is not null)
+            UpdateCustomBitrateState();
+    }
+
+    private void UpdateCustomBitrateState() =>
+        CustomBitratePanel.Visibility = GetSelectedTag(BitrateBox, "0") == "custom"
+            ? Visibility.Visible : Visibility.Collapsed;
+
+    private void CustomBitrateBox_TextChanged(object sender, TextChangedEventArgs e) =>
+        QueueSettingsDirtyRefresh();
+
+    private bool TryGetBitrateMbps(out int bitrate)
+    {
+        if (GetSelectedTag(BitrateBox, "0") != "custom")
+        {
+            bitrate = GetSelectedInt(BitrateBox, _config.BitrateMbps);
+            return true;
+        }
+
+        return int.TryParse(CustomBitrateBox.Text, out bitrate) &&
+               bitrate >= 1 && bitrate <= Config.MaxBitrateMbps;
+    }
+
+    private static string FormatDuration(int seconds) =>
+        Localization.Format(
+            seconds < 60 ? "L.Unit.Seconds" : "L.Unit.Minutes",
+            seconds < 60 ? seconds : seconds / 60);
+
+    private static string FormatBytes(long bytes)
+    {
+        double gigabytes = bytes / 1024d / 1024d / 1024d;
+        string value = gigabytes >= 100
+            ? gigabytes.ToString("0")
+            : gigabytes.ToString("0.0");
+        return Localization.Format("L.Unit.GB", value);
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double value = Math.Max(0, bytes);
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return $"{value:0.#} {units[unit]}";
+    }
+
+    private static string FormatTimelineDuration(TimeSpan duration) =>
+        duration.TotalHours >= 1
+            ? duration.ToString(@"h\:mm\:ss")
+            : duration.ToString(@"m\:ss");
+
+    private sealed class ReplayClipItem
+    {
+        private readonly Lazy<BitmapImage?> _thumbnail;
+
+        public ReplayClipItem(
+            ReplayClip clip,
+            string title,
+            string details,
+            string duration,
+            Func<BitmapImage?> thumbnailFactory,
+            bool canTrim)
+        {
+            Clip = clip;
+            Title = title;
+            Details = details;
+            Duration = duration;
+            _thumbnail = new Lazy<BitmapImage?>(thumbnailFactory);
+            CanTrim = canTrim;
+        }
+
+        public ReplayClip Clip { get; }
+        public string Title { get; }
+        public string Details { get; }
+        public string Duration { get; }
+        public BitmapImage? Thumbnail => _thumbnail.Value;
+        public bool CanTrim { get; }
+    }
+
+    private sealed record DashboardAudioSource(string Key, bool Microphone);
+
+    private Brush FindBrush(string key) => (Brush)FindResource(key);
+}

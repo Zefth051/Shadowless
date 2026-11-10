@@ -4,7 +4,7 @@ Describe the change and why it is needed.
 
 ## Validation
 
-- [ ] `dotnet build .\Captail.sln -c Release`
+- [ ] `dotnet build .\Shadowless.sln -c Release`
 - [ ] Real Windows UI checked when applicable
 - [ ] Existing replay, hotkey, tray, and recovery behavior preserved
 - [ ] New user-facing text added to both EN and RU resources
@@ -15,7 +15,7 @@ Describe the change and why it is needed.
 - [ ] Visible UI changed and real before/after screenshots are attached
 - [ ] Release PR refreshed the complete README screenshot set and added screenshots for significant new features
 
-Use real Captail builds only. No mockups or concept art. See `docs/SCREENSHOTS.md`.
+Use real Shadowless builds only. No mockups or concept art. See `docs/SCREENSHOTS.md`.
 
 ## Recording test
 

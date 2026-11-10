@@ -14,21 +14,21 @@ function Require([string]$text, [string]$pattern, [string]$message) {
     }
 }
 
-$theme = Read-Text "src\Captail\ThemeManager.cs"
-$app = Read-Text "src\Captail\App.xaml.cs"
-$shortcuts = Read-Text "src\Captail\ShortcutIconManager.cs"
-$project = Read-Text "src\Captail\Captail.csproj"
+$theme = Read-Text "src\Shadowless\ThemeManager.cs"
+$app = Read-Text "src\Shadowless\App.xaml.cs"
+$shortcuts = Read-Text "src\Shadowless\ShortcutIconManager.cs"
+$project = Read-Text "src\Shadowless\Shadowless.csproj"
 
 $icons = @(
-    "Captail.ico",
-    "CaptailBlue.ico",
-    "CaptailViolet.ico",
-    "CaptailRose.ico",
-    "CaptailAmber.ico"
+    "Shadowless.ico",
+    "ShadowlessBlue.ico",
+    "ShadowlessViolet.ico",
+    "ShadowlessRose.ico",
+    "ShadowlessAmber.ico"
 )
 
 foreach ($icon in $icons) {
-    $path = Join-Path $repoRoot "src\Captail\Assets\$icon"
+    $path = Join-Path $repoRoot "src\Shadowless\Assets\$icon"
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Missing accent icon: $icon"
     }
@@ -52,7 +52,7 @@ foreach ($window in @(
     "ProcessAudioRoutingWindow.xaml",
     "ClipEditorWindow.xaml"
 )) {
-    $xaml = Read-Text "src\Captail\$window"
+    $xaml = Read-Text "src\Shadowless\$window"
     Require $xaml 'Icon="\{DynamicResource ApplicationIcon\}"' `
         "$window must use dynamic application icon."
 }
@@ -66,6 +66,6 @@ Require $app 'ShortcutIconManager\.Apply\(accentName\)' `
 Require $shortcuts 'AppDistribution\.IsMicrosoftStore' `
     "MSIX shortcut must be excluded because package logos are immutable."
 Require $shortcuts 'TargetsCurrentExecutable\(targetPath\)' `
-    "Only shortcuts targeting current Captail executable may change."
+    "Only shortcuts targeting current Shadowless executable may change."
 
 Write-Host "ACCENT_ICON_REGRESSION_TEST PASS"

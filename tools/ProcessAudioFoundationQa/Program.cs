@@ -1,5 +1,5 @@
-using Captail;
-using Captail.Interop;
+using Shadowless;
+using Shadowless.Interop;
 using System.Text.Json;
 
 namespace ProcessAudioFoundationQa;
@@ -13,11 +13,77 @@ internal static class Program
     {
         try
         {
+            if (args.Contains("--bitrate"))
+            {
+                Run("custom bitrate range and persistence", BitrateQa.Run);
+                Run("settings failure identifies capture options", SettingsFailureQa.Run);
+                return 0;
+            }
+            if (args.Contains("--dashboard-audio-levels") || args.Contains("--dashboard-audio-preview"))
+                return DashboardAudioLevelsQa.Run(args.Contains("--dashboard-audio-preview"));
+            if (args.Contains("--live-audio-levels"))
+            {
+                Run("audio levels preserve pipeline classification", AudioLevelsPreservePipeline);
+                Run("live audio levels preserve native replay", LiveAudioLevelsPreserveReplay);
+                return 0;
+            }
+            if (args.Contains("--live-audio-sources"))
+            {
+                Run("audio sources preserve native replay", LiveAudioSourcesPreserveReplay);
+                return 0;
+            }
+            if (args.Contains("--audio-toggle-lifecycle"))
+            {
+                // Rebuild the real native graph like the dashboard audio toggles, without saving user settings.
+                for (int cycle = 0; cycle < 8; cycle++)
+                {
+                    Log.Flush();
+                    long logStart = System.IO.File.Exists(Log.Path) ? new System.IO.FileInfo(Log.Path).Length : 0;
+                    var config = new Config
+                    {
+                        CaptureSystemAudio = cycle % 2 == 0,
+                        CaptureMicrophone = true,
+                        SeparateAudioTracks = cycle >= 4,
+                        FrameRate = 30,
+                        RecordingResolution = "720p",
+                        BufferSeconds = 5,
+                    };
+                    Console.WriteLine($"Audio lifecycle {cycle + 1}: system={config.CaptureSystemAudio}");
+                    using (var engine = new ObsReplayEngine(config))
+                    {
+                        engine.Start();
+                        Thread.Sleep(1200);
+                    }
+                    Log.Flush();
+                    using var logFile = new System.IO.FileStream(Log.Path,
+                        System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite);
+                    logFile.Seek(logStart, System.IO.SeekOrigin.Begin);
+                    string diagnostic = new System.IO.StreamReader(logFile).ReadToEnd();
+                    if (diagnostic.Contains("Double destroy", StringComparison.Ordinal) ||
+                        diagnostic.Contains("source(s) were remaining", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException("Audio toggle left native sources alive during OBS shutdown.");
+                    }
+                    Console.WriteLine($"Audio lifecycle {cycle + 1}: disposed");
+                }
+                Console.WriteLine("AUDIO_TOGGLE_LIFECYCLE PASS");
+                return 0;
+            }
+            if (args.Contains("--replay-save-lifecycle"))
+            {
+                Run("replay save completion", () => ReplaySaveWait("success"));
+                Run("replay save caller cancellation", () => ReplaySaveWait("caller"));
+                Run("replay save timeout retains native request", () => ReplaySaveWait("timeout"));
+                Run("replay save shutdown cancellation", () => ReplaySaveWait("shutdown"));
+                return 0;
+            }
             if (args.Contains("--overlay-accent"))
             {
                 Run("notification uses selected accent", NotificationUsesSelectedAccent);
                 return 0;
             }
+            Run("custom bitrate range and persistence", BitrateQa.Run);
+            Run("settings failure identifies capture options", SettingsFailureQa.Run);
             Run("normalized executable matching", NormalizedExecutableMatching);
             Run("independent same-name roots", IndependentSameNameRoots);
             Run("same-name descendant deduplication", SameNameDescendantDeduplication);
@@ -31,6 +97,7 @@ internal static class Program
             Run("reconciler clean shutdown", ReconcilerCleanShutdown);
             Run("advanced config normalization", AdvancedConfigNormalization);
             Run("config clone copy and equality", ConfigCloneCopyAndEquality);
+            Run("audio levels preserve pipeline classification", AudioLevelsPreservePipeline);
             Run("old config remains simple", OldConfigRemainsSimple);
             Run("routing across tracks", RoutingAcrossTracks);
             Run("mixer bits and encoder continuity", MixerBitsAndEncoderContinuity);
@@ -59,6 +126,50 @@ internal static class Program
             Console.Error.WriteLine(exception);
             return 1;
         }
+    }
+
+    private static void ReplaySaveWait(string scenario)
+    {
+        // Exercise managed save coordination without starting OBS or touching user settings.
+        var engine = (ObsReplayEngine)System.Runtime.CompilerServices.RuntimeHelpers
+            .GetUninitializedObject(typeof(ObsReplayEngine));
+        const System.Reflection.BindingFlags flags =
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        typeof(ObsReplayEngine).GetField("_saveGate", flags)!.SetValue(engine, new object());
+        var pending = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pendingField = typeof(ObsReplayEngine).GetField("_pendingSave", flags)!;
+        pendingField.SetValue(engine, pending);
+        using var caller = new CancellationTokenSource();
+        var wait = (Task<string>)typeof(ObsReplayEngine)
+            .GetMethod("WaitForSaveCompletionAsync", flags)!
+            .Invoke(engine, [pending.Task, caller.Token])!;
+
+        switch (scenario)
+        {
+            case "success": pending.SetResult("completed.mp4"); break;
+            case "caller": caller.Cancel(); break;
+            case "shutdown": pending.SetCanceled(); break;
+        }
+
+        Exception? failure = null;
+        try
+        {
+            Equal("completed.mp4", wait.GetAwaiter().GetResult());
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+        bool expected = scenario switch
+        {
+            "success" => failure is null,
+            "timeout" => failure is TimeoutException,
+            _ => failure is OperationCanceledException,
+        };
+        if (!expected)
+            throw new InvalidOperationException($"Unexpected {scenario} result: {failure}");
+        if (!ReferenceEquals(pending, pendingField.GetValue(engine)))
+            throw new InvalidOperationException("Wait released a native save request before its saved callback.");
     }
 
     private static void NormalizedExecutableMatching()
@@ -362,7 +473,7 @@ internal static class Program
         Equal(
             Localization.Format("L.Library.AudioTrackNumber", 1),
             ClipEditorWindow.AudioLabel(
-                new AudioTrackInfo(1, 0, "aac", "Captail Audio 1", 2),
+                new AudioTrackInfo(1, 0, "aac", "Shadowless Audio 1", 2),
                 2));
     }
 
@@ -510,6 +621,157 @@ internal static class Program
         clone.AudioRoutingMode = "simple";
         if (source.PipelineEquals(clone))
             throw new InvalidOperationException("A routing-mode change was ignored.");
+    }
+
+    private static void AudioLevelsPreservePipeline()
+    {
+        var original = new Config();
+        foreach (Action<Config> change in new Action<Config>[]
+        {
+            config => config.SystemAudioVolume = 0,
+            config => config.MicrophoneVolume = 37,
+            config => config.MicrophoneBoostDb = 10,
+            config => config.SystemAudioMuted = true,
+            config => config.MicrophoneMuted = true,
+        })
+        {
+            Config changed = original.Clone();
+            change(changed);
+            Equal(true, original.PipelineEquals(changed));
+            Config copy = changed.Clone();
+            Equal(changed.SystemAudioMuted, copy.SystemAudioMuted);
+            Equal(changed.MicrophoneMuted, copy.MicrophoneMuted);
+            Config restored = JsonSerializer.Deserialize<Config>(JsonSerializer.Serialize(changed))!;
+            Equal(changed.SystemAudioMuted, restored.SystemAudioMuted);
+            Equal(changed.MicrophoneMuted, restored.MicrophoneMuted);
+        }
+        Config deviceChange = original.Clone();
+        deviceChange.MicrophoneDeviceId = "another-device";
+        Equal(true, original.PipelineEquals(deviceChange));
+        Config toggleChange = original.Clone();
+        toggleChange.CaptureSystemAudio = !original.CaptureSystemAudio;
+        Equal(true, original.PipelineEquals(toggleChange));
+    }
+
+    private static void LiveAudioSourcesPreserveReplay()
+    {
+        const System.Reflection.BindingFlags flags =
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        object Read(ObsReplayEngine engine, string field) =>
+            typeof(ObsReplayEngine).GetField(field, flags)!.GetValue(engine)!;
+        var config = new Config
+        {
+            CaptureSystemAudio = false, CaptureMicrophone = false,
+            FrameRate = 30, RecordingResolution = "720p", BufferSeconds = 15,
+        };
+        using var engine = new ObsReplayEngine(config);
+        engine.Start();
+        object output = Read(engine, "_output");
+        object encoder = Read(engine, "_videoEncoder");
+        object replayStart = Read(engine, "_replayWindowStartedUtc");
+        Thread.Sleep(1500);
+        for (int cycle = 0; cycle < 8; cycle++)
+        {
+            int frames = engine.EncodedFrameCount;
+            config.CaptureSystemAudio = cycle % 2 == 0;
+            config.CaptureMicrophone = cycle % 3 == 0;
+            config.SystemAudioMuted = cycle == 2;
+            config.SystemAudioVolume = 37;
+            engine.ApplyAudioSources();
+            nint system = (nint)Read(engine, "_systemAudioSource");
+            nint microphone = (nint)Read(engine, "_microphoneSource");
+            Equal(config.CaptureSystemAudio, system != 0);
+            Equal(config.CaptureMicrophone, microphone != 0);
+            Equal((config.CaptureSystemAudio ? 1 : 0) + (config.CaptureMicrophone ? 1 : 0),
+                ((List<nint>)Read(engine, "_audioSources")).Count);
+            if (system != 0)
+            {
+                float gain = ObsNative.obs_source_get_volume(system);
+                if (Math.Abs(gain - (config.SystemAudioMuted ? 0 : 0.37f)) > 0.001f)
+                    throw new InvalidOperationException("Recreated source lost its mute or gain.");
+            }
+            engine.ApplyAudioSources();
+            Equal(system, Read(engine, "_systemAudioSource"));
+            Equal(microphone, Read(engine, "_microphoneSource"));
+            Equal(output, Read(engine, "_output"));
+            Equal(encoder, Read(engine, "_videoEncoder"));
+            Equal(replayStart, Read(engine, "_replayWindowStartedUtc"));
+            Thread.Sleep(500);
+            if (!engine.IsActive || engine.EncodedFrameCount <= frames)
+                throw new InvalidOperationException("Audio toggle stopped replay encoding.");
+        }
+    }
+
+    private static void LiveAudioLevelsPreserveReplay()
+    {
+        const System.Reflection.BindingFlags flags =
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        object Read(ObsReplayEngine engine, string field) =>
+            typeof(ObsReplayEngine).GetField(field, flags)!.GetValue(engine)!;
+
+        foreach (string mode in new[] { "mixed", "separate", "microphone" })
+        {
+            var config = new Config
+            {
+                CaptureSystemAudio = mode != "microphone",
+                CaptureMicrophone = true,
+                SeparateAudioTracks = mode == "separate",
+                FrameRate = 30,
+                RecordingResolution = "720p",
+                BufferSeconds = 15,
+            };
+            using var engine = new ObsReplayEngine(config);
+            engine.Start();
+            Thread.Sleep(1500);
+            object output = Read(engine, "_output");
+            object replayStart = Read(engine, "_replayWindowStartedUtc");
+            int frames = engine.EncodedFrameCount;
+            if (frames == 0)
+                throw new InvalidOperationException("Replay did not encode frames before the volume change.");
+            foreach (int volume in new[] { 0, 37, 100 })
+            {
+                config.SystemAudioVolume = volume;
+                config.MicrophoneVolume = volume;
+                config.MicrophoneBoostDb = 10;
+                engine.ApplyAudioLevels();
+                nint microphone = (nint)Read(engine, "_microphoneSource");
+                float expectedMicrophone = volume / 100f * MathF.Pow(10, 10 / 20f);
+                if (Math.Abs(ObsNative.obs_source_get_volume(microphone) - expectedMicrophone) > 0.001f)
+                    throw new InvalidOperationException("Live microphone gain was not applied.");
+                nint system = (nint)Read(engine, "_systemAudioSource");
+                if (system != 0 && Math.Abs(ObsNative.obs_source_get_volume(system) - volume / 100f) > 0.001f)
+                    throw new InvalidOperationException("Live system gain was not applied.");
+                var processSources = (Dictionary<nint, nint>)Read(engine, "_processAudioSceneItems");
+                foreach (nint source in processSources.Keys)
+                {
+                    if (Math.Abs(ObsNative.obs_source_get_volume(source) - volume / 100f) > 0.001f)
+                        throw new InvalidOperationException("Live process audio gain was not applied.");
+                }
+                Equal(output, Read(engine, "_output"));
+                Equal(replayStart, Read(engine, "_replayWindowStartedUtc"));
+            }
+            foreach (bool muted in new[] { true, false })
+            {
+                config.SystemAudioMuted = muted;
+                config.MicrophoneMuted = muted;
+                engine.ApplyAudioLevels();
+                float microphoneGain = ObsNative.obs_source_get_volume((nint)Read(engine, "_microphoneSource"));
+                if (Math.Abs(microphoneGain - (muted ? 0 : MathF.Pow(10, 10 / 20f))) > 0.001f)
+                    throw new InvalidOperationException("Microphone mute did not restore the selected gain.");
+                nint system = (nint)Read(engine, "_systemAudioSource");
+                if (system != 0)
+                    Equal(muted ? 0f : 1f, ObsNative.obs_source_get_volume(system));
+                foreach (nint source in ((Dictionary<nint, nint>)Read(engine, "_processAudioSceneItems")).Keys)
+                    Equal(muted ? 0f : 1f, ObsNative.obs_source_get_volume(source));
+                Equal(100, config.SystemAudioVolume);
+                Equal(100, config.MicrophoneVolume);
+                Equal(output, Read(engine, "_output"));
+                Equal(replayStart, Read(engine, "_replayWindowStartedUtc"));
+            }
+            Thread.Sleep(500);
+            if (!engine.IsActive || engine.EncodedFrameCount <= frames)
+                throw new InvalidOperationException("Replay stopped encoding after changing audio levels.");
+        }
     }
 
     private static void OldConfigRemainsSimple()
@@ -832,13 +1094,13 @@ internal static class Program
         var config = new Config
         {
             OrganizeReplaysByGame = true,
-            OutputDirectory = @"C:\Captail",
+            OutputDirectory = @"C:\Shadowless",
         };
         Equal(
-            @"C:\Captail\PEAK",
+            @"C:\Shadowless\PEAK",
             ReplayPaths.CaptureDirectory(config, @"C:\Games\PEAK\peak.exe"));
         Equal(
-            @"C:\Captail\game",
+            @"C:\Shadowless\game",
             ReplayPaths.CaptureDirectory(config, @"C:\Games\Unknown\game.exe"));
     }
 

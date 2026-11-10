@@ -334,7 +334,7 @@ foreach ($listingProperty in $listings) {
 }
 
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) `
-    ("Captail-StoreListing-" + [Guid]::NewGuid().ToString("N"))
+    ("Shadowless-StoreListing-" + [Guid]::NewGuid().ToString("N"))
 $downloadedBundle = Join-Path $temporaryRoot "current-upload.zip"
 $bundleRoot = Join-Path $temporaryRoot "bundle"
 $updatedBundle = Join-Path $temporaryRoot "updated-upload.zip"

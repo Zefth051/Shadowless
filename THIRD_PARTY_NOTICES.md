@@ -1,6 +1,6 @@
 # Third-party notices
 
-Captail dynamically uses and may redistribute selected components from OBS Studio 32.2.2.
+Shadowless dynamically uses and may redistribute selected components from OBS Studio 32.2.2.
 
 ## OBS Studio / libobs
 
@@ -11,7 +11,7 @@ Captail dynamically uses and may redistribute selected components from OBS Studi
 
 `tools/AcquireObsRuntime.ps1` prepares the runtime. Distributions contain only components required for libobs, Replay Buffer, Windows capture, WASAPI audio, and supported hardware encoders.
 
-Captail's `native/ProcessAudio` module narrowly adapts the process-loopback
+Shadowless's `native/ProcessAudio` module narrowly adapts the process-loopback
 activation, audio format, silent-buffer, timestamp, and packet-delivery portions
 of OBS Studio 32.2.2 `plugins/win-wasapi/win-wasapi.cpp`. Window matching,
 device capture, OBS UI properties, and other unrelated `win-wasapi`
@@ -26,7 +26,7 @@ public libobs headers used to compile the module.
 - Build: `n9.0.1-84-g946fcce07b`, LGPL shared/static variants
 - License: GNU Lesser General Public License 2.1 or later; optional components retain their own licenses
 
-`tools/AcquireFfmpegRuntime.ps1` downloads a pinned, SHA-256-verified build. Captail uses it for clip metadata, thumbnails, and non-destructive trimming.
+`tools/AcquireFfmpegRuntime.ps1` downloads a pinned, SHA-256-verified build. Shadowless uses it for clip metadata, thumbnails, and non-destructive trimming.
 
 ## mpv / libmpv
 
@@ -35,7 +35,7 @@ public libobs headers used to compile the module.
 - Native Windows build: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20260903
 - License: GNU Lesser General Public License 2.1 or later
 
-Captail dynamically loads the replaceable `libmpv-2.dll` for embedded editor playback, hardware decoding, seeking, and local mixing of selected audio tracks. Captail does not bundle or launch the standalone `mpv.exe` player.
+Shadowless dynamically loads the replaceable `libmpv-2.dll` for embedded editor playback, hardware decoding, seeking, and local mixing of selected audio tracks. Shadowless does not bundle or launch the standalone `mpv.exe` player.
 
 ## NuGet dependencies
 
@@ -53,7 +53,7 @@ Licenses and copyright notices from these projects remain applicable to their re
 - License: MIT License
 - Copyright: Mark Terence Tiglao, 2025
 
-Captail embeds a reduced Windows executable-to-game-name index generated from
+Shadowless embeds a reduced Windows executable-to-game-name index generated from
 this catalog. `tools/UpdateGameCatalog.ps1` filters launcher and non-Windows
 entries and records the exact source revision in the generated asset.
 
