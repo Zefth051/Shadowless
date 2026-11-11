@@ -31,7 +31,7 @@ jobs:
       - name: Install native build dependencies
         run: >-
           pacman -Syu --noconfirm --needed git python qt6-base qt6-multimedia
-          qt6-wayland qt6-svg layer-shell-qt ffmpeg mpv gpu-screen-recorder
+          qt6-wayland qt6-svg qt6-imageformats layer-shell-qt ffmpeg mpv gpu-screen-recorder
           pkgconf mesa libpulse pipewire github-cli
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

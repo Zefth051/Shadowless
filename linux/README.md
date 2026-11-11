@@ -10,7 +10,7 @@ The initial capture experiment is documented in `docs/LINUX_GSR_SPIKE.md`.
 
 Required: GNU Make, a C++17 compiler, qmake6, Qt 6 Core/Gui/Widgets/Network/DBus/
 Concurrent/Test/Multimedia/MultimediaWidgets/OpenGLWidgets, libmpv development files,
-the Qt SVG image plugin, the native Qt Wayland plugin, LayerShellQt (tested 6.8.2), OpenGL
+the Qt SVG and WebP image plugins (`qt6-svg` / `qt6-imageformats` on Arch), the native Qt Wayland plugin, LayerShellQt (tested 6.8.2), OpenGL
 headers, FFmpeg development libraries (`libavformat`, `libavcodec`, `libavutil`,
 `libswscale`), FFmpeg/ffprobe executables, and GSR with IPC/plugin support
 (tested 6.1.5, including `/usr/include/gsr/plugin.h`).
