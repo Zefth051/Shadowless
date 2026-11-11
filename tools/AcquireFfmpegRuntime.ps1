@@ -8,8 +8,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
-$version = "n9.0.1-84-g946fcce07b"
-$releaseTag = "autobuild-2026-09-18-13-22"
+$version = "n9.0.2-49-gc179411bbb"
+$releaseTag = "autobuild-2026-11-11-12-39"
 $isStatic = $Flavor -eq "Static"
 $archiveName = if ($isStatic) {
     "ffmpeg-$version-win64-lgpl-9.0.zip"
@@ -18,10 +18,10 @@ else {
     "ffmpeg-$version-win64-lgpl-shared-9.0.zip"
 }
 $expectedArchiveSha256 = if ($isStatic) {
-    "e17c2a1313bec165f12f5a73d07447b03292bbd7a9153af9de901e981e0109d6"
+    "9ccd65428fb0e60a0d574b76145df41f402b754edd2d06c2e24fa506fc1c2b02"
 }
 else {
-    "a2a50423b631cb51e91c2668c16a4807197c50d1f5fc56dd4516ca188a0d731f"
+    "4ac2a4a732ee66707ab2a4d7fc135d085e1da691f365cdb2f1b48f8f3816d4d8"
 }
 $url =
     "https://github.com/BtbN/FFmpeg-Builds/releases/download/" +

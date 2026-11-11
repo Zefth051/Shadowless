@@ -6,11 +6,11 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$version = "v0.41.0-1023-g69e63f425"
-$releaseTag = "20260903"
-$archiveName = "mpv-dev-x86_64-20260903-git-69e63f425a.7z"
+$version = "git-bcde6b93cc"
+$releaseTag = "20261111"
+$archiveName = "mpv-dev-x86_64-20261111-git-bcde6b93cc.7z"
 $expectedArchiveSha256 =
-    "fac135c68a35b7639e39d72c0c365104edbaebdea39a0dfdd8c36e8c8e80faef"
+    "273c079b11ea5575822f972756f4c9a71149a5c10130353abeb8586738938452"
 $url =
     "https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/" +
     "$releaseTag/$archiveName"

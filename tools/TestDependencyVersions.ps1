@@ -57,15 +57,15 @@ Require $runtimeAcquisition `
     "OBS 32.2.2 Windows archive hash is not pinned."
 Require $engine 'RequiredObsVersion\s*=\s*"32\.2\.2"' `
     "Runtime OBS version guard must require 32.2.2."
-Require $mpvAcquisition '\$version\s*=\s*"v0\.41\.0-1023-g69e63f425"' `
-    "mpv runtime must stay on the validated v0.41.0-1023 build."
+Require $mpvAcquisition '\$version\s*=\s*"git-bcde6b93cc"' `
+    "mpv runtime must stay on the SHA-256-pinned 2026-11-11 build."
 Require $mpvAcquisition `
-    'fac135c68a35b7639e39d72c0c365104edbaebdea39a0dfdd8c36e8c8e80faef' `
+    '273c079b11ea5575822f972756f4c9a71149a5c10130353abeb8586738938452' `
     "mpv runtime archive hash is not pinned."
-Require $ffmpegAcquisition '\$version\s*=\s*"n9\.0\.1-84-g946fcce07b"' `
-    "FFmpeg runtime must stay on the validated 9.0.1 build."
+Require $ffmpegAcquisition '\$version\s*=\s*"n9\.0\.2-49-gc179411bbb"' `
+    "FFmpeg runtime must stay on the SHA-256-pinned 9.0.2 build."
 Require $ffmpegAcquisition `
-    'a2a50423b631cb51e91c2668c16a4807197c50d1f5fc56dd4516ca188a0d731f' `
+    '4ac2a4a732ee66707ab2a4d7fc135d085e1da691f365cdb2f1b48f8f3816d4d8' `
     "FFmpeg shared runtime archive hash is not pinned."
 
 Require $releaseWorkflow 'is-7_1_0/innosetup-7\.1\.0-x64\.exe' `

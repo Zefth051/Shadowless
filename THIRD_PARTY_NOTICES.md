@@ -34,7 +34,7 @@ public libobs headers used to compile the module.
 
 - Project: https://ffmpeg.org/
 - Windows build: https://github.com/BtbN/FFmpeg-Builds
-- Build: `n9.0.1-84-g946fcce07b`, LGPL shared/static variants
+- Build: `n9.0.2-49-gc179411bbb`, LGPL shared/static variants
 - License: GNU Lesser General Public License 2.1 or later; optional components retain their own licenses
 
 `tools/AcquireFfmpegRuntime.ps1` downloads a pinned, SHA-256-verified build. Shadowless uses it for clip metadata, thumbnails, and non-destructive trimming.
@@ -42,8 +42,8 @@ public libobs headers used to compile the module.
 ## mpv / libmpv
 
 - Project: https://mpv.io/
-- Source revision: `v0.41.0-1023-g69e63f425`
-- Native Windows build: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20260903
+- Source revision: `git-bcde6b93cc`
+- Native Windows build: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261111
 - License: mpv supports LGPL-2.1-or-later builds; the complete configuration and transitive licenses of this pinned binary still require verification before redistribution.
 
 Shadowless dynamically loads the replaceable `libmpv-2.dll` for embedded editor playback, hardware decoding, seeking, and local mixing of selected audio tracks. Shadowless does not bundle or launch the standalone `mpv.exe` player.
