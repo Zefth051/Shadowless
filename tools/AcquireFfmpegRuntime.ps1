@@ -99,6 +99,8 @@ try {
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
     Copy-Item -LiteralPath (Join-Path $binRoot "ffmpeg.exe") -Destination $Destination
     Copy-Item -LiteralPath (Join-Path $binRoot "ffprobe.exe") -Destination $Destination
+    Copy-Item -LiteralPath (Join-Path $ffmpeg.Directory.Parent.FullName "LICENSE.txt") `
+        -Destination (Join-Path $Destination "LICENSE.FFmpeg.txt")
     Get-ChildItem -LiteralPath $binRoot -File -Filter *.dll |
         Copy-Item -Destination $Destination
 

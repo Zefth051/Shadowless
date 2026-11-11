@@ -186,6 +186,11 @@ jobs:
             throw "Unexpected Portable product name: $product"
           }
           Write-Host "Portable files: $((Get-ChildItem $root -Recurse -File).Count)"
+          $ffmpegLicense = Join-Path $root "runtime\ffmpeg\LICENSE.FFmpeg.txt"
+          if (-not (Test-Path -LiteralPath $ffmpegLicense) -or
+              (Get-Content -Raw -LiteralPath $ffmpegLicense) -notmatch 'LESSER GENERAL PUBLIC LICENSE') {
+            throw "Portable package is missing the upstream FFmpeg license."
+          }
 
       - name: Verify installer and uninstaller
         shell: pwsh
