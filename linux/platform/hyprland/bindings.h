@@ -1,7 +1,9 @@
 #pragma once
 #include <QJsonArray>
 #include <QString>
+#include <QStringList>
 namespace Shadowless {
+QStringList legacyBindingCleanup(const QJsonArray &bindings);
 struct HyprBinding {
     QString modifiers, key, id;
     int mask = 0;

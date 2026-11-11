@@ -11,9 +11,10 @@ public:
     OverlayScene scene() const;
     bool indicator() const;
     QString accent() const;
+    QString indicatorPosition() const;
     QStringList shortcutKeys() const;
     bool save(const GsrOptions &options, const OverlayScene &scene, bool indicator, QString *error,
-              const QStringList &keys = {"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"}, const QString &accent = {});
+              const QStringList &keys = {"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"}, const QString &accent = {}, const QString &position = "top-right");
 private:
     std::unique_ptr<QSettings> m_store;
 };

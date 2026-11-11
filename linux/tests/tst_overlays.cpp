@@ -10,6 +10,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QImage>
+#include <QProcess>
+#include <QStandardPaths>
 #include <limits>
 
 using namespace Shadowless;
@@ -17,6 +19,53 @@ using namespace Shadowless;
 class OverlayTests : public QObject {
     Q_OBJECT
 private slots:
+    void removesLegacyCaptailBindingsWithoutTouchingOtherApps() {
+        const QJsonObject legacy{{"modmask", 8}, {"key", "Z"}, {"keycode", 0}, {"dispatcher", "__lua"},
+                                 {"arg", "75"}, {"description", "Captail native: toggle-overlay"}};
+        const auto commands = legacyBindingCleanup(QJsonArray{legacy});
+        QCOMPARE(commands.size(), 1);
+        auto other = legacy; other["description"] = "Another application";
+        QVERIFY(legacyBindingCleanup(QJsonArray{other}).isEmpty());
+        QVERIFY(legacyBindingCleanup(QJsonArray{legacy, other}).isEmpty());
+        other["keycode"] = 52;
+        QVERIFY(legacyBindingCleanup(QJsonArray{legacy, other}).isEmpty());
+        auto unknown = legacy; unknown["description"] = "Captail native: unknown-action";
+        QVERIFY(legacyBindingCleanup(QJsonArray{unknown}).isEmpty());
+        auto invalid = legacy; invalid["key"] = "Z\"; error('injected')";
+        QVERIFY(legacyBindingCleanup(QJsonArray{invalid}).isEmpty());
+        invalid = legacy; invalid["modmask"] = 128;
+        QVERIFY(legacyBindingCleanup(QJsonArray{invalid}).isEmpty());
+        invalid = legacy; invalid["arg"] = "75; error('injected')";
+        QVERIFY(legacyBindingCleanup(QJsonArray{invalid}).isEmpty());
+        const auto interpreter = QStandardPaths::findExecutable("lua");
+        if (interpreter.isEmpty()) QSKIP("Lua interpreter required to execute generated migration commands.");
+        // Exercise the generated Lua with old and current binding handles.
+        const QByteArray setup = R"(
+local old = {description="Captail native: toggle-overlay", arg="75", active=true}
+local unrelated = {active=true}
+local current = {description="Shadowless native: toggle-overlay", arg="76", active=true}
+function old:remove() self.active=false end
+hl = {unbind=function(key) assert(key=="ALT + Z"); old.active=false end}
+__captail_native_bindings = {["toggle-overlay"]=old}
+__shadowless_native_bindings = {["toggle-overlay"]=current}
+)";
+        QProcess lua;
+        lua.start(interpreter, {"-"});
+        QVERIFY(lua.waitForStarted());
+        lua.write(setup);
+        lua.write(commands.join(';').toUtf8());
+        lua.write("\nassert(not old.active); assert(unrelated.active); assert(current.active)\n");
+        // Cleanup must tolerate a missing legacy table on subsequent launches.
+        lua.write("__captail_native_bindings=nil\n");
+        lua.write(commands.join(';').toUtf8());
+        // A later Captail launch may have overwritten its handle with a new hotkey.
+        lua.write("\nold.active=true; __captail_native_bindings={[\"toggle-overlay\"]=current}\n");
+        lua.write(commands.join(';').toUtf8());
+        lua.write("\nassert(not old.active); assert(current.active)\n");
+        lua.closeWriteChannel();
+        QVERIFY(lua.waitForFinished());
+        QVERIFY2(lua.exitCode() == 0, lua.readAllStandardError().constData());
+    }
     void bindingsPreserveOtherApplications() {
         HyprBinding binding; QVERIFY(HyprBinding::parse("Alt+Z", "toggle-overlay", &binding));
         QCOMPARE(binding.mask, 8); QCOMPARE(binding.key, "Z");
@@ -25,6 +74,11 @@ private slots:
         QCOMPARE(binding.availability(QJsonArray{other}), HyprBinding::Conflict);
         other["dispatcher"] = "global"; other["arg"] = "io.github.zefth051.Shadowless:toggle-overlay";
         QCOMPARE(binding.availability(QJsonArray{other}), HyprBinding::Existing);
+        other["dispatcher"] = "HL.Dispatcher(global)"; other["arg"] = "99";
+        other["description"] = "Shadowless native: toggle-overlay";
+        QCOMPARE(binding.availability(QJsonArray{other}), HyprBinding::Existing);
+        other["description"] = "Another application";
+        QCOMPARE(binding.availability(QJsonArray{other}), HyprBinding::Conflict);
         other["modmask"] = 64; QCOMPARE(binding.availability(QJsonArray{other}), HyprBinding::Free);
         QVERIFY(!HyprBinding::parse("Alt+Z, Alt+Y", "toggle-overlay", &binding));
     }

@@ -76,7 +76,10 @@ QString GsrOptions::validate(const GsrCapabilities &capabilities) const {
     if (audioBitrateKbps != 0 && (audioBitrateKbps < 32 || audioBitrateKbps > 320))
         return "Audio bitrate must be automatic or between 32 and 320 kbps.";
     if (microphoneTrack < 1 || microphoneTrack > 6) return "Choose a valid microphone track.";
-    if (applicationAudio && applicationTracks.isEmpty()) return "Choose at least one application to record.";
+    if (pcTrack < 0 || pcTrack > 6) return "Choose a valid PC audio track.";
+    if (applicationAudio && applicationTracks.isEmpty() && !pcTrack) return "Choose at least one application to record.";
+    if (applicationAudio && pcTrack && (applicationTracks.values().contains(pcTrack) || (microphone && microphoneTrack == pcTrack)))
+        return "PC audio needs its own track, separate from selected applications and the microphone.";
     for (auto it = applicationTracks.cbegin(); it != applicationTracks.cend(); ++it) {
         if (it.key().trimmed().isEmpty() || it.key().contains('|') || it.key().contains('\n')
             || it.key().contains('\r') || it.value() < 1 || it.value() > 6)
@@ -96,6 +99,11 @@ QStringList GsrOptions::audioTracks() const {
         for (auto it = applicationTracks.cbegin(); it != applicationTracks.cend(); ++it)
             grouped[it.value()].append("app:" + it.key());
         if (!mic.isEmpty()) grouped[microphoneTrack].append(mic);
+        if (pcTrack) {
+            QStringList excluded = applicationTracks.keys();
+            if (excluded.isEmpty()) excluded.append(QString());
+            for (const auto &name : excluded) grouped[pcTrack].append("app-inverse:" + name);
+        }
         for (const auto &group : grouped) tracks.append(group.join('|'));
     } else {
         if (systemAudio) tracks.append(source(audioOutput, "default_output"));
@@ -265,6 +273,7 @@ void GsrCapture::startRecorder(const QString &output, const QString &input) {
     m_socketPath = m_runtime.filePath("gsr.sock");
     QFile::remove(m_socketPath);
     QFile::remove(overlaySocketPath());
+    QFile::remove(overlaySocketPath() + ".preview");
     auto environment = QProcessEnvironment::systemEnvironment();
     environment.insert("SHADOWLESS_OVERLAY_SOCKET", overlaySocketPath());
     m_process.setProcessEnvironment(environment);
@@ -328,7 +337,7 @@ void GsrCapture::request(const QString &name, const QJsonValue &data) {
             if (name == "stop" && active()) ::kill(static_cast<pid_t>(m_process.processId()), SIGINT);
         } else {
             if (name == "save-replay" || name == "stop-replay-recording" || (name == "stop" && m_options.continuousRecording))
-                publishClip(result);
+                publishClip(result, name != "save-replay");
             if (name == "start-replay-recording" || name == "stop-replay-recording") {
                 m_replayRecording = name == "start-replay-recording";
                 emit recordingChanged(m_replayRecording);
@@ -339,13 +348,13 @@ void GsrCapture::request(const QString &name, const QJsonValue &data) {
     command->send(m_socketPath, ++m_nextId, name, data);
 }
 
-void GsrCapture::publishClip(const QString &path) {
+void GsrCapture::publishClip(const QString &path, bool recording) {
     const QFileInfo file(path);
     const auto relative = QDir(m_options.outputDirectory).relativeFilePath(file.absoluteFilePath());
     if (path.isEmpty() || !file.isFile() || file.size() == 0 || relative == ".." || relative.startsWith("../")) {
         emit error("GPU Screen Recorder did not confirm a non-empty clip in the output directory."); return;
     }
-    emit clipSaved(file.absoluteFilePath());
+    emit clipSaved(file.absoluteFilePath(), recording);
 }
 
 void GsrCapture::readLog() {

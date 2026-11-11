@@ -1,6 +1,7 @@
 param(
     [string]$OutputPath = (Join-Path $PSScriptRoot '..\src\Shadowless\Assets\Shadowless.ico'),
-    [string]$Color = '#45C9A7'
+    [string]$Color = '#63E0BD',
+    [string]$SourcePath = (Join-Path $PSScriptRoot '../src/Shadowless/Assets/ShadowlessMoon.png')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,50 +16,44 @@ $sizes = @(16, 20, 24, 32, 40, 48, 64, 128, 256)
 $pngImages = [System.Collections.Generic.List[byte[]]]::new()
 $iconColor = [System.Drawing.ColorTranslator]::FromHtml($Color)
 
-foreach ($size in $sizes) {
-    $bitmap = [System.Drawing.Bitmap]::new($size, $size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-    try {
-        $graphics.Clear([System.Drawing.Color]::Transparent)
-        $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-        $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
-
-        $ringWidth = [single][Math]::Max(1.7, $size * 0.108)
-        $ringPen = [System.Drawing.Pen]::new($iconColor, $ringWidth)
-        $ringPen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
-        $ringPen.EndCap = [System.Drawing.Drawing2D.LineCap]::Round
-        try {
-            $ringInset = [single]($size * 0.135)
-            $ringSize = [single]($size - 2 * $ringInset)
-            $graphics.DrawArc($ringPen, $ringInset, $ringInset, $ringSize, $ringSize, -72, 304)
-        }
-        finally {
-            $ringPen.Dispose()
-        }
-
-        $dotSize = [single][Math]::Max(2.2, $size * 0.145)
-        $dotBrush = [System.Drawing.SolidBrush]::new($iconColor)
-        try {
-            $dotOffset = [single](($size - $dotSize) / 2)
-            $graphics.FillEllipse($dotBrush, $dotOffset, $dotOffset, $dotSize, $dotSize)
-        }
-        finally {
-            $dotBrush.Dispose()
-        }
-
+# Map the source moon's blue shadow to the accent and retain its pale highlights.
+# The generated source artwork and its alpha channel remain the single master.
+$source = [System.Drawing.Image]::FromFile([IO.Path]::GetFullPath($SourcePath))
+$attributes = [System.Drawing.Imaging.ImageAttributes]::new()
+$matrix = [System.Drawing.Imaging.ColorMatrix]::new()
+$matrix.Matrix00 = (255 - $iconColor.R) / 156.0
+$matrix.Matrix01 = (255 - $iconColor.G) / 156.0
+$matrix.Matrix02 = (255 - $iconColor.B) / 156.0
+$matrix.Matrix11 = 0
+$matrix.Matrix22 = 0
+$matrix.Matrix40 = 1 - $matrix.Matrix00
+$matrix.Matrix41 = 1 - $matrix.Matrix01
+$matrix.Matrix42 = 1 - $matrix.Matrix02
+$attributes.SetColorMatrix($matrix)
+try {
+    foreach ($size in $sizes) {
+        $bitmap = [System.Drawing.Bitmap]::new($size, $size, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
         $stream = [System.IO.MemoryStream]::new()
         try {
+            $graphics.Clear([System.Drawing.Color]::Transparent)
+            $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $graphics.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+            $graphics.DrawImage($source, [System.Drawing.Rectangle]::new(0, 0, $size, $size),
+                0, 0, $source.Width, $source.Height, [System.Drawing.GraphicsUnit]::Pixel, $attributes)
             $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
             $pngImages.Add($stream.ToArray())
         }
         finally {
             $stream.Dispose()
+            $graphics.Dispose()
+            $bitmap.Dispose()
         }
     }
-    finally {
-        $graphics.Dispose()
-        $bitmap.Dispose()
-    }
+}
+finally {
+    $attributes.Dispose()
+    $source.Dispose()
 }
 
 $resolvedOutput = [System.IO.Path]::GetFullPath($OutputPath)

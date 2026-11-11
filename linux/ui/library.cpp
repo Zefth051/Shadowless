@@ -1,14 +1,17 @@
 #include "library.h"
-#include <QDesktopServices>
 #include <QDir>
+#include <QDirIterator>
+#include <QComboBox>
+#include <QSignalBlocker>
+#include <algorithm>
 #include <QFileInfo>
+#include <QFile>
 #include <QLabel>
 #include <QLocale>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStandardPaths>
 #include <QStorageInfo>
-#include <QUrl>
 #include <QVBoxLayout>
 #include <QtConcurrentRun>
 
@@ -27,6 +30,12 @@ Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::fi
     refreshButton->setAccessibleName("Refresh recent clips");
     header->addWidget(refreshButton);
     layout->addLayout(header);
+    m_collection = new QComboBox;
+    m_collection->setObjectName("collectionFilter");
+    m_collection->setAccessibleName("Filter clips by game");
+    m_collection->addItem("All games", QString());
+    layout->addWidget(m_collection);
+    connect(m_collection, &QComboBox::currentIndexChanged, this, [this] { render(m_lastScan); });
 
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
@@ -43,6 +52,50 @@ Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::fi
     scroll->setWidget(container);
     layout->addWidget(scroll, 1);
 
+    m_deleteConfirmation = new QWidget;
+    auto *confirmation = new QVBoxLayout(m_deleteConfirmation);
+    m_deleteName = new QLabel;
+    m_deleteName->setTextFormat(Qt::PlainText);
+    m_deleteName->setWordWrap(true);
+    confirmation->addWidget(m_deleteName);
+    auto *actions = new QHBoxLayout;
+    auto *cancel = new QPushButton("Cancel");
+    cancel->setObjectName("cancelDeleteClip");
+    auto *confirm = new QPushButton("Move to Trash");
+    confirm->setObjectName("confirmDeleteClip");
+    actions->addWidget(cancel); actions->addWidget(confirm);
+    confirmation->addLayout(actions);
+    layout->addWidget(m_deleteConfirmation);
+    m_deleteConfirmation->hide();
+    m_deleteError = new QLabel;
+    m_deleteError->setObjectName("deleteClipError");
+    m_deleteError->setTextFormat(Qt::PlainText);
+    m_deleteError->setWordWrap(true);
+    layout->addWidget(m_deleteError);
+    m_deleteError->hide();
+    connect(cancel, &QPushButton::clicked, this, [this] {
+        m_pendingDelete.clear(); m_deleteConfirmation->hide();
+    });
+    connect(confirm, &QPushButton::clicked, this, [this] {
+        const auto path = m_pendingDelete;
+        m_pendingDelete.clear(); m_deleteConfirmation->hide();
+        const QFileInfo file(path);
+        const auto root = QFileInfo(m_directory).canonicalFilePath();
+        const auto relative = QDir(root).relativeFilePath(file.canonicalFilePath());
+        if (root.isEmpty() || !file.isFile() || file.isSymLink() || relative == ".." ||
+            relative.startsWith("../") || QDir::isAbsolutePath(relative)) {
+            m_deleteError->setText("The clip is missing or is outside the clips folder.");
+            m_deleteError->show(); return;
+        }
+        QFile clip(path);
+        if (!clip.moveToTrash()) {
+            m_deleteError->setText("Could not move the clip to Trash: " + clip.errorString());
+            m_deleteError->show(); return;
+        }
+        m_deleteError->hide();
+        refresh(m_directory);
+    });
+
     connect(refreshButton, &QPushButton::clicked, this, [this] {
         m_retryThumbnails = true;
         refresh(m_directory);
@@ -50,7 +103,7 @@ Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::fi
     connect(&m_scan, &QFutureWatcher<Scan>::finished, this, [this] {
         m_scanning = false;
         const auto scan = m_scan.result();
-        if (scan.directory == m_directory) render(scan);
+        if (scan.directory == m_directory) { m_lastScan = scan; render(scan); }
         startScan();
     });
     m_timeout.setSingleShot(true);
@@ -64,6 +117,7 @@ Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::fi
             if (image.loadFromData(bytes)) {
                 m_current->setPixmap(image);
                 m_cache.insert(m_currentClip.path, {m_currentClip, image});
+                emit thumbnailReady(m_currentClip.path, image);
             }
         }
         m_current.clear();
@@ -87,10 +141,12 @@ Library::~Library() {
 
 void Library::refresh(const QString &directory) {
     if (m_directory != directory) {
+        m_pendingDelete.clear(); m_deleteConfirmation->hide(); m_deleteError->hide();
         m_directory = directory;
         Scan loading;
         loading.directory = directory;
         loading.emptyText = "Loading clips…";
+        m_lastScan = loading;
         render(loading);
     }
     m_scanPending = true;
@@ -110,12 +166,27 @@ void Library::startScan() {
         }
 
         const QDir folder(directory);
-        const auto files = folder.entryInfoList({"*.mp4", "*.mkv"}, QDir::Files | QDir::NoSymLinks, QDir::Time);
-        for (const auto &file : files) {
+        QHash<QString, QList<Clip>> collections;
+        const auto newer = [](const Clip &a, const Clip &b) {
+            return a.modified != b.modified ? a.modified > b.modified : a.path < b.path;
+        };
+        QDirIterator files(directory, {"*.mp4", "*.mkv"}, QDir::Files | QDir::NoSymLinks, QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            files.next();
+            const auto file = files.fileInfo();
             if (file.size() <= 0) continue;
-            result.clips.append({file.absoluteFilePath(), file.lastModified(), file.size()});
-            if (result.clips.size() == 20) break;
+            const auto collection = folder.relativeFilePath(file.absolutePath());
+            auto &recent = collections[collection];
+            const Clip clip{file.absoluteFilePath(), file.lastModified(), file.size(), collection};
+            const auto position = std::lower_bound(recent.begin(), recent.end(), clip, newer);
+            if (position != recent.end() || recent.size() < 20) {
+                recent.insert(position, clip);
+                if (recent.size() > 20) recent.removeLast();
+            }
         }
+        for (const auto &recent : collections) result.clips.append(recent);
+        std::sort(result.clips.begin(), result.clips.end(), newer);
+        result.collections = collections.keys(); result.collections.sort(Qt::CaseInsensitive);
         result.emptyText = "Saved replays and recordings appear here.";
         if (folder.exists() && !folder.isReadable()) result.emptyText = "The clips folder cannot be read.";
 
@@ -131,14 +202,31 @@ void Library::startScan() {
 }
 
 void Library::render(const Scan &scan) {
+    const auto selected = m_collection->currentData().toString();
+    {
+        const QSignalBlocker blocker(m_collection);
+        m_collection->clear(); m_collection->addItem("All games", QString());
+        for (const auto &collection : scan.collections) m_collection->addItem(collection == "." ? "Desktop / Unidentified" : collection, collection);
+        m_collection->setCurrentIndex(qMax(0, m_collection->findData(selected)));
+    }
+    QList<Clip> visible;
+    const auto filter = m_collection->currentData().toString();
+    for (const auto &clip : scan.clips) {
+        if (!filter.isEmpty() && clip.collection != filter) continue;
+        visible.append(clip);
+        if (visible.size() == 20) break;
+    }
     emit storageChanged(scan.available, scan.total);
     m_empty->setText(scan.emptyText);
     const bool retry = m_retryThumbnails && m_cache.size() < m_clips.size();
     m_retryThumbnails = false;
-    if (m_renderedDirectory == scan.directory && m_clips == scan.clips && !retry) return;
+    if (m_renderedDirectory == scan.directory && m_clips == visible && !retry) return;
 
     m_renderedDirectory = scan.directory;
-    m_clips = scan.clips;
+    m_clips = visible;
+    QStringList paths;
+    for (const auto &clip : m_clips) paths.append(clip.path);
+    emit clipsChanged(paths);
     m_queue.clear();
     while (auto *item = m_rows->takeAt(1)) {
         delete item->widget();
@@ -160,6 +248,7 @@ void Library::render(const Scan &scan) {
         if (previous != m_cache.cend() && previous->clip == clip) {
             thumb->setPixmap(previous->pixmap);
             retained.insert(clip.path, *previous);
+            emit thumbnailReady(clip.path, previous->pixmap);
         } else {
             m_queue.enqueue({thumb, clip});
         }
@@ -182,11 +271,25 @@ void Library::render(const Scan &scan) {
 
         auto *play = new QPushButton("Open");
         play->setAccessibleName("Open " + file.fileName());
-        play->setToolTip("Open in the default video player");
+        play->setToolTip("Play inside Shadowless");
+        play->setIcon(QIcon(":/shadowless/icons/play.svg"));
         line->addWidget(play);
         connect(play, &QPushButton::clicked, this, [this, path = clip.path] {
-            if (QDesktopServices::openUrl(QUrl::fromLocalFile(path))) emit openingClip();
-            else emit openFailed("Could not open the clip in the default video player.");
+            emit clipRequested(path);
+        });
+        auto *remove = new QPushButton;
+        remove->setObjectName("deleteClip");
+        remove->setIcon(QIcon(":/shadowless/icons/trash.svg"));
+        remove->setAccessibleName("Delete " + file.fileName());
+        remove->setToolTip("Move clip to Trash");
+        remove->setFixedWidth(32);
+        line->addWidget(remove);
+        connect(remove, &QPushButton::clicked, this, [this, path = clip.path] {
+            m_pendingDelete = path;
+            m_deleteError->hide();
+            m_deleteName->setText("Move " + QFileInfo(path).fileName() + " to Trash?");
+            m_deleteConfirmation->show();
+            m_deleteConfirmation->findChild<QPushButton *>("cancelDeleteClip")->setFocus();
         });
         m_rows->addWidget(row);
     }
@@ -202,16 +305,22 @@ void Library::showEvent(QShowEvent *event) {
 }
 
 void Library::hideEvent(QHideEvent *event) {
+    if (!m_previewActive) setPreviewActive(false);
+    QWidget::hideEvent(event);
+}
+
+void Library::setPreviewActive(bool active) {
+    m_previewActive = active;
+    if (active || isVisible()) { next(); return; }
     if (m_current) {
         m_queue.prepend({m_current, m_currentClip});
         m_current.clear();
     }
     if (m_thumbnail.state() != QProcess::NotRunning) m_thumbnail.kill();
-    QWidget::hideEvent(event);
 }
 
 void Library::next() {
-    if (!isVisible() || m_queue.isEmpty() || m_ffmpeg.isEmpty() || m_thumbnail.state() != QProcess::NotRunning) return;
+    if ((!isVisible() && !m_previewActive) || m_queue.isEmpty() || m_ffmpeg.isEmpty() || m_thumbnail.state() != QProcess::NotRunning) return;
     const auto item = m_queue.dequeue();
     m_current = item.first;
     m_currentClip = item.second;

@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+tool=${0##*/}
+export PATH="$SHADOWLESS_HOST_PATH"
+if [ -n "${SHADOWLESS_HOST_LD_LIBRARY_PATH:-}" ]; then
+    export LD_LIBRARY_PATH="$SHADOWLESS_HOST_LD_LIBRARY_PATH"
+else
+    unset LD_LIBRARY_PATH
+fi
+unset QT_PLUGIN_PATH QT_QPA_PLATFORM_PLUGIN_PATH QML2_IMPORT_PATH QML_IMPORT_PATH
+exec "$tool" "$@"

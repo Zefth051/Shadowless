@@ -12,6 +12,8 @@ public:
     ~CompositorWorker();
     bool start(const QString &socketPath, QSize canvas, QString *error);
     bool snapshot(QVector<RenderLayer> *layers);
+    bool previewRequested() const;
+    bool publishPreview(const QImage &image);
 private:
     struct Data;
     std::unique_ptr<Data> d;

@@ -1,12 +1,31 @@
 <RCC>
   <qresource prefix="/shadowless">
+    <file alias="replay-saved.wav">assets/ReplaySaved.wav</file>
+    <file alias="game-catalog.json">../../src/Shadowless/Assets/GameCatalog.json</file>
     <file alias="theme.xaml">../../src/Shadowless/Themes/Theme.xaml</file>
     <file alias="mint.ico">../../src/Shadowless/Assets/Shadowless.ico</file>
     <file alias="blue.ico">../../src/Shadowless/Assets/ShadowlessBlue.ico</file>
     <file alias="violet.ico">../../src/Shadowless/Assets/ShadowlessViolet.ico</file>
     <file alias="rose.ico">../../src/Shadowless/Assets/ShadowlessRose.ico</file>
     <file alias="amber.ico">../../src/Shadowless/Assets/ShadowlessAmber.ico</file>
+    <file alias="moon.png">../../src/Shadowless/Assets/ShadowlessMoon.png</file>
     <file>chevron.svg</file>
     <file>chevron-up.svg</file>
+    <file>icons/settings.svg</file>
+    <file>icons/layers.svg</file>
+    <file>icons/replay.svg</file>
+    <file>icons/record.svg</file>
+    <file>icons/speaker.svg</file>
+    <file>icons/microphone.svg</file>
+    <file>icons/folder.svg</file>
+    <file>icons/video.svg</file>
+    <file>icons/back.svg</file>
+    <file>icons/play.svg</file>
+    <file>icons/pause.svg</file>
+    <file>icons/forward.svg</file>
+    <file>icons/skip-next.svg</file>
+    <file>icons/skip-previous.svg</file>
+    <file>icons/fullscreen.svg</file>
+    <file>icons/trash.svg</file>
   </qresource>
 </RCC>

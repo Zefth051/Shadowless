@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Shadowless
+Comment=Save gameplay clips and recordings on Hyprland
+Exec=shadowless
+Icon=io.github.zefth051.Shadowless
+Terminal=false
+Categories=AudioVideo;Recorder;

@@ -63,7 +63,8 @@ void applyTheme(QWidget *widget, const QString &name) {
         QLabel { background: transparent; }
         QLabel[muted="true"] { color: %2; font-size: 12px; }
         QLabel#heading { font-size: 21px; font-weight: bold; }
-        QLabel#brand, QLabel#statusTitle { font-size: 15px; font-weight: bold; }
+        QLabel#brand { font-size: 20px; font-weight: bold; }
+        QLabel#statusTitle { font-size: 15px; font-weight: bold; }
         QLabel#sectionTitle { color: %2; font-size: 11px; font-weight: bold; }
         QFrame#shadowlessPanel { background: #141719; border: 1px solid #2b3236; border-radius: 16px; }
         QFrame#segments { background: #101416; border: 1px solid %4; border-radius: 8px; }
@@ -80,6 +81,29 @@ void applyTheme(QWidget *widget, const QString &name) {
         QSlider::handle:horizontal { width: 12px; margin: -4px 0; border-radius: 6px; background: %5; }
         QSlider::handle:horizontal:disabled, QSlider::sub-page:horizontal:disabled { background: #434b50; }
         QSlider::handle:horizontal:focus { border: 1px solid white; }
+        QSlider#clipSeek::sub-page:horizontal { background: %5; }
+        QSlider#clipSeek::groove:horizontal { background: #2a3235; }
+        QSlider#clipSeek::handle:horizontal { border: 1px solid %7; width: 10px; margin: -4px 0; }
+        QSlider#clipSeek::handle:horizontal:hover { border-color: %6; }
+        QLabel#clipTime { font-family: monospace; font-size: 11px; color: %2; }
+        QPushButton[transport="true"] { padding: 0; min-height: 0; }
+        QPushButton#clipTrim, QPushButton#clipExport { background: %5; color: %8; border-color: %5; font-weight: bold; }
+        QPushButton#clipTrim:hover, QPushButton#clipExport:hover { background: %6; }
+        QWidget#clipSidebar { background: %3; border: 1px solid %4; border-radius: 12px; }
+        QListWidget#clipRecent { background: transparent; border: 0; padding: 0; outline: none; }
+        QListWidget#clipRecent::item { border: 1px solid transparent; border-radius: 7px; padding: 5px; margin: 3px 0; font-size: 11px; }
+        QListWidget#clipRecent::item:selected { background: %10; border-color: %7; color: %1; }
+        QListWidget#clipRecent::item:hover { background: %9; }
+        QCheckBox#clipMute::indicator { width: 0; height: 0; }
+        QCheckBox#clipMute:checked { background: %10; border-radius: 6px; }
+        QWidget#clipAudioRow { background: %3; border: 1px solid %4; border-radius: 8px; }
+        QCheckBox[clipAudioTrack="true"] { background: transparent; color: %2; border: 1px solid transparent; border-radius: 6px; padding: 0 8px; spacing: 8px; }
+        QCheckBox[clipAudioTrack="true"]:checked { background: %10; color: %1; border-color: %7; }
+        QCheckBox[clipAudioTrack="true"]:hover, QCheckBox[clipAudioTrack="true"]:focus { border-color: %5; }
+        QCheckBox[clipAudioTrack="true"]::indicator { width: 14px; height: 14px; border: 1px solid %2; border-radius: 7px; background: transparent; }
+        QCheckBox[clipAudioTrack="true"]::indicator:checked { background: %5; border-color: %5; image: url(:/shadowless/icons/speaker.svg); }
+        QDoubleSpinBox#clipIn, QDoubleSpinBox#clipOut { font-family: monospace; padding: 7px 10px; border-radius: 8px; }
+        QComboBox#clipSpeed { font-size: 11px; padding: 4px; padding-right: 22px; }
         QFrame#panel, QWidget#clip { background: %3; border: 1px solid %4; border-radius: 12px; }
         QPushButton { background: %3; border: 1px solid %4; border-radius: 8px; padding: 6px 10px; min-height: 19px; }
         QPushButton:hover { border-color: %5; background: %9; }
@@ -87,6 +111,10 @@ void applyTheme(QWidget *widget, const QString &name) {
         QPushButton:checked { background: %9; border-color: %5; color: %5; }
         QPushButton:disabled { color: %2; background: #151a1c; }
         QPushButton:checked:disabled { color: %2; background: %9; border-color: %10; }
+        QPushButton#captureMode { background: %3; border: 1px solid %4; border-radius: 12px; padding: 0; min-height: 144px; }
+        QPushButton#captureMode:checked { background: %9; border-color: %5; }
+        QPushButton#captureMode:hover, QPushButton#captureMode:focus { border-color: %5; }
+        QPushButton#captureMode:checked:disabled { border-color: %7; }
         QPushButton#segment { border: 1px solid transparent; background: transparent; color: %2; font-weight: bold; }
         QPushButton#segment:checked { color: %5; background: %9; }
         QPushButton#segment:checked:disabled { color: %2; background: %9; }

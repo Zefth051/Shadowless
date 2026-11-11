@@ -1,6 +1,7 @@
 #include "overlay_editor.h"
 #include "value_controls.h"
 #include <QCheckBox>
+#include <QButtonGroup>
 #include <QDoubleSpinBox>
 #include <QFileInfo>
 #include <QFormLayout>
@@ -25,9 +26,24 @@ OverlayCanvas::OverlayCanvas(QWidget *parent) : QWidget(parent) {
         bool changed = false; for (auto &entry : m_media) changed |= entry.second.second->advance(m_clock.elapsed());
         if (changed) update();
     });
+    connect(&m_preview, &PreviewClient::frameReady, this, [this](const QImage &image, QSize source) {
+        m_capture = image; m_sourceSize = source; update();
+    });
+    connect(&m_preview, &PreviewClient::statusChanged, this, [this](const QString &status) {
+        m_previewStatus = status;
+        if (status != "Live capture preview") m_capture = {};
+        update();
+    });
+}
+void OverlayCanvas::setPreviewSocket(const QString &path) { m_preview.setSocketPath(path); }
+void OverlayCanvas::setCaptureVisible(bool visible) {
+    m_captureVisible = visible;
+    m_preview.setActive(isVisible() && visible);
+    if (!visible) m_capture = {};
+    update();
 }
 QRectF OverlayCanvas::canvasRect() const {
-    QSizeF size(1920, 1080); size.scale(QSizeF(width() - 12, height() - 12), Qt::KeepAspectRatio);
+    QSizeF size(m_sourceSize); size.scale(QSizeF(width() - 12, height() - 12), Qt::KeepAspectRatio);
     return QRectF(QPointF((width() - size.width()) / 2, (height() - size.height()) / 2), size);
 }
 void OverlayCanvas::setScene(const OverlayScene &scene, int selected) {
@@ -51,16 +67,19 @@ void OverlayCanvas::setScene(const OverlayScene &scene, int selected) {
 }
 void OverlayCanvas::paintEvent(QPaintEvent *) {
     QPainter painter(this); const auto canvas = canvasRect();
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
     painter.fillRect(canvas, QColor("#101416"));
     painter.setPen(QColor("#1d2528"));
-    for (int i = 1; i < 4; ++i) {
+    if (!m_capture.isNull()) painter.drawImage(canvas, m_capture);
+    else for (int i = 1; i < 4; ++i) {
         const double x = canvas.x() + canvas.width() * i / 4.; painter.drawLine(QPointF(x, canvas.top()), QPointF(x, canvas.bottom()));
         const double y = canvas.y() + canvas.height() * i / 4.; painter.drawLine(QPointF(canvas.left(), y), QPointF(canvas.right(), y));
     }
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
     for (auto it = m_scene.layers.crbegin(); it != m_scene.layers.crend(); ++it) {
+        if (m_captureVisible && !m_scene.enabled) continue;
         const auto found = m_media.find(it->id); if (found == m_media.end()) continue;
-        painter.setOpacity(it->opacity / 100. * (m_scene.enabled ? 1. : .3));
+        painter.setOpacity(it->opacity / 100.);
         const auto &image = found->second.second->frame();
         const auto rect = it->fitRect(canvas.size().toSize(), image.size()).translated(canvas.topLeft());
         painter.drawImage(rect, image);
@@ -71,7 +90,14 @@ void OverlayCanvas::paintEvent(QPaintEvent *) {
         painter.setPen(QPen(palette().color(QPalette::Accent), 2, Qt::DashLine));
         painter.drawRect(QRectF(canvas.x() + layer.x * canvas.width(), canvas.y() + layer.y * canvas.height(), layer.width * canvas.width(), layer.height * canvas.height()));
     }
-    painter.setPen(QColor("#8b969d")); painter.drawText(canvas.adjusted(12, 12, -12, -12), Qt::AlignBottom | Qt::AlignLeft, "Composition preview · 16:9 canvas");
+    if (!property("compactPreview").toBool()) {
+        painter.setPen(QColor("#8b969d"));
+        const auto label = !m_captureVisible ? QString("Layers only · not the recorded output") : m_previewStatus == "Live capture preview"
+            ? QString("Live capture preview · %1 × %2").arg(m_sourceSize.width()).arg(m_sourceSize.height()) : m_previewStatus;
+        const auto box = canvas.adjusted(8, canvas.height() - 38, -8, -8);
+        painter.fillRect(box, QColor(16, 20, 22, 210));
+        painter.drawText(box.adjusted(5, 0, -5, 0), Qt::AlignVCenter | Qt::AlignLeft, label);
+    }
 }
 void OverlayCanvas::mousePressEvent(QMouseEvent *event) {
     if (event->button() != Qt::LeftButton || m_selected < 0 || m_selected >= m_scene.layers.size()) return;
@@ -84,8 +110,8 @@ void OverlayCanvas::mouseMoveEvent(QMouseEvent *event) {
     auto &layer = m_scene.layers[m_selected]; layer.setPosition(point.x() / rect.width(), point.y() / rect.height());
     emit moved(m_selected, layer.x, layer.y); update();
 }
-void OverlayCanvas::showEvent(QShowEvent *e) { QWidget::showEvent(e); m_clock.restart(); setScene(m_scene, m_selected); }
-void OverlayCanvas::hideEvent(QHideEvent *e) { m_timer.stop(); m_media.clear(); QWidget::hideEvent(e); }
+void OverlayCanvas::showEvent(QShowEvent *e) { QWidget::showEvent(e); m_preview.setActive(m_captureVisible); m_clock.restart(); setScene(m_scene, m_selected); }
+void OverlayCanvas::hideEvent(QHideEvent *e) { m_preview.setActive(false); m_capture = {}; m_timer.stop(); m_media.clear(); QWidget::hideEvent(e); }
 
 OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
     auto *layout = new QVBoxLayout(this); layout->setContentsMargins(0, 0, 0, 0);
@@ -98,7 +124,22 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
     content->setSpacing(16);
 
     auto *preview = new QVBoxLayout;
+    auto *previewModes = new QHBoxLayout;
+    auto *live = new QPushButton("Live capture + overlays");
+    live->setObjectName("livePreview");
+    auto *layersOnly = new QPushButton("Layers only");
+    layersOnly->setObjectName("layersPreview");
+    auto *previewGroup = new QButtonGroup(this);
+    for (auto *mode : {live, layersOnly}) {
+        mode->setCheckable(true);
+        previewGroup->addButton(mode);
+        previewModes->addWidget(mode);
+    }
+    live->setChecked(true);
+    preview->addLayout(previewModes);
     m_canvas = new OverlayCanvas;
+    m_canvas->setAccessibleName("Capture composition preview");
+    connect(live, &QPushButton::toggled, m_canvas, &OverlayCanvas::setCaptureVisible);
     preview->addWidget(m_canvas, 1);
     auto *dragHint = new QLabel("Drag the selected layer to position it in the capture.");
     dragHint->setWordWrap(true);
@@ -179,7 +220,7 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
     scroll->setWidget(controls);
     content->addWidget(scroll);
 
-    auto *pages = new QStackedWidget;
+    auto *pages = m_pages = new QStackedWidget;
     pages->addWidget(contentWidget);
     auto *picker = new QFileDialog(this, "Choose overlay media"); picker->setOption(QFileDialog::DontUseNativeDialog); picker->setWindowFlags(Qt::Widget); picker->setFileMode(QFileDialog::ExistingFile);
     picker->setNameFilter("Images and videos (*.png *.jpg *.jpeg *.bmp *.webp *.gif *.mp4 *.webm *.mov *.mkv)"); pages->addWidget(picker); layout->addWidget(pages, 1);
@@ -213,7 +254,11 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
         m_loading = false; schedule();
     });
 }
-void OverlayEditor::edit(const OverlayScene &scene) { m_debounce.stop(); m_scene = scene; m_loading = true; m_master->setChecked(scene.enabled); m_loading = false; refreshList(scene.layers.isEmpty() ? -1 : 0); }
+void OverlayEditor::edit(const OverlayScene &scene) {
+    m_pages->setCurrentIndex(0);
+    m_debounce.stop(); m_scene = scene; m_loading = true; m_master->setChecked(scene.enabled); m_loading = false; refreshList(scene.layers.isEmpty() ? -1 : 0);
+}
+void OverlayEditor::setPreviewSocket(const QString &path) { m_canvas->setPreviewSocket(path); }
 void OverlayEditor::refreshList(int selected) {
     m_loading = true; m_layers->clear();
     for (const auto &layer : m_scene.layers) { auto *item = new QListWidgetItem((layer.enabled ? "●  " : "○  ") + QFileInfo(layer.path).fileName(), m_layers); item->setToolTip(layer.path); }

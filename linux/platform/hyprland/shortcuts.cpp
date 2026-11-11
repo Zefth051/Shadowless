@@ -117,6 +117,18 @@ void Shortcuts::installBindings() {
     const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture"};
     const QStringList labels{"Overlay", "Save replay", "Capture"}; QStringList messages;
     auto bindings = document.array();
+    const auto legacy = legacyBindingCleanup(bindings);
+    if (!legacy.isEmpty()) {
+        for (const auto &command : legacy) {
+            if (hyprctl({"eval", command}).trimmed() != "ok") messages << "Cannot remove an old Captail shortcut";
+        }
+        document = QJsonDocument::fromJson(hyprctl({"-j", "binds"}), &error);
+        if (error.error != QJsonParseError::NoError || !document.isArray()) {
+            emit status("Cannot inspect Hyprland bindings after Captail shortcut cleanup. Use the tray or --toggle.");
+            return;
+        }
+        bindings = document.array();
+    }
     for (int i = 0; i < 3; ++i) {
         HyprBinding binding;
         if (!HyprBinding::parse(m_keys[i], ids[i], &binding)) { messages << labels[i] + ": unsupported shortcut"; continue; }
@@ -125,7 +137,7 @@ void Shortcuts::installBindings() {
         if (available == HyprBinding::Free) {
             QByteArray reply;
             if (!m_lua) reply = hyprctl({"keyword", "bindp", binding.modifiers + "," + binding.key + ",global,io.github.zefth051.Shadowless:" + binding.id});
-            if (reply.contains("non-legacy parsers")) m_lua = true;
+            if (reply.contains("non-legacy parsers") || reply.trimmed() == "unknown request") m_lua = true;
             if (m_lua) {
                 QStringList parts = binding.modifiers.split(' ', Qt::SkipEmptyParts); parts << binding.key;
                 const QString code = "__shadowless_native_bindings = __shadowless_native_bindings or {}; __shadowless_native_bindings[\"" + binding.id +
@@ -134,7 +146,12 @@ void Shortcuts::installBindings() {
                 reply = hyprctl({"eval", code});
             }
             if (reply.trimmed() != "ok") { messages << labels[i] + ": registration failed"; continue; }
-            m_owned.append(binding);
+        }
+        m_owned.append(binding);
+        for (const auto &value : bindings) {
+            const auto row = value.toObject();
+            const auto dispatcher = row.value("dispatcher").toString();
+            if ((dispatcher == "__lua" || dispatcher == "HL.Dispatcher(global)") && row.value("description").toString() == "Shadowless native: " + ids[i]) m_lua = true;
         }
         messages << labels[i] + ": " + m_keys[i];
     }

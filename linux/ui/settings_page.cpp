@@ -76,7 +76,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     m_buffer = new ClickToAdjust<QSpinBox>;
     m_buffer->setRange(1, 3600);
     m_buffer->setSuffix(" sec");
-    replay->addRow("Replay buffer", m_buffer);
+    replay->addRow("Clip duration", m_buffer);
 
     auto *video = section(capture, "VIDEO");
     m_source = new ClickToAdjust<QComboBox>;
@@ -149,7 +149,12 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     audio->addRow("Microphone track", m_microphoneTrack);
     m_separate = new QCheckBox("Separate system and microphone tracks");
     audio->addRow(m_separate);
-    auto *applicationHelp = note("Start playback in an app, then refresh the list. Sources assigned to the same track mix together. Empty tracks are omitted.");
+    m_pcTrack = new ClickToAdjust<QComboBox>;
+    m_pcTrack->setObjectName("pcAudioTrack");
+    m_pcTrack->addItem("Off");
+    for (int i = 1; i <= 6; ++i) m_pcTrack->addItem(QString("Track %1").arg(i));
+    audio->addRow("PC / other applications track", m_pcTrack);
+    auto *applicationHelp = note("Assign the game and music players to their own tracks. PC captures all other applications, including the browser, and excludes every assigned app automatically. Use a separate PC track. Suggested: game 1, music 2, PC 3, microphone 4. Browser tabs may share one audio identity.");
     audio->addRow(applicationHelp);
     m_applications = new QTableWidget(0, 2);
     m_applications->setHorizontalHeaderLabels({"Application", "Track"});
@@ -191,6 +196,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
         audio->setRowVisible(applicationHelp, apps);
         audio->setRowVisible(m_applications, apps);
         audio->setRowVisible(m_microphoneTrack, apps);
+        audio->setRowVisible(m_pcTrack, apps);
         m_audioOutput->setEnabled(m_system->isChecked());
         m_audioInput->setEnabled(m_microphone->isChecked());
         m_microphoneBoost->setEnabled(m_microphone->isChecked());
@@ -204,6 +210,10 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     populateAudio({}, {}, {});
 
     auto *storage = section(capture, "STORAGE");
+    m_organizeByGame = new QCheckBox("Organize clips into folders by game");
+    m_organizeByGame->setObjectName("organizeByGame");
+    storage->addRow(m_organizeByGame);
+    storage->addRow(note("Only new clips are organized. Unidentified games stay in the main save folder."));
     m_container = new ClickToAdjust<QComboBox>;
     m_container->addItems({"mp4", "mkv"});
     storage->addRow("File format", m_container);
@@ -245,6 +255,14 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     auto *overlay = section(bodyLayout, "OVERLAY");
     m_indicator = new QCheckBox("Show capture status while playing");
     overlay->addRow(m_indicator);
+    m_indicatorPosition = new ClickToAdjust<QComboBox>;
+    m_indicatorPosition->setObjectName("indicatorPosition");
+    m_indicatorPosition->addItem("Left up", "top-left");
+    m_indicatorPosition->addItem("Right up", "top-right");
+    m_indicatorPosition->addItem("Left down", "bottom-left");
+    m_indicatorPosition->addItem("Right down", "bottom-right");
+    m_indicatorPosition->setCurrentIndex(1);
+    overlay->addRow("Indicator position", m_indicatorPosition);
     overlay->addRow(note("The indicator is experimental and lets mouse and keyboard input pass through."));
 
     auto *shortcuts = section(bodyLayout, "GLOBAL SHORTCUTS");
@@ -302,12 +320,14 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
             options.container = m_container->currentText(); options.bufferSeconds = m_buffer->value(); options.bitrateMbps = m_bitrate->currentData().toInt();
             if (options.bitrateMbps == -1) options.bitrateMbps = m_customBitrate->value();
             options.outputDirectory = m_folder->text(); options.systemAudio = m_system->isChecked(); options.microphone = m_microphone->isChecked(); options.separateAudioTracks = m_separate->isChecked();
+            options.organizeByGame = m_organizeByGame->isChecked();
             options.audioOutput = m_audioOutput->currentData().toString();
             options.audioInput = m_audioInput->currentData().toString();
             options.applicationAudio = m_audioMode->currentIndex() == 1;
             options.applicationTracks = applicationTracks();
             options.levels.microphoneBoost = m_microphoneBoost->value();
             options.microphoneTrack = m_microphoneTrack->currentIndex() + 1;
+            options.pcTrack = m_pcTrack->currentIndex();
             options.audioCodec = m_audioCodec->currentData().toString();
             options.audioBitrateKbps = m_audioBitrate->currentData().toInt();
         }
@@ -318,10 +338,11 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
             if (!HyprBinding::parse(key, {}, &binding) || distinct.contains(key)) { m_error->setText("Choose three different shortcuts using letters, digits, function keys, Space, Pause or Print."); return; }
             distinct.insert(key); keys.append(key);
         }
-        emit saved(options, m_indicator->isChecked(), keys, m_accent->currentData().toString());
+        emit saved(options, m_indicator->isChecked(), keys, m_accent->currentData().toString(), m_indicatorPosition->currentData().toString());
     });
 }
-void SettingsPage::edit(const GsrOptions &o, bool indicator, bool active, const QStringList &keys, const QString &accent) {
+void SettingsPage::edit(const GsrOptions &o, bool indicator, bool active, const QStringList &keys, const QString &accent, const QString &position) {
+    m_indicatorPosition->setCurrentIndex(qMax(0, m_indicatorPosition->findData(position)));
     m_accent->setCurrentIndex(qMax(0, m_accent->findData(accent)));
     m_pages->setCurrentIndex(0);
     m_scroll->verticalScrollBar()->setValue(0);
@@ -334,8 +355,10 @@ void SettingsPage::edit(const GsrOptions &o, bool indicator, bool active, const 
     const int bitrateIndex = m_bitrate->findData(o.bitrateMbps);
     m_bitrate->setCurrentIndex(bitrateIndex >= 0 ? bitrateIndex : m_bitrate->count() - 1);
     m_folder->setText(o.outputDirectory);
+    m_organizeByGame->setChecked(o.organizeByGame);
     m_system->setChecked(o.systemAudio); m_microphone->setChecked(o.microphone); m_separate->setChecked(o.separateAudioTracks); m_indicator->setChecked(indicator);
     m_audioMode->setCurrentIndex(o.applicationAudio ? 1 : 0);
+    m_pcTrack->setCurrentIndex(o.pcTrack);
     m_microphoneBoost->setValue(o.levels.microphoneBoost);
     m_microphoneTrack->setCurrentIndex(o.microphoneTrack - 1);
     m_audioCodec->setCurrentIndex(m_audioCodec->findData(o.audioCodec));
@@ -400,7 +423,7 @@ void SettingsPage::populateAudio(const QString &output, const QString &input, co
         m_applications->setItem(row, 0, new QTableWidgetItem(name));
         auto *choice = new ClickToAdjust<QComboBox>;
         choice->setAccessibleName("Audio track for " + name);
-        choice->addItem("Exclude");
+        choice->addItem("Unassigned / PC");
         for (int i = 1; i <= 6; ++i) choice->addItem(QString("Track %1").arg(i));
         choice->setCurrentIndex(qBound(0, track, 6));
         m_applications->setCellWidget(row, 1, choice);

@@ -1,5 +1,11 @@
 TEMPLATE = subdirs
-SUBDIRS = plugins app tests overlaytests uitests
+SUBDIRS += updatetests
+updatetests.file = tests/updates/UpdateTests.pro
+SUBDIRS += plugins app tests overlaytests uitests playertests previewtests desktoptests playbacktests
+playbacktests.file = tests/playback/PlaybackTests.pro
+playertests.file = tests/player/PlayerTests.pro
+previewtests.file = tests/preview/PreviewTests.pro
+desktoptests.file = tests/desktop_entry/DesktopEntryTests.pro
 plugins.file = plugins/ShadowlessOverlay.pro
 app.depends = plugins
 app.file = app/ShadowlessLinux.pro

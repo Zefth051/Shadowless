@@ -1,5 +1,23 @@
 # Third-party notices
 
+## Captail / original project
+
+Shadowless is derived from [Captail by FaulMit](https://github.com/FaulMit/captail)
+under GNU GPL-2.0-or-later. Original authors retain their copyrights; Shadowless's
+renaming and platform modifications do not imply upstream endorsement. Preserve
+the original history, attribution, license and corresponding modified source.
+
+## Native Linux dependencies
+
+Qt, LayerShellQt, FFmpeg and libmpv retain their own licenses and third-party
+notices. The local Linux FFmpeg package declares GPL-3.0-only; the Windows LGPL
+build notice below does not describe Linux libraries. Qt 6's LGPLv3/GPLv3 routes
+also require a compatible combined distribution. The source grant permits the
+GPLv3 route where required. GSR remains an external GPL-3.0-only process, while
+its plugin/header boundary still needs review. See [the dependency audit](docs/DEPENDENCY_AUDIT.md)
+before distributing either source/binary combination or an AppImage. A list of
+project names is not a substitute for the exact required texts and sources.
+
 The Linux edition uses Qt, LayerShellQt and FFmpeg, and runs GPU Screen
 Recorder as a separate executable. See the [Linux guide](linux/README.md)
 for details. The following notices apply to the Windows components.
@@ -38,7 +56,7 @@ public libobs headers used to compile the module.
 - Project: https://mpv.io/
 - Source revision: `v0.41.0-1023-g69e63f425`
 - Native Windows build: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20260903
-- License: GNU Lesser General Public License 2.1 or later
+- License: mpv supports LGPL-2.1-or-later builds; the complete configuration and transitive licenses of this pinned binary still require verification before redistribution.
 
 Shadowless dynamically loads the replaceable `libmpv-2.dll` for embedded editor playback, hardware decoding, seeking, and local mixing of selected audio tracks. Shadowless does not bundle or launch the standalone `mpv.exe` player.
 
@@ -83,3 +101,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## License texts and development disclosure
+
+Relevant GNU license texts are included in `licenses/`. Exact component notices
+and corresponding sources remain subject to [the dependency audit](docs/DEPENDENCY_AUDIT.md).
+Shadowless is developed with AI assistance, including OpenAI Codex; this does not
+change original authorship, attribution or third-party licensing.

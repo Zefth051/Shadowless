@@ -9,6 +9,7 @@
 #include <QSignalSpy>
 #include <QTest>
 #include <QFileDevice>
+#include <QScopeGuard>
 
 using namespace Shadowless;
 
@@ -16,6 +17,51 @@ class GsrTests : public QObject {
     Q_OBJECT
     const GsrCapabilities supported{"6.1.5", "nvidia", "wayland", {"h264", "hevc"}, {"DP-1", "portal"}};
 private slots:
+    void queuedStopKeepsReplayAndRecordingIdentity() {
+        QTemporaryDir directory;
+        const auto script = directory.filePath("recorder");
+        QFile fake(script); QVERIFY(fake.open(QIODevice::WriteOnly));
+        fake.write(R"PY(#!/usr/bin/env python3
+import sys,socket,json,pathlib,time
+args=sys.argv
+sock=socket.socket(socket.AF_UNIX); sock.bind(args[args.index('-ipc')+1]); sock.listen()
+root=pathlib.Path(args[args.index('-o')+1])
+while True:
+    peer,_=sock.accept()
+    data=peer.makefile('rb').readline()
+    if not data:
+        peer.close(); continue
+    msg=json.loads(data); name=msg['name']; result=''
+    if name in ['save-replay','stop-replay-recording']:
+        time.sleep(.05)
+        path=root/(name+'.mp4'); path.write_bytes(b'clip'); result=str(path)
+    peer.sendall((json.dumps({'id':msg['id'],'result':'ok','data':result})+'\n').encode()); peer.close()
+    if name=='stop': break
+)PY");
+        fake.close(); QVERIFY(fake.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        GsrOptions options; options.source = "DP-1"; options.systemAudio = false; options.outputDirectory = directory.path();
+        GsrCapture engine(nullptr, script);
+        QSignalSpy started(&engine, &GsrCapture::started), clips(&engine, &GsrCapture::clipSaved), stopped(&engine, &GsrCapture::stopped);
+        engine.start(options, supported); QTRY_COMPARE(started.size(), 1);
+        engine.startReplayRecording(); QTRY_VERIFY(engine.replayRecording()); QTRY_VERIFY(!engine.busy());
+        engine.saveReplay(2); engine.stop();
+        QTRY_COMPARE(clips.size(), 2); QTRY_COMPARE(stopped.size(), 1);
+        QCOMPARE(clips[0].size(), 2);
+        QCOMPARE(clips[0][1].toBool(), false);
+        QCOMPARE(clips[1][1].toBool(), true);
+    }
+    void removesPreviewSocketBeforeCaptureRestart() {
+        QTemporaryDir directory;
+        GsrCapture engine(nullptr, "/bin/false");
+        const auto stalePath = engine.overlaySocketPath() + ".preview";
+        QFile stale(stalePath); QVERIFY(stale.open(QIODevice::WriteOnly)); stale.close();
+        QVERIFY(QFile::exists(stalePath));
+        GsrOptions options; options.systemAudio = false; options.source = "DP-1"; options.outputDirectory = directory.path();
+        QSignalSpy stopped(&engine, &GsrCapture::stopped);
+        engine.start(options, supported);
+        QTRY_COMPARE(stopped.size(), 1);
+        QVERIFY(!QFile::exists(stalePath));
+    }
     void waitsForCompositionBeforeReportingReady() {
         QTemporaryDir directory;
         const auto program = directory.filePath("recorder.py");
@@ -116,6 +162,22 @@ while running:
         options.applicationTracks.insert("Other|default_output", 1);
         QVERIFY(!options.validate(supported).isEmpty());
     }
+    void pcTrackExcludesAllExplicitApplications() {
+        GsrOptions options; options.outputDirectory = "/tmp/clips";
+        options.applicationAudio = true; options.pcTrack = 3;
+        options.applicationTracks = {{"Game", 1}, {"Spotify", 2}, {"YT Music", 2}};
+        options.microphone = true; options.microphoneTrack = 4;
+        QVERIFY(options.validate(supported).isEmpty());
+        QCOMPARE(options.audioTracks(), QStringList({"app:Game", "app:Spotify|app:YT Music",
+            "app-inverse:Game|app-inverse:Spotify|app-inverse:YT Music", "default_input"}));
+        options.pcTrack = 2; QVERIFY(!options.validate(supported).isEmpty());
+        options.pcTrack = 4; QVERIFY(!options.validate(supported).isEmpty());
+        options.pcTrack = 7; QVERIFY(!options.validate(supported).isEmpty());
+        options.pcTrack = -1; QVERIFY(!options.validate(supported).isEmpty());
+        options.pcTrack = 3; options.applicationTracks.clear(); options.microphone = false;
+        QVERIFY(options.validate(supported).isEmpty());
+        QCOMPARE(options.audioTracks(), QStringList{"app-inverse:"});
+    }
 
     void ipcReplies_data() {
         QTest::addColumn<QByteArray>("reply");
@@ -181,6 +243,80 @@ while running:
         QTest::addColumn<QString>("codec");
         QTest::newRow("h264") << QString("h264");
         QTest::newRow("hevc") << QString("hevc");
+    }
+
+    void livePcTracksDoNotDuplicateSelectedAudio_data() {
+        QTest::addColumn<bool>("pcOnly");
+        QTest::newRow("four isolated tracks") << false;
+        QTest::newRow("PC without assigned applications") << true;
+    }
+    void livePcTracksDoNotDuplicateSelectedAudio() {
+        QFETCH(bool, pcOnly);
+        const auto app = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_APP");
+        const auto music = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_MUSIC");
+        const auto pc = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_PC");
+        const auto input = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_INPUT");
+        if (app.isEmpty() || music.isEmpty() || pc.isEmpty() || input.isEmpty())
+            QSKIP("Requires explicit synthetic game, music, PC and microphone fixtures.");
+        const auto pactl = [](const QStringList &args) {
+            QProcess p; p.start("pactl", args);
+            if (!p.waitForFinished(3000) || p.exitCode()) return QByteArray();
+            return p.readAllStandardOutput();
+        };
+        const auto devices = [&](const QString &kind) {
+            QStringList names;
+            for (const auto &v : QJsonDocument::fromJson(pactl({"-f", "json", "list", kind})).array())
+                names.append(v.toObject().value("name").toString());
+            names.sort(); return names;
+        };
+        const auto sources = devices("sources"), sinks = devices("sinks");
+        const auto defaultSource = pactl({"get-default-source"}), defaultSink = pactl({"get-default-sink"});
+        QVERIFY(!sources.isEmpty()); QVERIFY(!sinks.isEmpty());
+        QTemporaryDir clips; QString error; const auto caps = GsrCapabilities::probe(&error);
+        QVERIFY2(error.isEmpty(), qPrintable(error));
+        GsrOptions options; options.source = qEnvironmentVariable("SHADOWLESS_GSR_SOURCE", "DP-1");
+        options.outputDirectory = clips.path(); options.applicationAudio = true;
+        options.applicationTracks = {{app, 1}, {music, 2}}; options.pcTrack = 3;
+        if (pcOnly) options.applicationTracks.clear();
+        options.microphone = !pcOnly; options.microphoneTrack = 4; options.audioInput = input;
+        GsrCapture engine; QSignalSpy started(&engine, &GsrCapture::started), saved(&engine, &GsrCapture::clipSaved);
+        QSignalSpy errors(&engine, &GsrCapture::error), stopped(&engine, &GsrCapture::stopped);
+        engine.start(options, caps);
+        QTRY_VERIFY_WITH_TIMEOUT(!started.isEmpty() || !errors.isEmpty(), 10000);
+        QVERIFY2(errors.isEmpty(), errors.isEmpty() ? "" : qPrintable(errors[0][0].toString()));
+        QCOMPARE(devices("sources").size(), sources.size() + (pcOnly ? 0 : 1)); QCOMPARE(devices("sinks"), sinks);
+        QCOMPARE(pactl({"get-default-source"}), defaultSource); QCOMPARE(pactl({"get-default-sink"}), defaultSink);
+        QProcess lateMusic;
+        const auto cleanup = qScopeGuard([&] {
+            if (lateMusic.state() != QProcess::NotRunning) { lateMusic.terminate(); lateMusic.waitForFinished(2000); }
+        });
+        const auto lateFile = qEnvironmentVariable("SHADOWLESS_QA_LATE_MUSIC_FILE");
+        if (!lateFile.isEmpty()) {
+            const auto output = qEnvironmentVariable("SHADOWLESS_QA_AUDIO_OUTPUT");
+            QVERIFY(output.endsWith(".monitor"));
+            const auto props = QString::fromUtf8(QJsonDocument(QJsonObject{{"application.name", music}}).toJson(QJsonDocument::Compact));
+            lateMusic.start("pw-play", {"--target", output.chopped(8), "--properties", props, lateFile});
+            QVERIFY(lateMusic.waitForStarted(2000));
+        }
+        QTest::qWait(2800); engine.saveReplay(2);
+        QTRY_COMPARE_WITH_TIMEOUT(saved.size(), 1, 10000);
+        engine.stop(); QTRY_COMPARE_WITH_TIMEOUT(stopped.size(), 1, 10000);
+        QVERIFY2(errors.isEmpty(), errors.isEmpty() ? "" : qPrintable(errors[0][0].toString()));
+        const int frequencies[]{641, 997, 1237, 883};
+        for (int track = 0; track < (pcOnly ? 1 : 4); ++track) {
+            for (int tone = 0; tone < 4; ++tone) {
+                QProcess ffmpeg;
+                ffmpeg.start("ffmpeg", {"-hide_banner", "-i", saved[0][0].toString(), "-map", QString("0:a:%1").arg(track),
+                    "-af", QString("bandpass=f=%1:width_type=h:w=12,bandpass=f=%1:width_type=h:w=12,volumedetect").arg(frequencies[tone]), "-f", "null", "-"});
+                QVERIFY(ffmpeg.waitForFinished(5000)); QCOMPARE(ffmpeg.exitCode(), 0);
+                const auto match = QRegularExpression("mean_volume: (-?[0-9.]+) dB").match(QString::fromUtf8(ffmpeg.readAllStandardError()));
+                QVERIFY(match.hasMatch()); const auto db = match.captured(1).toDouble();
+                qInfo() << "Track" << track << "tone" << frequencies[tone] << "dB" << db;
+                const bool expected = pcOnly ? tone < 3 : track == tone;
+                QVERIFY(expected ? db > -40 : db < -55);
+            }
+        }
+        QTRY_COMPARE(devices("sources"), sources); QCOMPARE(devices("sinks"), sinks);
     }
 
     void liveAudioLevels_data() {

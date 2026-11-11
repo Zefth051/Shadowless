@@ -3,12 +3,15 @@
 #include <QSlider>
 #include "library.h"
 #include "overlay_editor.h"
+#include "clip_player.h"
+#include "../player/mpv_player.h"
 #include "settings_page.h"
 #include "theme.h"
-#include <QButtonGroup>
+#include <QApplication>
 #include <QCloseEvent>
 #include <QDesktopServices>
 #include <QFrame>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QBoxLayout>
 #include <QScrollArea>
@@ -18,13 +21,45 @@
 #include <QPushButton>
 #include <QShortcut>
 #include <QSignalBlocker>
-#include <QSpinBox>
 #include <QStackedWidget>
+#include <QStyleOptionButton>
 #include <QUrl>
 #include <QVBoxLayout>
 
 namespace Shadowless {
 namespace {
+class CaptureModeTile : public QPushButton {
+public:
+    CaptureModeTile(const QString &title, const QString &detail) : QPushButton(title), m_detail(detail) {
+        setFixedHeight(144);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        setAccessibleDescription(detail);
+    }
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QStyleOptionButton option;
+        initStyleOption(&option);
+        option.text.clear(); option.icon = {};
+        QPainter painter(this);
+        style()->drawControl(QStyle::CE_PushButton, &option, &painter, this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        if (!isEnabled()) painter.setOpacity(.55);
+        const auto accent = palette().color(QPalette::Accent);
+        painter.setPen(QPen(isChecked() ? accent : QColor("#536169"), 2));
+        painter.drawEllipse(QPointF(width() / 2., 44), 24, 24);
+        icon().paint(&painter, QRect(width() / 2 - 12, 32, 24, 24));
+        auto titleFont = font(); titleFont.setBold(true); painter.setFont(titleFont);
+        painter.setPen(isChecked() ? accent : palette().color(QPalette::WindowText));
+        painter.drawText(QRect(8, 84, width() - 16, 24), Qt::AlignCenter, text());
+        titleFont.setBold(false); titleFont.setPixelSize(11); painter.setFont(titleFont);
+        painter.setPen(QColor("#8b969d"));
+        painter.drawText(QRect(8, 110, width() - 16, 20), Qt::AlignCenter,
+                         painter.fontMetrics().elidedText(m_detail, Qt::ElideRight, width() - 16));
+    }
+private:
+    QString m_detail;
+};
+
 class CaptureSwitch : public QPushButton {
 public:
     CaptureSwitch() {
@@ -92,10 +127,12 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_panel = new QFrame(this);
     m_panel->setObjectName("shadowlessPanel");
     auto *shell = new QVBoxLayout(m_panel);
-    shell->setContentsMargins(16, 10, 16, 10);
-    shell->setSpacing(12);
+    shell->setContentsMargins(20, 16, 20, 16);
+    shell->setSpacing(16);
 
-    auto *header = new QHBoxLayout;
+    m_chrome = new QWidget;
+    auto *header = new QHBoxLayout(m_chrome);
+    header->setContentsMargins(0, 0, 0, 0);
     m_logo = new QLabel;
     header->addWidget(m_logo);
     auto *brand = new QLabel("Shadowless");
@@ -105,7 +142,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_layers = new QPushButton("Capture overlays");
     m_layers->setObjectName("openOverlays");
     header->addWidget(m_layers);
-    m_back = new QPushButton("‹  Dashboard");
+    m_back = new QPushButton("Dashboard");
     header->addWidget(m_back);
     m_settingsButton = new QPushButton("Settings");
     m_settingsButton->setObjectName("openSettings");
@@ -116,13 +153,13 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     close->setText("Esc  ×");
     close->setToolTip("Hide Shadowless and return to the game");
     header->addWidget(close);
-    shell->addLayout(header);
+    shell->addWidget(m_chrome);
 
     m_pages = new QStackedWidget;
     m_home = new QWidget;
     m_homeLayout = new QBoxLayout(QBoxLayout::LeftToRight, m_home);
     m_homeLayout->setContentsMargins(0, 0, 0, 0);
-    m_homeLayout->setSpacing(20);
+    m_homeLayout->setSpacing(24);
 
     auto *controls = new QWidget;
     auto *homeLayout = new QVBoxLayout(controls);
@@ -137,7 +174,8 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     auto *card = new QFrame;
     card->setObjectName("panel");
     auto *statusLayout = new QHBoxLayout(card);
-    statusLayout->setContentsMargins(12, 10, 12, 10);
+    statusLayout->setContentsMargins(14, 14, 14, 14);
+    statusLayout->setSpacing(14);
     m_ring = new CaptureRing;
     statusLayout->addWidget(m_ring);
     auto *statusText = new QVBoxLayout;
@@ -151,17 +189,15 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_detail->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     statusText->addWidget(m_detail);
     statusLayout->addLayout(statusText, 1);
-    m_toggle = new CaptureSwitch;
-    m_toggle->setObjectName("captureToggle");
-    m_toggle->setAccessibleName("Toggle capture");
-    statusLayout->addWidget(m_toggle);
     homeLayout->addWidget(card);
 
     auto *overlayCard = new QFrame;
     overlayCard->setObjectName("panel");
     auto *overlayRow = new QHBoxLayout(overlayCard);
-    overlayRow->setContentsMargins(12, 10, 12, 10);
-    auto *overlayMark = new QLabel("▱");
+    overlayRow->setContentsMargins(14, 14, 14, 14);
+    overlayRow->setSpacing(14);
+    auto *overlayMark = new QLabel;
+    overlayMark->setPixmap(QIcon(":/shadowless/icons/layers.svg").pixmap(26, 26));
     overlayMark->setObjectName("overlayMark");
     overlayMark->setFixedSize(46, 46);
     overlayMark->setAlignment(Qt::AlignCenter);
@@ -179,25 +215,35 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_layerToggle->setObjectName("overlayToggle");
     m_layerToggle->setAccessibleName("Enable capture overlays");
     overlayRow->addWidget(m_layerToggle);
-    homeLayout->addWidget(overlayCard);
+    m_overlayPreview = new OverlayCanvas;
+    m_overlayPreview->setObjectName("overlayPreview");
+    m_overlayPreview->setProperty("compactPreview", true);
+    m_overlayPreview->setCaptureVisible(false);
+    m_overlayPreview->setAccessibleName("Custom overlay preview");
+    m_overlayPreview->setMinimumSize(160, 90);
+    m_overlayPreview->setFixedHeight(120);
+    m_overlayPreview->setAttribute(Qt::WA_TransparentForMouseEvents);
 
     auto *modePanel = new QFrame;
-    modePanel->setObjectName("segments");
     auto *modes = new QHBoxLayout(modePanel);
-    modes->setContentsMargins(2, 2, 2, 2);
-    modes->setSpacing(2);
-    auto *group = new QButtonGroup(this);
-    m_replay = new QPushButton("Instant Replay");
-    m_record = new QPushButton("Recording");
+    modes->setContentsMargins(0, 2, 0, 2);
+    modes->setSpacing(12);
+    m_replay = new CaptureModeTile("Instant Clip", "Start / stop instant replay");
+    m_record = new CaptureModeTile("Recording", "Start / stop recording");
     for (auto *mode : {m_replay, m_record}) {
-        mode->setObjectName("segment");
+        mode->setObjectName("captureMode");
         mode->setCheckable(true);
-        group->addButton(mode);
         modes->addWidget(mode, 1);
     }
     homeLayout->addWidget(modePanel);
+    homeLayout->addWidget(overlayCard);
+    homeLayout->addWidget(m_overlayPreview);
 
-    auto *quick = new QGridLayout;
+    auto *audioCard = new QFrame;
+    audioCard->setObjectName("panel");
+    auto *quick = new QGridLayout(audioCard);
+    quick->setContentsMargins(10, 8, 12, 8);
+    quick->setHorizontalSpacing(12);
     quick->setColumnStretch(1, 1);
     m_systemAudio = new QPushButton("System audio");
     m_microphone = new QPushButton("Microphone");
@@ -221,7 +267,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_audioSettings = new QPushButton("Audio settings");
     m_audioSettings->setObjectName("settingsLink");
     quick->addWidget(m_audioSettings, 2, 0, 1, 3);
-    homeLayout->addLayout(quick);
+    homeLayout->addWidget(audioCard);
 
     auto *summary = new QHBoxLayout;
     m_format = new QPushButton;
@@ -242,24 +288,9 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_diskUsage->hide();
     homeLayout->addWidget(m_diskUsage);
 
-    auto *actions = new QHBoxLayout;
     m_action = new QPushButton;
     m_action->setObjectName("captureAction");
-    actions->addWidget(m_action, 1);
-    m_seconds = new ClickToAdjust<QSpinBox>;
-    m_seconds->setRange(1, 30);
-    m_seconds->setValue(10);
-    m_seconds->setSuffix(" sec");
-    m_seconds->setAccessibleName("Replay save duration");
-    m_seconds->setToolTip("Duration saved by the dashboard button");
-    actions->addWidget(m_seconds);
-    homeLayout->addLayout(actions);
-    m_replayRecording = new QPushButton("Start recording");
-    m_replayRecording->setObjectName("replayRecording");
-    m_replayRecording->setToolTip("Record continuously while instant replay stays on");
-    m_replayRecording->hide();
-    homeLayout->addWidget(m_replayRecording);
-
+    homeLayout->addWidget(m_action);
     auto *folderRow = new QHBoxLayout;
     m_folder = new QPushButton;
     m_folder->setObjectName("settingsLink");
@@ -278,12 +309,49 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     libraryLayout->addWidget(m_library, 1);
     m_homeLayout->addWidget(libraryCard, 1);
 
+    m_layers->setIcon(QIcon(":/shadowless/icons/layers.svg"));
+    m_settingsButton->setIcon(QIcon(":/shadowless/icons/settings.svg"));
+    m_back->setIcon(QIcon(":/shadowless/icons/back.svg"));
+    m_replay->setIcon(QIcon(":/shadowless/icons/replay.svg"));
+    m_record->setIcon(QIcon(":/shadowless/icons/record.svg"));
+    m_systemAudio->setIcon(QIcon(":/shadowless/icons/speaker.svg"));
+    m_microphone->setIcon(QIcon(":/shadowless/icons/microphone.svg"));
+    m_openFolder->setIcon(QIcon(":/shadowless/icons/folder.svg"));
+    m_folder->setIcon(QIcon(":/shadowless/icons/folder.svg"));
+    m_format->setIcon(QIcon(":/shadowless/icons/video.svg"));
+    m_audioSettings->setIcon(QIcon(":/shadowless/icons/settings.svg"));
+
     m_settings = new SettingsPage(caps);
     m_editor = new OverlayEditor;
     m_pages->addWidget(m_home);
     m_pages->addWidget(m_settings);
     m_pages->addWidget(m_editor);
+    m_player = new ClipPlayer;
+    m_pages->addWidget(m_player);
+    connect(m_library, &Library::clipRequested, this, [this](const QString &path) {
+        showPage(m_player, 980);
+        m_player->open(path);
+    });
+    connect(m_player, &ClipPlayer::back, this, &Dashboard::home);
+    connect(m_player, &ClipPlayer::editingChanged, this, [this] { positionPanel(); });
+    connect(m_library, &Library::clipsChanged, m_player, &ClipPlayer::setClips);
+    connect(m_library, &Library::thumbnailReady, m_player, &ClipPlayer::setThumbnail);
+    auto *playback = m_player->findChild<MpvPlayer *>();
+    connect(playback, &MpvPlayer::stateChanged, m_library, [this, playback] { m_library->setPreviewActive(!playback->source().isEmpty()); });
+    connect(m_player, &ClipPlayer::clipExported, this, [this] { m_library->refresh(m_directory); });
+    connect(m_player, &ClipPlayer::fullscreenChanged, this, [this, shell](bool fullscreen) {
+        m_chrome->setVisible(!fullscreen);
+        m_footer->setVisible(!fullscreen);
+        m_divider->setVisible(!fullscreen);
+        shell->setContentsMargins(fullscreen ? 0 : 20, fullscreen ? 0 : 16, fullscreen ? 0 : 20, fullscreen ? 0 : 16);
+        positionPanel();
+    });
     shell->addWidget(m_pages, 1);
+    auto *rendering = new QLabel("rendering...");
+    rendering->setObjectName("clipRenderingStatus");
+    rendering->hide();
+    shell->addWidget(rendering);
+    connect(m_player, &ClipPlayer::exportingChanged, rendering, &QWidget::setVisible);
     m_notice = new QLabel;
     m_notice->setObjectName("notice");
     m_notice->setTextFormat(Qt::PlainText);
@@ -292,6 +360,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_notice->hide();
     shell->addWidget(m_notice);
     auto *divider = new QFrame;
+    m_divider = divider;
     divider->setObjectName("divider");
     divider->setFixedHeight(1);
     shell->addWidget(divider);
@@ -301,21 +370,15 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
 
     connect(close, &QPushButton::clicked, this, &Dashboard::hideRequested);
     connect(m_back, &QPushButton::clicked, this, &Dashboard::escape);
-    connect(m_toggle, &QPushButton::clicked, this, [this](bool checked) {
-        m_toggle->setChecked(!checked);
-        emit toggleCapture();
+    connect(m_action, &QPushButton::clicked, this, &Dashboard::saveReplay);
+    connect(m_replay, &QPushButton::clicked, this, [this](bool checked) {
+        m_replay->setChecked(!checked);
+        emit recordingMode(false);
     });
-    connect(m_action, &QPushButton::clicked, this, [this] {
-        if (m_actionSavesReplay) emit saveReplay(m_seconds->value());
-        else emit toggleCapture();
+    connect(m_record, &QPushButton::clicked, this, [this](bool checked) {
+        m_record->setChecked(!checked);
+        emit recordingMode(true);
     });
-    connect(m_seconds, &QSpinBox::valueChanged, this, [this](int seconds) {
-        m_preferredSeconds = seconds;
-        updateActionText();
-    });
-    connect(m_replayRecording, &QPushButton::clicked, this, &Dashboard::toggleReplayRecording);
-    connect(m_replay, &QPushButton::clicked, this, [this] { emit recordingMode(false); });
-    connect(m_record, &QPushButton::clicked, this, [this] { emit recordingMode(true); });
     connect(m_systemAudio, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(false, checked); });
     connect(m_microphone, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(true, checked); });
     auto openSettings = [this] {
@@ -345,14 +408,12 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     });
     connect(m_settings, &SettingsPage::cancelled, this, &Dashboard::home);
     connect(m_editor, &OverlayEditor::back, this, &Dashboard::home);
-    connect(m_library, &Library::openingClip, this, &Dashboard::hideRequested);
     connect(m_library, &Library::storageChanged, this, [this](qint64 available, qint64 total) {
         m_disk->setText(total > 0 ? QLocale().formattedDataSize(available, 1) + " free" : QString());
         m_diskUsage->setVisible(total > 0);
         if (width() < 800) positionPanel();
         if (total > 0) m_diskUsage->setValue(qBound(0, qRound(100. * (1. - double(available) / total)), 100));
     });
-    connect(m_library, &Library::openFailed, this, &Dashboard::notice);
     connect(m_openFolder, &QPushButton::clicked, this, [this] {
         if (QDesktopServices::openUrl(QUrl::fromLocalFile(m_directory))) emit hideRequested();
         else notice("Could not open the clips folder.");
@@ -363,10 +424,13 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     setShortcutKeys({"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"});
     resize(1280, 720);
     home();
+    qApp->installEventFilter(this);
 }
 
 void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool active, bool ready, bool saving, bool stopping,
                             bool replayRecording, bool busy) {
+    m_overlayPreview->setVisible(!scene.layers.isEmpty());
+    m_overlayPreview->setScene(scene, -1);
     const QString mode = o.continuousRecording ? "Recording" : "Instant Replay";
     m_status->setText(stopping ? "Finishing capture…" : active && !ready ? "Starting capture…" :
                       ready ? (o.continuousRecording ? mode : replayRecording ? "Recording + Instant Replay" : "Instant Replay is on")
@@ -376,12 +440,15 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
                      QString("Last %1 sec · %2").arg(o.bufferSeconds).arg(source));
     m_detail->setToolTip(m_detail->text());
     static_cast<CaptureRing *>(m_ring)->setState(ready && !stopping, o.continuousRecording);
-    m_toggle->setChecked(active);
-    m_toggle->setEnabled(!stopping);
-    m_replay->setChecked(!o.continuousRecording);
-    m_record->setChecked(o.continuousRecording);
-    m_replay->setEnabled(!active);
-    m_record->setEnabled(!active);
+    m_replay->setChecked(active && !o.continuousRecording);
+    m_record->setChecked(active && (o.continuousRecording || replayRecording));
+    const bool available = !stopping && !saving && !busy;
+    m_replay->setEnabled(available && (!active || !o.continuousRecording));
+    m_record->setEnabled(available && (!active || ready || o.continuousRecording));
+    m_replay->setToolTip(active && o.continuousRecording ? "Stop recording before starting Instant Clip" :
+                         replayRecording ? "Stop capture and finish the recording" :
+                         m_replay->isChecked() ? "Stop instant replay" : "Start instant replay");
+    m_record->setToolTip(m_record->isChecked() ? "Stop and save recording" : "Start recording");
     auto updateAudio = [active, stopping](QPushButton *button, QSlider *slider, QLabel *percent,
                                            bool enabled, bool muted, int volume) {
         const QSignalBlocker blocker(slider);
@@ -398,20 +465,9 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
     for (auto *widget : {static_cast<QWidget *>(m_systemAudio), static_cast<QWidget *>(m_systemVolume), static_cast<QWidget *>(m_systemPercent)})
         widget->setVisible(!o.applicationAudio);
     m_audioSettings->setText(o.applicationAudio ? "Application audio settings" : "Audio settings");
-    m_replayRecording->setText(replayRecording ? "Stop recording" : "Start recording");
-    m_replayRecording->setVisible(ready && !o.continuousRecording);
-    m_replayRecording->setEnabled(!busy && !saving && !stopping);
-
-    const QSignalBlocker blocker(m_seconds);
-    m_seconds->setMaximum(o.bufferSeconds);
-    m_seconds->setValue(m_preferredSeconds);
-    m_seconds->setVisible(!o.continuousRecording);
-    m_seconds->setEnabled(!saving && !stopping);
-    m_actionSavesReplay = ready && !o.continuousRecording && !saving && !stopping;
-    m_actionText = stopping ? "Finishing…" : active && !ready ? "Starting…" : saving ? "Saving…" :
-        o.continuousRecording ? (active ? "Stop recording" : "Start recording") : "Start instant replay";
-    updateActionText();
-    m_action->setEnabled(!stopping && !saving && !busy && (!active || ready));
+    m_action->setVisible(active && !o.continuousRecording);
+    m_action->setText(saving ? "Saving…" : QString("Save %1 sec").arg(o.bufferSeconds));
+    m_action->setEnabled(available && ready && !o.continuousRecording);
 
     m_format->setText(QString("%1  ·  %2 FPS  ·  %3").arg(o.codec.toUpper()).arg(o.frameRate).arg(o.container.toUpper()));
     m_layerToggle->setChecked(scene.enabled);
@@ -426,10 +482,6 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
     if (width() < 800) positionPanel();
 }
 
-void Dashboard::updateActionText() {
-    m_action->setText(m_actionSavesReplay ? QString("Save %1 sec").arg(m_seconds->value()) : m_actionText);
-}
-
 void Dashboard::notice(const QString &message) {
     m_notice->setText(message);
     m_notice->setToolTip(message);
@@ -437,11 +489,10 @@ void Dashboard::notice(const QString &message) {
 }
 
 void Dashboard::setShortcutKeys(const QStringList &keys) {
+    m_overlayKey = QKeySequence(keys.value(0), QKeySequence::PortableText);
     m_footer->setText(keys.value(0) + "  Show / hide    ·    " + keys.value(1) + "  Save replay");
     m_footer->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    m_action->setToolTip("Escape returns to the game. The global replay shortcut saves up to 10 sec.");
-    m_toggle->setToolTip(keys.value(2) + "  Start / stop capture");
-    m_seconds->setToolTip("Duration saved by this button. " + keys.value(1) + " saves up to 10 sec.");
+    m_status->setToolTip(keys.value(2) + "  Start / stop capture");
 }
 
 void Dashboard::shortcutStatus(const QString &message) {
@@ -464,7 +515,7 @@ void Dashboard::showPage(QWidget *page, int width) {
     m_settingsButton->setVisible(dashboard);
     m_layers->setVisible(dashboard);
     m_panelWidth = width;
-    m_panelHeight = dashboard ? 680 : 780;
+    m_panelHeight = dashboard ? 740 : 780;
     m_pages->setCurrentWidget(page);
     positionPanel();
 }
@@ -477,8 +528,13 @@ void Dashboard::resizeEvent(QResizeEvent *event) {
 }
 
 void Dashboard::positionPanel() {
-    const auto panelWidth = qBound(0, width() - 24, m_panelWidth);
-    const auto panelHeight = qBound(0, height() - 24, m_panelHeight);
+    if (m_player->fullscreen()) {
+        m_panel->setGeometry(rect());
+        return;
+    }
+    const bool editing = m_pages->currentWidget() == m_player && m_player->editing();
+    const auto panelWidth = editing ? qMax(0, width() - 24) : qBound(0, width() - 24, m_panelWidth);
+    const auto panelHeight = editing ? qMax(0, height() - 24) : qBound(0, height() - 24, m_panelHeight);
     const bool narrow = width() < 800;
     m_homeLayout->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
     const int controlsHeight = qBound(0, panelHeight - 245, m_controlScroll->widget()->sizeHint().height());
@@ -488,11 +544,28 @@ void Dashboard::positionPanel() {
 }
 
 void Dashboard::escape() {
+    if (m_pages->currentWidget() == m_player && m_player->handleEscape()) {
+        return;
+    }
     if (m_pages->currentWidget() == m_home) emit hideRequested();
     else {
         if (m_pages->currentWidget() == m_editor) m_editor->flush();
         home();
     }
+}
+
+bool Dashboard::eventFilter(QObject *watched, QEvent *event) {
+    if (!isVisible() || (event->type() != QEvent::ShortcutOverride && event->type() != QEvent::KeyPress)) return false;
+    auto *key = static_cast<QKeyEvent *>(event);
+    if (m_overlayKey != QKeySequence(key->keyCombination())) return false;
+    // Include popup widgets and take precedence over shortcut editors.
+    for (auto *widget = qobject_cast<QWidget *>(watched); widget; widget = widget->parentWidget()) {
+        if (widget != this) continue;
+        event->accept();
+        if (event->type() == QEvent::KeyPress && !key->isAutoRepeat()) emit hideRequested();
+        return true;
+    }
+    return false;
 }
 
 void Dashboard::closeEvent(QCloseEvent *event) {

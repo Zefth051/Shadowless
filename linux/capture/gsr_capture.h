@@ -31,9 +31,10 @@ struct GsrOptions {
     QMap<QString, int> applicationTracks;
     AudioLevels levels;
     int frameRate = 60, bufferSeconds = 30, bitrateMbps = 0;
-    int audioBitrateKbps = 0, microphoneTrack = 1;
+    int audioBitrateKbps = 0, microphoneTrack = 1, pcTrack = 0;
     bool systemAudio = true, microphone = false, separateAudioTracks = false;
     bool applicationAudio = false, continuousRecording = false;
+    bool organizeByGame = false;
     QString validate(const GsrCapabilities &capabilities) const;
     QStringList audioTracks() const;
     QStringList arguments(const QString &socketPath) const;
@@ -77,7 +78,7 @@ public:
 signals:
     void started();
     void stopped();
-    void clipSaved(const QString &path);
+    void clipSaved(const QString &path, bool recording);
     void error(const QString &message);
     void diagnostic(const QString &message);
     void recordingChanged(bool recording);
@@ -95,7 +96,7 @@ private:
     QStringList m_logTail;
     void request(const QString &name, const QJsonValue &data = {});
     void startRecorder(const QString &output, const QString &input);
-    void publishClip(const QString &path);
+    void publishClip(const QString &path, bool recording);
     void readLog();
 };
 

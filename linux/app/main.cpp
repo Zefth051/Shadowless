@@ -10,9 +10,10 @@
 
 int main(int argc, char **argv) {
     QApplication app(argc, argv);
+    app.setApplicationVersion(SHADOWLESS_VERSION);
     app.setApplicationName("shadowless"); app.setOrganizationName("Shadowless");
     app.setDesktopFileName("io.github.zefth051.Shadowless"); app.setQuitOnLastWindowClosed(false);
-    QCommandLineParser parser; parser.setApplicationDescription("Shadowless - An app for clipping"); parser.addHelpOption();
+    QCommandLineParser parser; parser.setApplicationDescription("Shadowless - An app for clipping"); parser.addHelpOption(); parser.addVersionOption();
     for (const auto &option : {"background", "toggle", "show", "hide", "save", "capture", "quit"})
         parser.addOption(QCommandLineOption(option));
     parser.process(app);

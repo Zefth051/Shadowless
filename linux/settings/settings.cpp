@@ -40,6 +40,7 @@ GsrOptions Settings::capture(const GsrCapabilities &caps) const {
     const int audioBitrate = s.value("audio/bitrateKbps", 0).toInt();
     o.audioBitrateKbps = audioBitrate == 0 ? 0 : qBound(32, audioBitrate, 320);
     o.microphoneTrack = qBound(1, s.value("audio/microphoneTrack", 1).toInt(), 6);
+    o.pcTrack = qBound(0, s.value("audio/pcTrack", 0).toInt(), 6);
     o.applicationAudio = s.value("audio/applicationMode", false).toBool();
     const auto routes = s.value("audio/applicationTracks").toMap();
     for (auto it = routes.cbegin(); it != routes.cend(); ++it) o.applicationTracks.insert(it.key(), it.value().toInt());
@@ -50,6 +51,7 @@ GsrOptions Settings::capture(const GsrCapabilities &caps) const {
     o.levels.microphoneMuted = s.value("audio/microphoneMuted", false).toBool();
     o.separateAudioTracks = s.value("separateAudioTracks", false).toBool();
     o.continuousRecording = s.value("continuousRecording", false).toBool();
+    o.organizeByGame = s.value("organizeByGame", false).toBool();
     auto videos = QStandardPaths::writableLocation(QStandardPaths::MoviesLocation);
     if (videos.isEmpty()) videos = QDir::home().filePath("Videos");
     const auto preferred = QDir(videos).filePath("Shadowless");
@@ -67,12 +69,16 @@ OverlayScene Settings::scene() const {
     return scene;
 }
 bool Settings::indicator() const { return m_store->value("overlay/indicator", false).toBool(); }
+QString Settings::indicatorPosition() const {
+    const auto value = m_store->value("overlay/position", "top-right").toString();
+    return QStringList{"top-left", "top-right", "bottom-left", "bottom-right"}.contains(value) ? value : "top-right";
+}
 QString Settings::accent() const { return m_store->value("appearance/accent", "mint").toString(); }
 QStringList Settings::shortcutKeys() const {
     const auto keys = m_store->value("overlay/shortcuts", QStringList{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"}).toStringList();
     return keys.size() == 3 ? keys : QStringList{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"};
 }
-bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicator, QString *error, const QStringList &keys, const QString &accent) {
+bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicator, QString *error, const QStringList &keys, const QString &accent, const QString &position) {
     auto &s = *m_store;
     s.setValue("source", o.source); s.setValue("codec", o.codec); s.setValue("container", o.container);
     s.setValue("fps", o.frameRate); s.setValue("bufferSeconds", o.bufferSeconds); s.setValue("bitrateMbps", o.bitrateMbps);
@@ -82,6 +88,7 @@ bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicat
     s.setValue("audio/codec", o.audioCodec);
     s.setValue("audio/bitrateKbps", o.audioBitrateKbps);
     s.setValue("audio/microphoneTrack", o.microphoneTrack);
+    s.setValue("audio/pcTrack", o.pcTrack);
     s.setValue("audio/applicationMode", o.applicationAudio);
     QVariantMap routes;
     for (auto it = o.applicationTracks.cbegin(); it != o.applicationTracks.cend(); ++it) routes.insert(it.key(), it.value());
@@ -93,7 +100,9 @@ bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicat
     s.setValue("audio/microphoneMuted", o.levels.microphoneMuted);
     s.setValue("separateAudioTracks", o.separateAudioTracks); s.setValue("continuousRecording", o.continuousRecording);
     s.setValue("outputDirectory", o.outputDirectory); s.setValue("overlay/indicator", indicator);
+    s.setValue("organizeByGame", o.organizeByGame);
     s.setValue("overlay/shortcuts", keys);
+    s.setValue("overlay/position", position);
     if (!accent.isEmpty()) s.setValue("appearance/accent", accent);
     s.setValue("overlays/scene", QJsonDocument(scene.toJson()).toJson(QJsonDocument::Compact));
     s.sync();

@@ -11,6 +11,7 @@
 
 class QLabel;
 class QVBoxLayout;
+class QComboBox;
 
 namespace Shadowless {
 class Library : public QWidget {
@@ -19,10 +20,12 @@ public:
     explicit Library(QWidget *parent = nullptr);
     ~Library() override;
     void refresh(const QString &directory);
+    void setPreviewActive(bool active);
 signals:
-    void openingClip();
-    void openFailed(const QString &message);
+    void clipRequested(const QString &path);
     void storageChanged(qint64 available, qint64 total);
+    void clipsChanged(const QStringList &paths);
+    void thumbnailReady(const QString &path, const QPixmap &image);
 protected:
     void showEvent(QShowEvent *event) override;
     void hideEvent(QHideEvent *event) override;
@@ -31,6 +34,7 @@ private:
         QString path;
         QDateTime modified;
         qint64 size;
+        QString collection;
         bool operator==(const Clip &other) const {
             return path == other.path && modified == other.modified && size == other.size;
         }
@@ -38,6 +42,7 @@ private:
     struct Scan {
         QString directory;
         QList<Clip> clips;
+        QStringList collections;
         qint64 available = 0;
         qint64 total = 0;
         QString emptyText;
@@ -49,6 +54,11 @@ private:
 
     QVBoxLayout *m_rows;
     QLabel *m_empty;
+    QWidget *m_deleteConfirmation;
+    QLabel *m_deleteName, *m_deleteError;
+    QString m_pendingDelete;
+    QComboBox *m_collection;
+    Scan m_lastScan;
     QFutureWatcher<Scan> m_scan;
     QProcess m_thumbnail;
     QTimer m_timeout;
@@ -62,6 +72,7 @@ private:
     bool m_scanPending = false;
     bool m_scanning = false;
     bool m_retryThumbnails = false;
+    bool m_previewActive = false;
 
     void startScan();
     void render(const Scan &scan);

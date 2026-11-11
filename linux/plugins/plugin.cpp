@@ -17,7 +17,75 @@ struct Plugin {
     GLuint program = 0, vao = 0, buffer = 0;
     GLint sampler = -1, opacity = -1;
     quint64 calls = 0, uploads = 0, renderNs = 0;
+    GLuint previewFbo = 0, previewColor = 0, previewPbo = 0;
+    GLsync previewFence = nullptr;
+    QSize previewSize;
+    std::chrono::steady_clock::time_point previewAt{};
+    quint64 previewCalls = 0, previewReadbacks = 0, previewNs = 0;
 };
+// Only bounded GPU work and a completed PBO copy run here. The worker owns all I/O.
+void preview(Plugin &p, const gsr_plugin_draw_params *params) {
+    const bool requested = p.worker.previewRequested();
+    if (!requested && !p.previewFence) return;
+    const auto now = std::chrono::steady_clock::now();
+    if (!p.previewFence && now - p.previewAt < std::chrono::milliseconds(250)) return;
+    GLint readFbo, drawFbo, renderbuffer, packBuffer, alignment, rowLength, skipRows, skipPixels;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFbo); glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFbo);
+    glGetIntegerv(GL_RENDERBUFFER_BINDING, &renderbuffer); glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &packBuffer);
+    glGetIntegerv(GL_PACK_ALIGNMENT, &alignment); glGetIntegerv(GL_PACK_ROW_LENGTH, &rowLength);
+    glGetIntegerv(GL_PACK_SKIP_ROWS, &skipRows); glGetIntegerv(GL_PACK_SKIP_PIXELS, &skipPixels);
+    if (p.previewFence) {
+        const auto ready = glClientWaitSync(p.previewFence, 0, 0);
+        if (ready == GL_ALREADY_SIGNALED || ready == GL_CONDITION_SATISFIED) {
+            if (requested) {
+                glBindBuffer(GL_PIXEL_PACK_BUFFER, p.previewPbo);
+                const auto bytes = p.previewSize.width() * p.previewSize.height() * 4;
+                const void *pixels = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, bytes, GL_MAP_READ_BIT);
+                if (pixels) {
+                    QImage image(p.previewSize, QImage::Format_RGBA8888);
+                    memcpy(image.bits(), pixels, bytes); glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+                    // GSR's framebuffer row zero is the recorded top row; do not mirror it.
+                    p.worker.publishPreview(image);
+                }
+            }
+            glDeleteSync(p.previewFence); p.previewFence = nullptr;
+        } else if (ready == GL_WAIT_FAILED) { glDeleteSync(p.previewFence); p.previewFence = nullptr; }
+    } else {
+        QSize size(static_cast<int>(params->width), static_cast<int>(params->height)); size.scale(640, 640, Qt::KeepAspectRatio);
+        if (!p.previewFbo) { glGenFramebuffers(1, &p.previewFbo); glGenRenderbuffers(1, &p.previewColor); glGenBuffers(1, &p.previewPbo); }
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, p.previewFbo); glBindRenderbuffer(GL_RENDERBUFFER, p.previewColor);
+        if (size != p.previewSize) {
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, size.width(), size.height());
+            glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, p.previewColor);
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, p.previewPbo);
+            glBufferData(GL_PIXEL_PACK_BUFFER, size.width() * size.height() * 4, nullptr, GL_STREAM_READ);
+            p.previewSize = size;
+        }
+        if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE) {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(drawFbo));
+            GLint sourceRead; glGetIntegerv(GL_READ_BUFFER, &sourceRead);
+            // Read the attachment GSR is currently drawing into.
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(drawFbo));
+            GLint sourceDraw; glGetIntegerv(GL_DRAW_BUFFER0, &sourceDraw); glReadBuffer(sourceDraw);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, p.previewFbo);
+            const GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST); glDisable(GL_SCISSOR_TEST);
+            glBlitFramebuffer(0, 0, params->width, params->height, 0, 0, size.width(), size.height(), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            if (scissor) glEnable(GL_SCISSOR_TEST);
+            glReadBuffer(sourceRead); glBindFramebuffer(GL_READ_FRAMEBUFFER, p.previewFbo); glReadBuffer(GL_COLOR_ATTACHMENT0);
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, p.previewPbo);
+            glPixelStorei(GL_PACK_ALIGNMENT, 4); glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+            glPixelStorei(GL_PACK_SKIP_ROWS, 0); glPixelStorei(GL_PACK_SKIP_PIXELS, 0);
+            glReadPixels(0, 0, size.width(), size.height(), GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            p.previewFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0); p.previewAt = now;
+            ++p.previewReadbacks;
+        }
+    }
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(readFbo)); glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(drawFbo));
+    glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(renderbuffer)); glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(packBuffer));
+    glPixelStorei(GL_PACK_ALIGNMENT, alignment); glPixelStorei(GL_PACK_ROW_LENGTH, rowLength);
+    glPixelStorei(GL_PACK_SKIP_ROWS, skipRows); glPixelStorei(GL_PACK_SKIP_PIXELS, skipPixels);
+    ++p.previewCalls; p.previewNs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - now).count();
+}
 GLuint shader(GLenum type, const QByteArray &source) {
     const GLuint result = glCreateShader(type); const char *text = source.constData();
     glShaderSource(result, 1, &text, nullptr); glCompileShader(result);
@@ -30,6 +98,7 @@ GLuint shader(GLenum type, const QByteArray &source) {
 }
 void draw(const gsr_plugin_draw_params *params, void *userdata) {
     auto &p = *static_cast<Plugin *>(userdata); p.worker.snapshot(&p.frames);
+    preview(p, params);
     if (p.frames.isEmpty() && p.textures.empty()) return;
     const auto begin = std::chrono::steady_clock::now();
     GLint program, vao, buffer, active, texture, srcRgb, dstRgb, srcAlpha, dstAlpha, equationRgb, equationAlpha, unpack;
@@ -81,7 +150,10 @@ void draw(const gsr_plugin_draw_params *params, void *userdata) {
     if (scissor) glEnable(GL_SCISSOR_TEST);
     ++p.calls; p.renderNs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - begin).count();
 }
-bool damaged(void *userdata) { return !static_cast<Plugin *>(userdata)->frames.isEmpty(); }
+bool damaged(void *userdata) {
+    const auto &p = *static_cast<Plugin *>(userdata);
+    return !p.frames.isEmpty() || p.worker.previewRequested() || p.previewFence;
+}
 }
 
 extern "C" bool gsr_plugin_init(const gsr_plugin_init_params *params, gsr_plugin_init_return *ret) {
@@ -114,8 +186,11 @@ extern "C" bool gsr_plugin_init(const gsr_plugin_init_params *params, gsr_plugin
 }
 extern "C" void gsr_plugin_deinit(void *userdata) {
     std::unique_ptr<Plugin> p(static_cast<Plugin *>(userdata));
+    if (p->previewFence) glDeleteSync(p->previewFence);
+    glDeleteBuffers(1, &p->previewPbo); glDeleteFramebuffers(1, &p->previewFbo); glDeleteRenderbuffers(1, &p->previewColor);
     for (auto &entry : p->textures) glDeleteTextures(1, &entry.second.id);
     glDeleteBuffers(1, &p->buffer); glDeleteVertexArrays(1, &p->vao); glDeleteProgram(p->program);
-    fprintf(stderr, "Shadowless overlay metrics: draws=%llu uploads=%llu mean_cpu_us=%.2f\n",
-        static_cast<unsigned long long>(p->calls), static_cast<unsigned long long>(p->uploads), p->calls ? p->renderNs / (1000. * p->calls) : 0.);
+    fprintf(stderr, "Shadowless overlay metrics: draws=%llu uploads=%llu mean_cpu_us=%.2f preview_readbacks=%llu preview_mean_cpu_us=%.2f\n",
+        static_cast<unsigned long long>(p->calls), static_cast<unsigned long long>(p->uploads), p->calls ? p->renderNs / (1000. * p->calls) : 0.,
+        static_cast<unsigned long long>(p->previewReadbacks), p->previewCalls ? p->previewNs / (1000. * p->previewCalls) : 0.);
 }

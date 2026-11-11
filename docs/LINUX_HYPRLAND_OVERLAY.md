@@ -44,3 +44,21 @@ GSR 6.1.5 produced external-texture errors when its plugin pipeline tried
 to draw certain hardware cursor textures. The application excludes the
 mouse cursor from recordings made with the composition plugin. The five
 final capture cases completed without those errors.
+
+## Cursor diagnosis (2026-11-11)
+
+`GsrOptions::arguments()` in `linux/capture/gsr_capture.cpp` explicitly adds
+`-cursor no` whenever `overlayPlugin` is set. `Controller::toggleCapture()` always
+sets that plugin, including with composition disabled and with an empty scene,
+because it also provides the live capture preview. Therefore the missing cursor
+is an intentional capture argument, not a clip-player rendering issue.
+`GsrTests::captureArguments` asserts this behavior.
+
+The local historical `.qa/hyprland-overlay/live/capture.log` contains repeated
+`gsr_color_conversion_draw: external texture not loaded` errors with the plugin
+loaded; the subsequent `no-cursor.log` run completes without them. GSR installed
+for this diagnosis reports version 6.1.5. These establish why the workaround exists;
+they do not prove which upstream code needs changing or whether newer GSR fixes it.
+No cursor workaround was removed and no new desktop recording was made for this
+diagnosis. Restoring cursor capture needs a hardware check of the plugin/cursor
+combination, including empty and disabled scenes, before changing the argument.

@@ -7,9 +7,14 @@ if [[ -z ${SHADOWLESS_LAYERSHELL_PREFIX:-} && -f "$project_root/.qa/deps/usr/lib
 fi
 mkdir -p -- "$build_dir"
 cd -- "$build_dir"
-qmake6 "$project_root/linux/Shadowless.pro"
+qmake6 "$project_root/linux/Shadowless.pro" "SHADOWLESS_PUBLIC_UPDATES=${SHADOWLESS_PUBLIC_UPDATES:-false}"
 make qmake_all
 make -j"${SHADOWLESS_BUILD_JOBS:-4}"
 ./tests/shadowless-gsr-tests
 ./tests/overlays/shadowless-overlay-tests
 DBUS_SESSION_BUS_ADDRESS=unix:path=/dev/null QT_QPA_PLATFORM=offscreen ./tests/ui/shadowless-ui-tests
+./tests/player/shadowless-player-tests
+QT_QPA_PLATFORM=offscreen ./tests/playback/shadowless-playback-tests
+QT_QPA_PLATFORM=offscreen ./tests/preview/shadowless-preview-tests
+./tests/desktop_entry/shadowless-desktop-entry-check
+./tests/updates/shadowless-update-tests

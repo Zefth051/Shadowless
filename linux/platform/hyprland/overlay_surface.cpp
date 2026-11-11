@@ -28,6 +28,13 @@ void OverlaySurface::prepare(QWidget *widget, bool passive) {
         surface->setDesiredSize(QSize(0, 0));
     }
 }
+void OverlaySurface::setPosition(QWidget *widget, const QString &position) {
+    auto *surface = LayerShellQt::Window::get(widget->windowHandle());
+    const bool left = position.endsWith("left"), bottom = position.startsWith("bottom");
+    surface->setAnchors(LayerShellQt::Window::Anchors(bottom ? LayerShellQt::Window::AnchorBottom : LayerShellQt::Window::AnchorTop) |
+                        (left ? LayerShellQt::Window::AnchorLeft : LayerShellQt::Window::AnchorRight));
+    surface->setMargins(QMargins(left ? 18 : 0, bottom ? 0 : 18, left ? 0 : 18, bottom ? 18 : 0));
+}
 void OverlaySurface::show(QWidget *widget) {
     auto *screen = QApplication::screenAt(QCursor::pos());
     if (!screen) screen = QApplication::primaryScreen();
