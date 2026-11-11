@@ -28,16 +28,16 @@
 **Files:** `linux/app/update_service.{h,cpp}`, app/controller/build project files,
 `linux/tests/updates/`, `linux/packaging/build_appimage.py`.
 
-- [ ] Add Qt tests for release selection, URL trust, digest validation and atomic replacement; run before implementation.
-- [ ] Implement release discovery/download with bounded asynchronous networking and QSaveFile installation.
-- [ ] Add tray update action, startup checks for public builds, version/build configuration and packaging verification.
-- [ ] Run `./linux/build.sh` and Python packaging tests.
+- [x] Add Qt tests for release selection, URL trust, digest validation and atomic replacement; run before implementation.
+- [x] Implement release discovery/download with bounded asynchronous networking and QSaveFile installation.
+- [x] Add tray update action, startup checks for public builds, version/build configuration and packaging verification.
+- [x] Run `./linux/build.sh` and Python packaging tests.
 
 ### Task 2: Publication documentation and review
 
 **Files:** platform READMEs, `docs/FEATURES.md`, `docs/AI_DEVELOPMENT.md`, notices/audit and release workflows.
 
-- [ ] Document platform features, AI development and exact remaining redistribution requirements.
-- [ ] Run secret scanner tests/history scans, Windows update QA, workflow parsing and diff checks.
-- [ ] Commit reviewed files separately on each branch, create repository, push only both platform refs and verify remote SHAs.
+- [x] Document platform features, AI development and exact remaining redistribution requirements.
+- [x] Run secret scanner tests/history scans, Windows update QA, workflow parsing and diff checks.
+- [x] Commit reviewed files separately on each branch, create repository, push only both platform refs and verify remote SHAs.
 - [ ] Run release builds where feasible; report any actual build/license blocker.
