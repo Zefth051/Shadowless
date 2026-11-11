@@ -13,7 +13,7 @@ does not replace its authorship or imply upstream endorsement.
 | Captail/Shadowless | GPL-2.0-or-later; upstream history | Exact modified source and build scripts |
 | Windows OBS 32.2.2 | Pinned acquisition; GPL-2.0-or-later | OBS sources, native modifications and transitive notices |
 | Windows FFmpeg | Script selects `win64-lgpl` builds | Exact build configuration, LGPL texts and corresponding sources |
-| Windows libmpv | Pinned `v0.41.0-1023-g69e63f425`; DLL contains LGPL-2.1-or-later notices | Confirm entire build and dependency configuration; strings alone are insufficient |
+| Windows libmpv | Pinned `git-bcde6b93cc`; full binary build licensing pending verification | Confirm entire build and dependency configuration; strings alone are insufficient |
 | Qt 6 | Local 6.12.0 declares LGPL-3.0-only / GPL-3.0-only options | Compatible distribution route, Qt/third-party notices and library replacement as applicable |
 | Linux FFmpeg | Local `2:9.0.2-2.1` declares **GPL-3.0-only** | Assess bundle under GPLv3-compatible terms; exact source/configuration |
 | Linux libmpv | Local `1:0.41.0-6.1` declares GPL-2.0-or-later AND LGPL-2.1-or-later | Audit complete dependency closure |
