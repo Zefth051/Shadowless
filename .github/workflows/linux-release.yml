@@ -41,6 +41,8 @@ jobs:
         shell: bash
         run: |
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          # checkout's temporary HOME does not persist Git ownership trust into container steps.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           python3 tools/check_secrets.py --history
           if [[ "$SHADOWLESS_PUBLIC_UPDATES" == true && '${{ github.event.repository.private }}' == true ]]; then
             echo 'Public updates require a public repository; no private tokens belong in applications.'
