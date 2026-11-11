@@ -55,3 +55,20 @@ this does not validate native OBS or an installed Windows application. Workflow
 YAML and project/XAML XML parse. Native Windows installer execution and clean-host
 Hyprland capture remain required. Actual network update/install across two releases
 has not yet been exercised.
+
+## GitHub execution follow-up
+
+Both platform branches were pushed and `windows` selected as the default. GitHub's
+repository safety and agent-context checks passed. Initial release attempts exposed
+container Git ownership trust and missing Git executable modes; both are fixed.
+The old mpv/FFmpeg release downloads had expired upstream. Windows now pins mpv
+`bcde6b93cc` (2026-11-11) and FFmpeg `n9.0.2-49-gc179411bbb`; archives were downloaded
+and independently SHA-256 verified against their upstream asset digests. The
+Windows dependency-pin validator passes. The upstream FFmpeg license was previously
+dropped by acquisition; a reproduced failure now passes after preserving that text,
+and the Windows release workflow checks it in the final Portable package.
+
+Local AppImage `linux-0.2.4-publication` was rebuilt with update code, AI disclosure
+and GNU license texts; its published checksum file verifies and extracted startup
+reports `shadowless 0.2.4`. Cloud release builds are tracked in GitHub Actions;
+private drafts remain subject to the binary distribution audit above.

@@ -47,7 +47,7 @@ public libobs headers used to compile the module.
 - Project: https://ffmpeg.org/
 - Windows build: https://github.com/BtbN/FFmpeg-Builds
 - Build: `n9.0.2-49-gc179411bbb`, LGPL shared/static variants
-- License: GNU Lesser General Public License 2.1 or later; optional components retain their own licenses
+- License: the selected Windows archive includes LGPL-3.0; optional components retain their own licenses. Its original license text is preserved as `LICENSE.FFmpeg.txt`.
 
 `tools/AcquireFfmpegRuntime.ps1` downloads a pinned, SHA-256-verified build. Shadowless uses it for clip metadata, thumbnails, and non-destructive trimming.
 
