@@ -1,0 +1,20 @@
+name: Repository safety
+on:
+  push:
+    branches: [linux, windows]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test the scanner
+        run: python3 -m unittest discover -s tools/tests -p test_check_secrets.py
+      - name: Check current files, index and reachable history
+        run: python3 tools/check_secrets.py --history

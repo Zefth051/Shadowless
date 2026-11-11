@@ -2,9 +2,10 @@
 
 ## Channels
 
-Portable ZIP and Setup share ordinary desktop behavior. This fork disables
-official release checks, downloads, and self-update installation in `UpdateService`.
-The version button is informational; updates must be installed manually.
+Portable ZIP and Setup share ordinary desktop behavior. Private/development builds disable
+release checks, downloads and installation in `Distribution/UpdateService.cs`.
+Explicit `EnablePublicUpdates=true` builds enable repository-scoped desktop updates;
+private builds update manually.
 Microsoft Store uses MSIX identity, package-managed state, Store updates, and a
 separate Partner Center release workflow.
 
@@ -15,7 +16,8 @@ separate Partner Center release workflow.
   `ApplicationData` paths for Store builds.
 - `StorePackageLifecycle` responds to package update/removal lifetime events.
 - `Autostart` uses the channel-appropriate mechanism.
-- `UpdateService.SelfUpdateEnabled` is false in this fork, including forced checks.
+- `UpdateService.SelfUpdateEnabled` defaults to false, including forced checks;
+  `SHADOWLESS_PUBLIC_UPDATES` enables it only for explicit public builds.
 - `DiagnosticLogExporter` sanitizes local diagnostic context before a bug form
   is opened; logs and recordings are never attached automatically.
 - Portable builds include `ExportDiagnostics.cmd` for a sanitized local ZIP.
@@ -52,7 +54,9 @@ Run `./tools/TestPortableLayout.ps1` for the Portable folder contract. Add
 directory, and exit codes through `tools/PortableRuntimeQa` without opening UI.
 
 Run `dotnet run --project tools/ForkUpdateQa -c Release` to verify fork update
-checks and installation entry points stay blocked.
+private-build checks and installation entry points stay blocked. Run
+`dotnet run --project tools/PublicUpdateQa -c Release` for public-build policy,
+package-root resolution, URL trust and Store isolation.
 
 Run `TestStoreLifecycleIsolation.ps1`, `TestStoreFfmpegIsolation.ps1`,
 `TestStoreNativeDependencies.ps1`, `TestStoreIconAssets.ps1`, and

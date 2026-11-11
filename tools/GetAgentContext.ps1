@@ -132,12 +132,12 @@ $areas = @{
             "docs/agent/decisions/0003-release-channels-are-independent.md"
         )
         Paths = @(
-            "src/Shadowless/AppDataPaths.cs",
-            "src/Shadowless/AppDistribution.cs",
+            "src/Shadowless/Distribution/AppDataPaths.cs",
+            "src/Shadowless/Distribution/AppDistribution.cs",
             "src/Shadowless/Autostart.cs",
-            "src/Shadowless/DiagnosticLogExporter.cs",
-            "src/Shadowless/StorePackageLifecycle.cs",
-            "src/Shadowless/UpdateService.cs",
+            "src/Shadowless/Diagnostics/DiagnosticLogExporter.cs",
+            "src/Shadowless/Distribution/StorePackageLifecycle.cs",
+            "src/Shadowless/Distribution/UpdateService.cs",
             "packaging/",
             "store-listing/",
             ".github/workflows/release.yml",

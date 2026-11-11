@@ -40,8 +40,12 @@ internal sealed record PreparedUpdate(
 
 internal sealed class UpdateService
 {
-    // Official releases must never replace this fork's local changes.
+    // Private/development builds must not download or overwrite local changes.
+#if SHADOWLESS_PUBLIC_UPDATES
+    internal static bool SelfUpdateEnabled { get; } = true;
+#else
     internal static bool SelfUpdateEnabled { get; } = false;
+#endif
 
     internal const string RepositoryUrl =
         "https://github.com/Zefth051/Shadowless";
@@ -50,7 +54,7 @@ internal sealed class UpdateService
         "https://github.com/Zefth051/Shadowless/issues/new?template=feature_request.yml";
 
     private const string ReleasesApiUrl =
-        "https://api.github.com/repos/Zefth051/Shadowless/releases?per_page=10";
+        "https://api.github.com/repos/Zefth051/Shadowless/releases";
     private const long MaximumAssetBytes = 512L * 1024 * 1024;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(10);
     private static readonly Regex ReleaseTagPattern = new(
@@ -71,6 +75,9 @@ internal sealed class UpdateService
         FormatVersion(CurrentVersion);
 
     private static readonly HttpClient Client = CreateClient();
+    private readonly HttpClient _checkClient;
+
+    internal UpdateService(HttpClient? checkClient = null) => _checkClient = checkClient ?? Client;
 
     private readonly SemaphoreSlim _checkGate = new(1, 1);
     private UpdateRelease? _cachedRelease;
@@ -108,36 +115,36 @@ internal sealed class UpdateService
             checkCts.CancelAfter(TimeSpan.FromSeconds(15));
             CancellationToken checkToken = checkCts.Token;
 
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                ReleasesApiUrl);
-            request.Headers.Accept.ParseAdd(
-                "application/vnd.github+json");
-            request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-
-            using HttpResponseMessage response = await Client.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                checkToken);
-            response.EnsureSuccessStatusCode();
-
-            await using Stream stream = await response.Content.ReadAsStreamAsync(
-                checkToken);
-            List<GitHubRelease>? releases =
-                await JsonSerializer.DeserializeAsync<List<GitHubRelease>>(
-                    stream,
-                    cancellationToken: checkToken);
-
             bool includePrereleases = CurrentVersion.Major == 0;
-            _cachedRelease = releases?
-                .Where(release => !release.Draft)
-                .Where(release => includePrereleases || !release.Prerelease)
-                .Select(TryMapRelease)
-                .Where(release => release is not null)
-                .Cast<UpdateRelease>()
-                .Where(release => release.Version > CurrentVersion)
-                .OrderByDescending(release => release.Version)
-                .FirstOrDefault();
+            UpdateRelease? newest = null;
+            for (int page = 1; ; page++)
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get, $"{ReleasesApiUrl}?per_page=100&page={page}");
+                request.Headers.Accept.ParseAdd("application/vnd.github+json");
+                request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
+                using HttpResponseMessage response = await _checkClient.SendAsync(
+                    request, HttpCompletionOption.ResponseHeadersRead, checkToken);
+                response.EnsureSuccessStatusCode();
+                await using Stream stream = await response.Content.ReadAsStreamAsync(checkToken);
+                List<GitHubRelease>? releases = await JsonSerializer.DeserializeAsync<List<GitHubRelease>>(
+                    stream, cancellationToken: checkToken);
+                UpdateRelease? candidate = releases?
+                    .Where(release => !release.Draft)
+                    .Where(release => includePrereleases || !release.Prerelease)
+                    .Select(TryMapRelease)
+                    .Where(release => release is not null)
+                    .Cast<UpdateRelease>()
+                    .Where(release => release.Version > CurrentVersion)
+                    .OrderByDescending(release => release.Version)
+                    .FirstOrDefault();
+                if (candidate is not null && (newest is null || candidate.Version > newest.Version))
+                    newest = candidate;
+                if (!response.Headers.TryGetValues("Link", out IEnumerable<string>? links) ||
+                    !links.Any(link => link.Contains("rel=\"next\"", StringComparison.Ordinal)))
+                    break;
+            }
+            _cachedRelease = newest;
             _lastCheckUtc = DateTime.UtcNow;
             return _cachedRelease;
         }
@@ -240,13 +247,8 @@ internal sealed class UpdateService
                 "Portable update payload is unavailable.");
         }
 
-        string targetDirectory = Path.GetFullPath(AppContext.BaseDirectory)
-            .TrimEnd(
-                Path.DirectorySeparatorChar,
-                Path.AltDirectorySeparatorChar);
-        string executablePath =
-            Environment.ProcessPath ??
-            Path.Combine(targetDirectory, "Shadowless.exe");
+        string targetDirectory = GetPackageDirectory(AppContext.BaseDirectory);
+        string executablePath = Path.Combine(targetDirectory, "Shadowless.exe");
         string updaterDirectory = Path.GetDirectoryName(update.PackagePath) ??
             throw new InvalidOperationException(
                 "Update directory is unavailable.");
@@ -372,7 +374,10 @@ internal sealed class UpdateService
             !string.Equals(
                 parsed.Host,
                 "github.com",
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.IsNullOrEmpty(parsed.UserInfo) ||
+            !parsed.IsDefaultPort ||
+            !parsed.AbsoluteUri.StartsWith(RepositoryUrl + "/", StringComparison.OrdinalIgnoreCase))
         {
             uri = null!;
             return false;
@@ -383,6 +388,11 @@ internal sealed class UpdateService
 
     private static void ValidateAsset(UpdateAsset asset)
     {
+        if (!TryCreateGitHubUri(asset.DownloadUri.AbsoluteUri, out Uri uri) ||
+            !uri.AbsolutePath.StartsWith("/Zefth051/Shadowless/releases/download/", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException("Update assets must come from this repository's releases.");
+        }
         if (asset.Size <= 0 || asset.Size > MaximumAssetBytes)
         {
             throw new InvalidDataException(
@@ -642,8 +652,19 @@ internal sealed class UpdateService
                 }
                 Start-Sleep -Milliseconds 250
               }
-              Get-ChildItem -LiteralPath {{Quote(payloadDirectory)}} |
-                Copy-Item -Destination {{Quote(targetDirectory)}} -Recurse -Force
+              # The native launcher may still hold its executable after its child exits.
+              $copyDeadline = [DateTime]::UtcNow.AddSeconds(15)
+              while ($true) {
+                try {
+                  Get-ChildItem -LiteralPath {{Quote(payloadDirectory)}} |
+                    Copy-Item -Destination {{Quote(targetDirectory)}} -Recurse -Force
+                  break
+                }
+                catch {
+                  if ([DateTime]::UtcNow -ge $copyDeadline) { throw }
+                  Start-Sleep -Milliseconds 250
+                }
+              }
               Start-Process -FilePath {{Quote(executablePath)}}
             }
             catch {
@@ -659,10 +680,19 @@ internal sealed class UpdateService
             """;
     }
 
+    internal static string GetPackageDirectory(string applicationDirectory)
+    {
+        string directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(applicationDirectory));
+        string? parent = Path.GetDirectoryName(directory);
+        return string.Equals(Path.GetFileName(directory), "runtime", StringComparison.OrdinalIgnoreCase) &&
+               parent is not null && File.Exists(Path.Combine(parent, "Shadowless.exe"))
+            ? parent
+            : directory;
+    }
+
     private static bool IsInstalledBuild()
     {
-        string applicationDirectory = Path.GetFullPath(
-            AppContext.BaseDirectory);
+        string applicationDirectory = GetPackageDirectory(AppContext.BaseDirectory);
         string installedDirectory = Path.GetFullPath(Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.LocalApplicationData),

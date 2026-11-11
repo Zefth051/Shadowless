@@ -1,5 +1,16 @@
 # Third-party notices
 
+## Captail / original project
+
+Shadowless is derived from [Captail by FaulMit](https://github.com/FaulMit/captail)
+under GNU GPL-2.0-or-later. Original authors retain their copyrights; Shadowless's
+renaming and modifications do not imply upstream endorsement. Preserve the
+original history, attribution, license and corresponding modified source.
+
+Before distributing, complete [the dependency/source audit](docs/DEPENDENCY_AUDIT.md)
+for the exact runtime builds and include all required license/copyright texts.
+Project links alone do not satisfy every redistribution requirement.
+
 Shadowless dynamically uses and may redistribute selected components from OBS Studio 32.2.2.
 
 ## OBS Studio / libobs
@@ -33,7 +44,7 @@ public libobs headers used to compile the module.
 - Project: https://mpv.io/
 - Source revision: `v0.41.0-1023-g69e63f425`
 - Native Windows build: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20260903
-- License: GNU Lesser General Public License 2.1 or later
+- License: mpv supports LGPL-2.1-or-later builds; the complete configuration and transitive licenses of this pinned binary still require verification before redistribution.
 
 Shadowless dynamically loads the replaceable `libmpv-2.dll` for embedded editor playback, hardware decoding, seeking, and local mixing of selected audio tracks. Shadowless does not bundle or launch the standalone `mpv.exe` player.
 
@@ -78,3 +89,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## License texts and development disclosure
+
+Relevant GNU license texts are included in `licenses/`. Exact component notices
+and corresponding sources remain subject to [the dependency audit](docs/DEPENDENCY_AUDIT.md).
+Shadowless is developed with AI assistance, including OpenAI Codex; this does not
+change original authorship, attribution or third-party licensing.

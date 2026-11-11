@@ -78,35 +78,25 @@ function Draw-ShadowlessMark {
         [Drawing.Color]$Color
     )
 
-    $ringWidth = [single]($Bounds.Width * 0.108)
-    $ringInset = [single]($Bounds.Width * 0.135)
-    $ringBounds = [Drawing.RectangleF]::new(
-        [single]($Bounds.Left + $ringInset),
-        [single]($Bounds.Top + $ringInset),
-        [single]($Bounds.Width - 2 * $ringInset),
-        [single]($Bounds.Height - 2 * $ringInset))
-    $pen = [Drawing.Pen]::new($Color, $ringWidth)
-    $pen.StartCap = [Drawing.Drawing2D.LineCap]::Round
-    $pen.EndCap = [Drawing.Drawing2D.LineCap]::Round
+    $source = [Drawing.Image]::FromFile((Join-Path $repoRoot "src/Shadowless/Assets/ShadowlessMoon.png"))
+    $attributes = [Drawing.Imaging.ImageAttributes]::new()
+    $matrix = [Drawing.Imaging.ColorMatrix]::new()
+    $matrix.Matrix00 = (255 - $Color.R) / 156.0
+    $matrix.Matrix01 = (255 - $Color.G) / 156.0
+    $matrix.Matrix02 = (255 - $Color.B) / 156.0
+    $matrix.Matrix11 = 0
+    $matrix.Matrix22 = 0
+    $matrix.Matrix40 = 1 - $matrix.Matrix00
+    $matrix.Matrix41 = 1 - $matrix.Matrix01
+    $matrix.Matrix42 = 1 - $matrix.Matrix02
+    $attributes.SetColorMatrix($matrix)
     try {
-        $Graphics.DrawArc($pen, $ringBounds, -72, 304)
+        $Graphics.DrawImage($source, [Drawing.Rectangle]::Round($Bounds),
+            0, 0, $source.Width, $source.Height, [Drawing.GraphicsUnit]::Pixel, $attributes)
     }
     finally {
-        $pen.Dispose()
-    }
-
-    $dotSize = [single]($Bounds.Width * 0.145)
-    $dotBrush = [Drawing.SolidBrush]::new($Color)
-    try {
-        $Graphics.FillEllipse(
-            $dotBrush,
-            [single]($Bounds.Left + ($Bounds.Width - $dotSize) / 2),
-            [single]($Bounds.Top + ($Bounds.Height - $dotSize) / 2),
-            $dotSize,
-            $dotSize)
-    }
-    finally {
-        $dotBrush.Dispose()
+        $attributes.Dispose()
+        $source.Dispose()
     }
 }
 
@@ -156,7 +146,7 @@ function New-ShadowlessMaster {
             [single]($Size - 2 * $markInset),
             [single]($Size - 2 * $markInset))
         $markColor = if ($Transparent) {
-            [Drawing.Color]::FromArgb(255, 69, 201, 167)
+            [Drawing.Color]::FromArgb(255, 99, 224, 189)
         }
         else {
             [Drawing.Color]::FromArgb(255, 99, 224, 189)
@@ -437,7 +427,7 @@ Create a premium abstract 16:9 Microsoft Store super banner for Shadowless, a li
 
 ## Targeted symbol edit prompt
 
-Replace only the central circular arrow with Shadowless's brand motif: a thick mint circular ring with one clean gap near the upper-right, rounded ends, and a solid mint capture dot centered inside. Remove the arrowhead. Preserve composition, graphite background, timeline, waveform, frame trails, lighting, colors, and all other elements. No text or watermark.
+Replace only the central circular arrow with the pixel moon and stars from `src/Shadowless/Assets/ShadowlessMoon.png`, tinted mint with pale highlights. Preserve composition, graphite background, timeline, waveform, frame trails, lighting, colors, and all other elements. No text or watermark.
 '@
 [IO.File]::WriteAllText(
     (Join-Path $outputRoot "GENERATION-NOTES.md"),

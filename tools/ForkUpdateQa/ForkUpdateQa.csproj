@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/Shadowless/UpdateService.cs" Link="UpdateService.cs" />
+    <Compile Include="../../src/Shadowless/Distribution/UpdateService.cs" Link="UpdateService.cs" />
   </ItemGroup>
 </Project>

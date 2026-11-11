@@ -12,6 +12,16 @@ on:
         required: true
         default: true
         type: boolean
+      enable_public_updates:
+        description: Enable in-app updates (public repository only)
+        required: true
+        default: false
+        type: boolean
+      publish:
+        description: Publish after validation (false creates a draft)
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -30,6 +40,7 @@ jobs:
     env:
       VERSION: ${{ inputs.version }}
       RELEASE_DIR: artifacts/release/${{ inputs.version }}
+      ENABLE_PUBLIC_UPDATES: ${{ inputs.enable_public_updates }}
 
     steps:
       - name: Validate version
@@ -37,6 +48,12 @@ jobs:
         run: |
           if ($env:VERSION -notmatch '^\d+\.\d+\.\d+$') {
             throw "Invalid semantic version: $env:VERSION"
+          }
+          if ($env:ENABLE_PUBLIC_UPDATES -eq 'true') {
+            $repository = gh api "repos/$env:GITHUB_REPOSITORY" | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0 -or $repository.private -ne $false) {
+              throw "In-app updates require a public repository; never embed a private access token."
+            }
           }
           $releases = gh release list --repo "$env:GITHUB_REPOSITORY" --limit 100 --json tagName |
             ConvertFrom-Json
@@ -76,6 +93,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - name: Check repository for sensitive data
+        shell: pwsh
+        run: python tools/check_secrets.py --history
+
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
@@ -86,6 +107,14 @@ jobs:
       - name: Acquire minimal OBS runtime
         shell: pwsh
         run: ./tools/AcquireObsRuntime.ps1
+
+      - name: Verify public and private update policies
+        shell: pwsh
+        run: |
+          dotnet run --project tools/PublicUpdateQa -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Public update QA failed." }
+          dotnet run --project tools/ForkUpdateQa -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Private update QA failed." }
 
       - name: Install verified Inno Setup compiler
         id: inno
@@ -134,6 +163,7 @@ jobs:
           ./tools/BuildRelease.ps1 `
             -Version $env:VERSION `
             -OutputDirectory $env:RELEASE_DIR `
+            -EnablePublicUpdates:($env:ENABLE_PUBLIC_UPDATES -eq 'true') `
             -InnoSetupCompiler '${{ steps.inno.outputs.compiler }}'
 
       - name: Verify Portable package
@@ -239,6 +269,7 @@ jobs:
           retention-days: 30
 
       - name: Attest release assets
+        if: github.event.repository.private == false
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4
         with:
           subject-path: |
@@ -264,6 +295,9 @@ jobs:
           )
           if ('${{ inputs.prerelease }}' -eq 'true') {
             $arguments += "--prerelease"
+          }
+          if ('${{ inputs.publish }}' -ne 'true') {
+            $arguments += "--draft"
           }
           & gh @arguments
           if ($LASTEXITCODE -ne 0) {

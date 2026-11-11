@@ -172,6 +172,18 @@ jobs:
         shell: pwsh
         run: ./tools/TestDiagnosticLogExporter.ps1
 
+      - name: Test organized distribution and update policy
+        shell: pwsh
+        run: |
+          ./tools/TestPortableLayout.ps1
+          ./tools/TestStoreLifecycleIsolation.ps1
+          dotnet run --project tools/ForkUpdateQa -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Private update policy QA failed." }
+          dotnet run --project tools/PublicUpdateQa -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Public update policy QA failed." }
+          dotnet run --project tools/DiagnosticsQa -c Release
+          if ($LASTEXITCODE -ne 0) { throw "Diagnostics QA failed." }
+
       - name: Test localization policy
         shell: pwsh
         run: |

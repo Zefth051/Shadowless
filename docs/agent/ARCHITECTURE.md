@@ -42,8 +42,11 @@ SettingsWindow / hotkeys / tray
   icons, and optional OBS process-loopback sources.
 - `ClipEditorWindow.*`, `MpvHost.cs`, `ReplayLibrary.cs`, `FfmpegAdapter.cs`:
   preview and non-destructive media workflows.
-- `AppDataPaths.cs`, `AppDistribution.cs`, `StorePackageLifecycle.cs`:
+- `Distribution/`: `AppDataPaths.cs`, `AppDistribution.cs`, `StorePackageLifecycle.cs`, `UpdateService.cs`:
   package-channel differences and local state.
+
+`Diagnostics/` groups crash persistence, log rotation, sanitized export and bug-report
+context. SDK recursive compilation retains existing namespaces; XAML stays in place.
 
 ## Cross-cutting invariants
 

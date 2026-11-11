@@ -8,7 +8,9 @@ param(
 
     [string]$InnoSetupCompiler = "",
 
-    [switch]$SkipInstaller
+    [switch]$SkipInstaller,
+
+    [switch]$EnablePublicUpdates
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,7 +70,8 @@ dotnet publish $project `
     -p:PublishTrimmed=false `
     -p:DebugType=None `
     -p:DebugSymbols=false `
-    -p:ContinuousIntegrationBuild=true
+    -p:ContinuousIntegrationBuild=true `
+    -p:EnablePublicUpdates=$($EnablePublicUpdates.IsPresent.ToString().ToLowerInvariant())
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE."
 }
@@ -83,6 +86,10 @@ if ($LASTEXITCODE -ne 0) { throw "Portable launcher build failed." }
     -PublishDirectory $publishDirectory `
     -LauncherPath (Join-Path $launcherBuild "Release\Shadowless.exe")
 $runtimeDirectory = Join-Path $publishDirectory "runtime"
+foreach ($document in @("AI_DEVELOPMENT.md", "FEATURES.md", "DEPENDENCY_AUDIT.md")) {
+    Copy-Item -LiteralPath (Join-Path $repoRoot "docs/$document") -Destination (Join-Path $publishDirectory "docs/$document")
+}
+Copy-Item -LiteralPath (Join-Path $repoRoot "licenses") -Destination (Join-Path $publishDirectory "docs/licenses") -Recurse
 $shadowlessExe = Join-Path $publishDirectory "Shadowless.exe"
 if (-not (Test-Path -LiteralPath $shadowlessExe)) {
     throw "Published Shadowless.exe not found."

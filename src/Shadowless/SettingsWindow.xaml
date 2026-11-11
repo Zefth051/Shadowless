@@ -1562,6 +1562,10 @@
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
+                                <TextBlock Text="Developed with AI assistance"
+                                           TextWrapping="Wrap" Margin="9,4,9,4"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           FontSize="11"/>
                                 <Button x:Name="ReportBugButton"
                                         Style="{StaticResource AboutMenuButton}"
                                         Click="ReportBug_Click"

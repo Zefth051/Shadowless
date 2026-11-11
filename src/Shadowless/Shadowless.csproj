@@ -18,6 +18,8 @@
     <Version>0.2.4</Version>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <DefineConstants Condition="'$(MicrosoftStoreBuild)' == 'true'">$(DefineConstants);MICROSOFT_STORE</DefineConstants>
+    <EnablePublicUpdates Condition="'$(EnablePublicUpdates)' == ''">false</EnablePublicUpdates>
+    <DefineConstants Condition="'$(EnablePublicUpdates)' == 'true' and '$(MicrosoftStoreBuild)' != 'true'">$(DefineConstants);SHADOWLESS_PUBLIC_UPDATES</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

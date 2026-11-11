@@ -44,7 +44,7 @@ $expectations = [ordered]@{
     audio = "src/Shadowless/ProcessAudioReconciler.cs"
     player = "src/Shadowless/MpvHost.cs"
     ui = "src/Shadowless/SettingsWindow.xaml"
-    distribution = "src/Shadowless/AppDataPaths.cs"
+    distribution = "src/Shadowless/Distribution/AppDataPaths.cs"
     release = "docs/RELEASING.md"
 }
 

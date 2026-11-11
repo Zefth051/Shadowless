@@ -1,0 +1,80 @@
+name: Build Linux AppImage preview
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Package version X.Y.Z (creates a draft release)
+        required: true
+        type: string
+      enable_public_updates:
+        description: Enable in-app updates (public repository only)
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: write
+concurrency:
+  group: linux-appimage-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  appimage:
+    if: github.ref == 'refs/heads/linux'
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    timeout-minutes: 45
+    env:
+      VERSION: ${{ inputs.version }}
+      SHADOWLESS_VERSION: ${{ inputs.version }}
+      SHADOWLESS_PUBLIC_UPDATES: ${{ inputs.enable_public_updates }}
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Install native build dependencies
+        run: >-
+          pacman -Syu --noconfirm --needed git python qt6-base qt6-multimedia
+          qt6-wayland qt6-svg layer-shell-qt ffmpeg mpv gpu-screen-recorder
+          pkgconf mesa libpulse pipewire github-cli
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate version and repository
+        shell: bash
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          python3 tools/check_secrets.py --history
+          if [[ "$SHADOWLESS_PUBLIC_UPDATES" == true && '${{ github.event.repository.private }}' == true ]]; then
+            echo 'Public updates require a public repository; no private tokens belong in applications.'
+            exit 1
+          fi
+      - name: Build and run offline regressions
+        shell: bash
+        run: ./linux/build.sh
+      - name: Test packaging
+        run: python3 -m unittest discover -s linux/tests/packaging
+      - name: Package and smoke-test AppImage
+        run: python3 linux/packaging/build_appimage.py --version "$VERSION"
+      - name: Record build environment
+        run: pacman -Q > "artifacts/release/linux-$VERSION/BUILD_PACKAGES.txt"
+      - name: Upload private-test artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: Shadowless-${{ inputs.version }}-linux-x86_64-preview
+          path: |
+            artifacts/release/linux-${{ inputs.version }}/*.AppImage
+            artifacts/release/linux-${{ inputs.version }}/SHA256SUMS.txt
+            artifacts/release/linux-${{ inputs.version }}/BUILD_PACKAGES.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Create Linux draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "linux-v$VERSION" \
+            "artifacts/release/linux-$VERSION/Shadowless-$VERSION-linux-x86_64.AppImage" \
+            "artifacts/release/linux-$VERSION/SHA256SUMS.txt" \
+            "artifacts/release/linux-$VERSION/BUILD_PACKAGES.txt" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Shadowless Linux $VERSION (validation draft)" \
+            --notes-file docs/LINUX_RELEASE_DRAFT.md --draft --prerelease --latest=false

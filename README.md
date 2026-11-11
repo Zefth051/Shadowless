@@ -1,5 +1,17 @@
 # Shadowless - An app for clipping
 
+**Developed with AI assistance, including OpenAI Codex.** This is a fork of
+Captail by FaulMit; original attribution and licensing are retained.
+See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
+[Windows / Linux feature comparison](docs/FEATURES.md).
+
+[Windows installer / releases](https://github.com/Zefth051/Shadowless/releases) ·
+[Linux AppImage releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v) ·
+[Installation guide](docs/INSTALL.md)
+
+Private preview builds update manually. In-app updates are enabled only in
+explicit public release builds; see [private staging](docs/GITHUB.md).
+
 [Linux edition](../../tree/linux) · [Publishing both branches](docs/GITHUB.md)
 
 <p align="center">
@@ -98,7 +110,9 @@ Every Shadowless package includes .NET, libobs, FFmpeg, and the embedded preview
 > Release binaries are not Authenticode-signed yet. Windows SmartScreen may show “Unknown publisher.” Verify `SHA256SUMS.txt` and GitHub build provenance if you want to confirm the download.
 
 > [!IMPORTANT]
-> Shadowless updates are installed manually.
+> Public release builds check GitHub for updates and install a verified update
+> after confirmation. Private/development builds update manually; Store builds
+> use Microsoft Store updates.
 
 ## How do I save my first replay?
 

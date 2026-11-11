@@ -9,6 +9,11 @@ Each release contains:
 - SHA-256 checksum file
 - GitHub build-provenance attestations
 
+During private staging, releases default to **drafts**, in-app updates default
+off, and public attestations are skipped. Complete [GITHUB.md](GITHUB.md) and
+[DEPENDENCY_AUDIT.md](DEPENDENCY_AUDIT.md) before sharing packages. The Linux
+AppImage uses the separate `linux-vX.Y.Z` release channel described there.
+
 ## Create a release
 
 Before running the workflow:
@@ -39,6 +44,8 @@ From GitHub:
 3. Click **Run workflow**.
 4. Enter a semantic version without `v`, for example `0.2.0`.
 5. Keep **Pre-release** enabled while Shadowless is in preview.
+6. Keep **Publish** off to create a reviewable draft; enable it only for an approved release.
+7. Keep **Enable in-app updates** off while private. Enable only after public transition.
 
 From GitHub CLI:
 
@@ -50,7 +57,9 @@ gh workflow run release.yml `
   -f prerelease=true
 ```
 
-The workflow validates the version, builds and verifies both packages, creates tag `v<version>`, and publishes the GitHub Release using the matching changelog section.
+The workflow validates the version, builds and verifies both packages and prepares
+the `v<version>` release from the matching changelog section. It creates a draft
+unless `publish=true`; publication is an explicit workflow choice.
 
 After publishing, verify:
 
@@ -72,6 +81,10 @@ Install Inno Setup 7.1.0 or newer, then run:
 ```
 
 Output is written to `artifacts\release\0.2.0`.
+
+Add `-EnablePublicUpdates` only for an approved public desktop build. Ordinary
+and private builds retain blocked update checks/downloads/installation. Test both
+policies with `tools/ForkUpdateQa` and `tools/PublicUpdateQa` before release.
 
 ## Version rules
 

@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/Shadowless/Log.cs" Link="Log.cs" />
-    <Compile Include="../../src/Shadowless/CrashDiagnostics.cs" Link="CrashDiagnostics.cs" />
-    <Compile Include="../../src/Shadowless/DiagnosticLogExporter.cs" Link="DiagnosticLogExporter.cs" />
+    <Compile Include="../../src/Shadowless/Diagnostics/Log.cs" Link="Log.cs" />
+    <Compile Include="../../src/Shadowless/Diagnostics/CrashDiagnostics.cs" Link="CrashDiagnostics.cs" />
+    <Compile Include="../../src/Shadowless/Diagnostics/DiagnosticLogExporter.cs" Link="DiagnosticLogExporter.cs" />
   </ItemGroup>
 </Project>

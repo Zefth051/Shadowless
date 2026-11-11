@@ -11,7 +11,7 @@ $ProjectRoot = [IO.Path]::GetFullPath($ProjectRoot)
 
 $pathChecks = [ordered]@{
     "Config.cs" = "AppDataPaths.ConfigFile"
-    "Log.cs" = "AppDataPaths.LogFile"
+    "Diagnostics/Log.cs" = "AppDataPaths.LogFile"
     "ReplayLibrary.cs" = "AppDataPaths.ThumbnailDirectory"
     "ObsPluginDataCache.cs" = "AppDataPaths.ObsPluginCacheDirectory"
     "ObsReplayEngine.cs" = "AppDataPaths.ObsConfigDirectory"
@@ -28,7 +28,7 @@ foreach ($entry in $pathChecks.GetEnumerator()) {
     }
 }
 
-$pathsSource = Join-Path $ProjectRoot "AppDataPaths.cs"
+$pathsSource = Join-Path $ProjectRoot "Distribution/AppDataPaths.cs"
 if (-not (Test-Path -LiteralPath $pathsSource -PathType Leaf)) {
     throw "AppDataPaths.cs is missing."
 }
@@ -41,7 +41,7 @@ foreach ($required in @(
     }
 }
 
-$lifecycleSource = Join-Path $ProjectRoot "StorePackageLifecycle.cs"
+$lifecycleSource = Join-Path $ProjectRoot "Distribution/StorePackageLifecycle.cs"
 if (-not (Test-Path -LiteralPath $lifecycleSource -PathType Leaf)) {
     throw "StorePackageLifecycle.cs is missing."
 }
