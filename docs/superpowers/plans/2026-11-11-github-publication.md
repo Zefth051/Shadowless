@@ -40,4 +40,4 @@
 - [x] Document platform features, AI development and exact remaining redistribution requirements.
 - [x] Run secret scanner tests/history scans, Windows update QA, workflow parsing and diff checks.
 - [x] Commit reviewed files separately on each branch, create repository, push only both platform refs and verify remote SHAs.
-- [ ] Run release builds where feasible; report any actual build/license blocker.
+- [x] Run release builds where feasible; report any actual build/license blocker.

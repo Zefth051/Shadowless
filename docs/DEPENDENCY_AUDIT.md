@@ -12,7 +12,7 @@ does not replace its authorship or imply upstream endorsement.
 | --- | --- | --- |
 | Captail/Shadowless | GPL-2.0-or-later; upstream history | Exact modified source and build scripts |
 | Windows OBS 32.2.2 | Pinned acquisition; GPL-2.0-or-later | OBS sources, native modifications and transitive notices |
-| Windows FFmpeg | Script selects `win64-lgpl` builds | Exact build configuration, LGPL texts and corresponding sources |
+| Windows FFmpeg | Pinned LGPL shared/static build; upstream archive ships LGPL-3.0 | Exact build configuration, LGPL texts and corresponding sources |
 | Windows libmpv | Pinned `git-bcde6b93cc`; full binary build licensing pending verification | Confirm entire build and dependency configuration; strings alone are insufficient |
 | Qt 6 | Local 6.12.0 declares LGPL-3.0-only / GPL-3.0-only options | Compatible distribution route, Qt/third-party notices and library replacement as applicable |
 | Linux FFmpeg | Local `2:9.0.2-2.1` declares **GPL-3.0-only** | Assess bundle under GPLv3-compatible terms; exact source/configuration |
@@ -20,10 +20,11 @@ does not replace its authorship or imply upstream endorsement.
 | LayerShellQt | Local 6.8.2 library and Wayland plugin | Exact sources, build inputs and upstream notices |
 | GSR | External 6.1.5, GPL-3.0-only; plugin header used | Review header/plugin boundary and ABI; not bundled or permission-configured |
 | NAudio / H.NotifyIcon / .NET | NuGet lock file and published runtime | Dependency/runtime license and copyright texts |
+| AppImage type2 runtime | SHA-256-pinned `runtime-x86_64`, embedded ahead of the bundle | Exact runtime/dependency copyright, licenses and corresponding source as applicable |
 | Game catalog | Reduced MIT catalog with pinned source revision | Full MIT notice retained in `THIRD_PARTY_NOTICES.md` |
 
 The GPL-2.0-or-later source grant permits choosing GPLv3 where required by the
-dependency combination. Do not describe the Linux bundle as GPLv2-only or reuse
+dependency combination, including LGPLv3/GPLv3 components in either platform's bundle. Do not describe the Linux bundle as GPLv2-only or reuse
 the Windows LGPL FFmpeg notice for the system's GPL Linux build.
 
 Before sharing binaries:
