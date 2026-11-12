@@ -13,7 +13,7 @@ shared by the repository, so select the tag for your operating system.
 | Audio | Desktop/game, microphone, per-application routing and separate tracks | PipeWire desktop/microphone, application tracks and optional unassigned-PC track |
 | Clip library | Recent clips, game folders, playback and deletion | Recent clips, game-folder filters, playback and desktop Trash |
 | Editing | Trimming, audio-track selection and configurable export | Trimming, audio-track selection/merge and stream-copy export |
-| Overlays | Optional passive capture status indicator | Hyprland control panel, optional passive indicator and composited media layers |
+| Overlays | Composited media layers, live preview editor and optional passive capture status indicator | Hyprland control panel, optional passive indicator and composited media layers |
 | Shortcuts | Configurable Windows global hotkeys | Desktop portal and temporary Hyprland bindings |
 | Updates | Confirmed in-app download/install for public Setup/Portable builds | Confirmed, SHA-256-verified AppImage replacement for public builds; takes effect next launch |
 
