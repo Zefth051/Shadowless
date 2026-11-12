@@ -19,6 +19,14 @@ off, and public attestations are skipped. Complete [GITHUB.md](GITHUB.md) and
 [DEPENDENCY_AUDIT.md](DEPENDENCY_AUDIT.md) before sharing packages. The Linux
 AppImage uses the separate `linux-vX.Y.Z` release channel described there.
 
+## Linux download buttons
+
+When a new Linux candidate becomes available, update the Linux download links in
+`README.md` and `site/index.html` on both platform branches to its release page.
+Use the URL returned by `gh release view linux-vX.Y.Z --json url --jq .url`:
+draft releases have a temporary URL and require repository access. Refresh the
+links after publication. Keep Linux releases out of the Windows latest channel.
+
 ## Create a release
 
 Before running the workflow:

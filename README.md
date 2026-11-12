@@ -40,8 +40,8 @@ See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release pro
 
 <p align="center">
   <a href="https://github.com/Zefth051/Shadowless/actions/workflows/ci.yml"><img src="https://github.com/Zefth051/Shadowless/actions/workflows/ci.yml/badge.svg" alt="Build"></a>
-  <a href="https://github.com/Zefth051/Shadowless/releases"><img src="https://img.shields.io/github/v/release/Zefth051/Shadowless?include_prereleases&sort=semver&color=65d9bd" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0--or--later-65d9bd" alt="GPL-2.0-or-later"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases"><img src="https://img.shields.io/github/v/release/Zefth051/Shadowless?include_prereleases&sort=semver&color=b69af7" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0--or--later-b69af7" alt="GPL-2.0-or-later"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-252b2e" alt="Windows 10/11">
 </p>
 <p align="center">
@@ -51,6 +51,7 @@ See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release pro
 
 <p align="center">
   <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases/tag/untagged-e5258d391b46e29e7bd6"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
 </p>
 
 <p align="center">

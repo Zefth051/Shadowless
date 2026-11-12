@@ -8,9 +8,9 @@
   <rect width="1200" height="630" fill="url(#background)"/>
   <path d="M0 72H1200M0 558H1200" stroke="#293336"/>
   <circle cx="954" cy="315" r="126" fill="none" stroke="#324741" stroke-width="2"/>
-  <circle cx="954" cy="315" r="86" fill="none" stroke="#63e0bd" stroke-width="16"
+  <circle cx="954" cy="315" r="86" fill="none" stroke="#b69af7" stroke-width="16"
     stroke-linecap="round" stroke-dasharray="418 123" transform="rotate(-55 954 315)"/>
-  <circle cx="954" cy="315" r="18" fill="#63e0bd"/>
+  <circle cx="954" cy="315" r="18" fill="#b69af7"/>
   <text x="76" y="302" fill="#e7ecea" font-family="Inter, sans-serif" font-size="94" font-weight="700">Shadowless</text>
   <text x="82" y="370" fill="#a6b0b2" font-family="Inter, sans-serif" font-size="39">An app for clipping</text>
 </svg>
