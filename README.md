@@ -46,7 +46,7 @@ See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release pro
 </p>
 <p align="center">
   <strong>Save what just happened.</strong><br>
-  Lightweight, open-source instant replay for Windows — built to stay recording.
+  Lightweight, open-source instant replay for Windows and Linux — built to stay recording.
 </p>
 
 <p align="center">
