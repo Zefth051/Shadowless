@@ -1,8 +1,8 @@
 # Release and validation status
 
-Last checked: 2026-11-12. This is a private validation stage, not a published
-Shadowless release. Draft assets require repository access and permission to view
-draft releases; being able to browse source does not guarantee draft access.
+Last checked: 2026-11-12. The repository source is public. Binary packages remain
+unpublished validation drafts; no Shadowless release has been published. Draft
+assets need permission to view drafts; public source access does not grant it.
 Open Releases and select the matching draft title/tag. GitHub may change a
 draft's temporary `untagged-*` URL when its notes are edited.
 
@@ -85,7 +85,7 @@ Do not change repository visibility or publish releases solely to bypass this
 test prerequisite without explicit authorization.
 
 Fresh Windows screenshots, clean-host Linux capture and the dependency audit
-also remain release gates. Detailed prior build evidence is recorded in
+also remain binary-release gates. Detailed prior build evidence is recorded in
 [the publication review](PUBLICATION_REVIEW.md).
 
 

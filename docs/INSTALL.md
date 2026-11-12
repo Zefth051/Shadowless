@@ -1,14 +1,14 @@
 # Install Shadowless
 
-**Current status: private validation drafts only.** Setup, Portable and AppImage
-assets exist in draft releases; no release is published. Draft access requires
+**Current status: public source; no published binary release yet.** Setup,
+Portable and AppImage assets exist in unpublished validation drafts. Draft access requires
 sufficient repository permissions. See [release status](RELEASE_STATUS.md).
 Windows native package upgrades passed controlled-transport QA; see
 [the evidence and limits](WINDOWS_UPDATE_VALIDATION.md). Neither platform has
 completed the full in-app upgrade through two published releases. The
 public-update flows below still await that test.
 
-Private testers must sign in with a GitHub account granted repository access.
+Authorized draft testers must sign in with a GitHub account allowed to view drafts.
 Public downloads become available after reviewed releases are published.
 Source ZIPs are for developers, not installers.
 
@@ -29,9 +29,9 @@ separately is not required.
 For Portable, extract the entire ZIP into a writable directory and run the
 top-level `Shadowless.exe`; keep `runtime/` and `docs/` beside it.
 Existing private drafts update manually. New Windows Release builds enable
-in-app, SHA-256-verified public-release updates by default. Until the repository
-and a newer release are public, no update is accessible without GitHub credentials;
-none are embedded in the application. Store installations use Microsoft Store updates.
+in-app, SHA-256-verified updates from published final Windows releases by default.
+The repository is public, but no eligible release is published yet. No GitHub
+credentials are embedded in the application. Store installations use Microsoft Store updates.
 Preview binaries are unsigned; review the release source and checksum.
 
 ## Linux x86_64 / Hyprland

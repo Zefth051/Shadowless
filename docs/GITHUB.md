@@ -1,7 +1,8 @@
 # Publishing Shadowless on GitHub
 
-See [current packages and outstanding validation](RELEASE_STATUS.md). Both
-platform packages are attached to private drafts; no release is published.
+See [current packages and outstanding validation](RELEASE_STATUS.md). Source is
+public; platform packages remain unpublished validation drafts. Public source
+access does not grant access to draft assets.
 Real in-app upgrades on Linux and Windows remain untested.
 
 Use one GitHub repository named `Shadowless` with the description

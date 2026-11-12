@@ -26,11 +26,11 @@ GSR interface is needed. The existing 0.2.4 draft still requires host GSR.
 
 ## Current release status
 
-**Private validation drafts only; no published release.** The Windows 0.3.0 draft
+**Public source; binary releases are not published yet.** The Windows 0.3.0 draft
 contains Setup and Portable packages with final-only public updates enabled. The Linux draft contains
 `Shadowless-0.2.4-linux-x86_64.AppImage`; binaries are attached to Releases,
-not included in the source ZIP. Viewing drafts requires sufficient repository
-permissions. See [available packages and pending validation](docs/RELEASE_STATUS.md).
+not included in the source ZIP. Public source access does not grant access to
+unpublished drafts; viewing them requires sufficient repository permissions. See [available packages and pending validation](docs/RELEASE_STATUS.md).
 
 | | Windows edition | Linux edition |
 | --- | --- | --- |
