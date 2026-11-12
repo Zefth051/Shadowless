@@ -73,7 +73,7 @@ QString Settings::indicatorPosition() const {
     const auto value = m_store->value("overlay/position", "top-right").toString();
     return QStringList{"top-left", "top-right", "bottom-left", "bottom-right"}.contains(value) ? value : "top-right";
 }
-QString Settings::accent() const { return m_store->value("appearance/accent", "mint").toString(); }
+QString Settings::accent() const { return m_store->value("appearance/accent", "violet").toString(); }
 QStringList Settings::shortcutKeys() const {
     const auto keys = m_store->value("overlay/shortcuts", QStringList{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"}).toStringList();
     return keys.size() == 3 ? keys : QStringList{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"};

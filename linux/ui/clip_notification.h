@@ -18,6 +18,6 @@ private:
     QLabel *m_title, *m_detail;
     QVariantAnimation m_lifetime{this};
     Kind m_kind = Saved;
-    QColor m_accent = QColor("#63e0bd");
+    QColor m_accent = QColor("#b69af7");
 };
 }

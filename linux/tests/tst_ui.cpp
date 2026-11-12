@@ -9,6 +9,7 @@
 #include "../app/controller.h"
 #include "../capture/replay_paths.h"
 #include "../ui/clip_notification.h"
+#include "../ui/theme.h"
 #include <QCheckBox>
 #include <QComboBox>
 #include <QFileDialog>
@@ -199,7 +200,7 @@ private slots:
         int accentPixels = 0;
         for (int y = 20; y < 65; ++y) for (int x = 12; x < 60; ++x) {
             const auto pixel = image.pixelColor(x, y);
-            if (pixel.green() > 130 && pixel.green() > pixel.red() * 1.3) ++accentPixels;
+            if (pixel.blue() > 200 && pixel.red() > 140 && pixel.blue() > pixel.green() * 1.3) ++accentPixels;
         }
         QVERIFY(accentPixels > 50);
         const auto output = qEnvironmentVariable("SHADOWLESS_UI_OUTPUT");
@@ -774,6 +775,18 @@ private slots:
         QCOMPARE(options.frameRate, 75);
         QCOMPARE(options.bitrateMbps, 27);
     }
+    void violetIsDefaultAndSavedAccentsArePreserved() {
+        QTemporaryDir directory;
+        const auto path = directory.filePath("settings.ini");
+        Settings settings(path);
+        QCOMPARE(settings.accent(), "violet");
+        Dashboard dashboard(caps);
+        QCOMPARE(dashboard.palette().color(QPalette::Accent), QColor("#b69af7"));
+        QCOMPARE(accentColor("unknown"), QColor("#b69af7"));
+        QString error;
+        QVERIFY(settings.save(GsrOptions{}, {}, false, &error, keys, "mint"));
+        QCOMPARE(Settings(path).accent(), "mint");
+    }
     void migratesLegacySettingsAndPersistsAccent() {
         QTemporaryDir directory;
         QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, directory.path());
@@ -786,7 +799,7 @@ private slots:
         const auto options = settings.capture(caps);
         QCOMPARE(options.frameRate, 75);
         QCOMPARE(options.outputDirectory, "/tmp/existing-clips");
-        QCOMPARE(settings.accent(), "mint");
+        QCOMPARE(settings.accent(), "violet");
 
         SettingsPage page(caps);
         page.edit(options, false, false, keys, settings.accent());

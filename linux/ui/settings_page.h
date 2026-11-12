@@ -16,7 +16,7 @@ class SettingsPage : public QWidget {
     Q_OBJECT
 public:
     explicit SettingsPage(const GsrCapabilities &caps, QWidget *parent = nullptr);
-    void edit(const GsrOptions &options, bool indicator, bool active, const QStringList &keys, const QString &accent = "mint", const QString &position = "top-right");
+    void edit(const GsrOptions &options, bool indicator, bool active, const QStringList &keys, const QString &accent = "violet", const QString &position = "top-right");
     void showVideo();
     void showStorage();
     void showAudio();

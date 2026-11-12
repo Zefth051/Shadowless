@@ -25,9 +25,9 @@
 
             <Grid x:Name="NotificationIcon" Width="34" Height="34"
                   Margin="0,-2,0,0" VerticalAlignment="Center">
-                <Ellipse x:Name="IconRing" Stroke="#FF63E0BD" StrokeThickness="2"/>
+                <Ellipse x:Name="IconRing" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2"/>
                 <TextBlock x:Name="IconText" Text="✓"
-                           Foreground="#FF63E0BD"
+                           Foreground="{DynamicResource AccentBrush}"
                            FontFamily="Segoe UI Variable Display"
                            FontSize="16" FontWeight="Bold"
                            HorizontalAlignment="Center"
@@ -53,7 +53,7 @@
                     Margin="0,0,0,-13"
                     CornerRadius="1" Background="#22283136">
                 <Border x:Name="LifeBar"
-                        Background="#FF63E0BD"
+                        Background="{DynamicResource AccentBrush}"
                         RenderTransformOrigin="0,0.5"
                         HorizontalAlignment="Stretch">
                     <Border.RenderTransform>

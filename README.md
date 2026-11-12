@@ -13,6 +13,11 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Linux AppImage releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v) ·
 [Installation guide](docs/INSTALL.md)
 
+<p align="center">
+  <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases/tag/untagged-e5258d391b46e29e7bd6"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
+</p>
+
 ## Current release status
 
 **Private validation drafts only; no published release.** The Windows draft

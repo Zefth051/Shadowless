@@ -420,7 +420,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     });
     auto *escape = new QShortcut(QKeySequence(Qt::Key_Escape), this);
     connect(escape, &QShortcut::activated, this, &Dashboard::escape);
-    setAccent("mint");
+    setAccent("violet");
     setShortcutKeys({"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"});
     resize(1280, 720);
     home();

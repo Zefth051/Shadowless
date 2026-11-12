@@ -10,9 +10,9 @@ struct Accent {
     QString name, color, hover, dim, text;
 };
 const QList<Accent> accents{
+    {"violet", "#b69af7", "#c8b2fa", "#785ac6", "#160f2b"},
     {"mint", "#63e0bd", "#7de8cb", "#2ea184", "#0b201a"},
     {"blue", "#64b5f6", "#82c4fa", "#357ebd", "#081a28"},
-    {"violet", "#b69af7", "#c8b2fa", "#785ac6", "#160f2b"},
     {"rose", "#ff6666", "#ff8585", "#c54242", "#270b0b"},
     {"amber", "#f5b94c", "#f8c96e", "#b97d1e", "#251702"},
 };

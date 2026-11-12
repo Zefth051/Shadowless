@@ -63,7 +63,7 @@ public sealed class Config
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Shadowless");
     public bool OrganizeReplaysByGame { get; set; }
     /// <summary>"mint", "blue", "violet", "rose", or "amber".</summary>
-    public string AccentColor { get; set; } = "mint";
+    public string AccentColor { get; set; } = "violet";
     public int PlayerVolume { get; set; } = 100;
     [JsonIgnore]
     public static string ConfigPath => AppDataPaths.ConfigFile;
@@ -277,7 +277,7 @@ public sealed class Config
         AccentColor = AllowedText(
             AccentColor,
             ["mint", "blue", "violet", "rose", "amber"],
-            "mint");
+            "violet");
         PlayerVolume = Math.Clamp(PlayerVolume, 0, 100);
     }
 

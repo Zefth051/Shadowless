@@ -20,13 +20,13 @@
   <Color x:Key="ColorTextSecondary">#FF8B969D</Color>
   <Color x:Key="ColorTextMuted">#FF5D6870</Color>
   <Color x:Key="ColorTextValue">#FFD7DEDD</Color>
-  <Color x:Key="ColorAccent">#FF63E0BD</Color>
-  <Color x:Key="ColorAccentHover">#FF7DE8CB</Color>
-  <Color x:Key="ColorAccentDim">#FF2EA184</Color>
-  <Color x:Key="ColorOnAccent">#FF0B201A</Color>
-  <Color x:Key="ColorAccentSubtle">#2463E0BD</Color>
-  <Color x:Key="ColorAccentChipBg">#1263E0BD</Color>
-  <Color x:Key="ColorAccentChipBorder">#4063E0BD</Color>
+  <Color x:Key="ColorAccent">#FFB69AF7</Color>
+  <Color x:Key="ColorAccentHover">#FFC8B2FA</Color>
+  <Color x:Key="ColorAccentDim">#FF785AC6</Color>
+  <Color x:Key="ColorOnAccent">#FF160F2B</Color>
+  <Color x:Key="ColorAccentSubtle">#24B69AF7</Color>
+  <Color x:Key="ColorAccentChipBg">#12B69AF7</Color>
+  <Color x:Key="ColorAccentChipBorder">#40B69AF7</Color>
   <Color x:Key="ColorError">#FFE0A163</Color>
   <Color x:Key="ColorToggleOffTrack">#FF2A3136</Color>
   <Color x:Key="ColorToggleKnob">#FFEEF4F1</Color>
@@ -928,7 +928,7 @@
   </Style>
 
   <!-- ============ SEGMENT CONTROL ============ -->
-  <!-- Buttons inside the dark BgControl strip: checked = AccentSubtle background + mint text -->
+  <!-- Buttons inside the dark BgControl strip: checked = AccentSubtle background + accent text -->
   <Style x:Key="SegmentButton" TargetType="RadioButton">
     <Setter Property="Foreground" Value="#FF7D8891"/>
     <Setter Property="FontFamily" Value="{StaticResource FontUi}"/>

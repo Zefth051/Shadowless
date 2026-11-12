@@ -14,6 +14,14 @@ Each release contains:
 - SHA-256 checksum file
 - GitHub build-provenance attestations
 
+## Linux download buttons
+
+When a new Linux candidate becomes available, update the Linux download links in
+`README.md` and `site/index.html` on both platform branches to its release page.
+Use the URL returned by `gh release view linux-vX.Y.Z --json url --jq .url`:
+draft releases have a temporary URL and require repository access. Refresh the
+links after publication. Keep Linux releases out of the Windows latest channel.
+
 ## Create a release
 
 Before running the workflow:

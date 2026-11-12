@@ -38,7 +38,7 @@ internal static class ThemeManager
         if (Application.Current is null)
             return;
         if (!Palettes.TryGetValue(name ?? "", out Palette? palette))
-            palette = Palettes["mint"];
+            palette = Palettes["violet"];
 
         ResourceDictionary resources = Application.Current.Resources;
         resources["AccentBrush"] = Brush(palette.Accent);
@@ -54,7 +54,7 @@ internal static class ThemeManager
     internal static string IconAssetName(string? name) =>
         IconAssets.TryGetValue(name ?? "", out string? assetName)
             ? assetName
-            : IconAssets["mint"];
+            : IconAssets["violet"];
 
     private static BitmapFrame LoadIcon(string? name)
     {
