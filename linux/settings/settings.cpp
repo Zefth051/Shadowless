@@ -69,6 +69,21 @@ OverlayScene Settings::scene() const {
     return scene;
 }
 bool Settings::indicator() const { return m_store->value("overlay/indicator", false).toBool(); }
+bool Settings::launchAtLogin() const { return m_store->value("startup/launchAtLogin", false).toBool(); }
+bool Settings::startReplayOnLaunch() const { return m_store->value("startup/startReplayOnLaunch", false).toBool(); }
+bool Settings::saveStartup(bool launch, bool replay, QString *error) {
+    const auto previousLaunch = m_store->value("startup/launchAtLogin", false);
+    const auto previousReplay = m_store->value("startup/startReplayOnLaunch", false);
+    m_store->setValue("startup/launchAtLogin", launch);
+    m_store->setValue("startup/startReplayOnLaunch", replay);
+    m_store->sync();
+    if (m_store->status() != QSettings::NoError) {
+        m_store->setValue("startup/launchAtLogin", previousLaunch);
+        m_store->setValue("startup/startReplayOnLaunch", previousReplay);
+        *error = "Cannot write configuration: " + m_store->fileName(); return false;
+    }
+    error->clear(); return true;
+}
 QString Settings::indicatorPosition() const {
     const auto value = m_store->value("overlay/position", "top-right").toString();
     return QStringList{"top-left", "top-right", "bottom-left", "bottom-right"}.contains(value) ? value : "top-right";

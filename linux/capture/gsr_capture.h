@@ -7,8 +7,14 @@
 #include <QProcess>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QCoreApplication>
+#include <QDir>
 
 namespace Shadowless {
+
+inline QString managedGsrProgram() {
+    return QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../engine/gpu-screen-recorder");
+}
 
 class CaptureAudio;
 
@@ -21,7 +27,7 @@ struct GsrCapabilities {
     QString version, vendor, displayServer;
     QStringList codecs, sources;
     static GsrCapabilities parse(const QString &output);
-    static GsrCapabilities probe(QString *error, const QString &program = "gpu-screen-recorder");
+    static GsrCapabilities probe(QString *error, const QString &program = managedGsrProgram());
 };
 
 struct GsrOptions {
@@ -62,7 +68,7 @@ class GsrCapture : public QObject {
     Q_OBJECT
 public:
     explicit GsrCapture(QObject *parent = nullptr,
-                        const QString &program = "gpu-screen-recorder");
+                        const QString &program = managedGsrProgram());
     ~GsrCapture() override;
     bool running() const { return m_ready; }
     bool active() const { return m_preparingAudio || m_process.state() != QProcess::NotRunning; }

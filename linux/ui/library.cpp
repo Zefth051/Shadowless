@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <QFileInfo>
 #include <QFile>
+#include <QDesktopServices>
+#include <QUrl>
 #include <QLabel>
 #include <QLocale>
 #include <QPushButton>
@@ -276,6 +278,19 @@ void Library::render(const Scan &scan) {
         line->addWidget(play);
         connect(play, &QPushButton::clicked, this, [this, path = clip.path] {
             emit clipRequested(path);
+        });
+        auto *folder = new QPushButton;
+        folder->setObjectName("openClipFolder");
+        folder->setIcon(QIcon(":/shadowless/icons/folder.svg"));
+        folder->setAccessibleName("Open containing folder for " + file.fileName());
+        folder->setToolTip("Open containing folder");
+        folder->setFixedWidth(32);
+        line->addWidget(folder);
+        connect(folder, &QPushButton::clicked, this, [this, path = clip.path] {
+            if (!QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()))) {
+                m_deleteError->setText("Could not open the clip's folder.");
+                m_deleteError->show();
+            }
         });
         auto *remove = new QPushButton;
         remove->setObjectName("deleteClip");

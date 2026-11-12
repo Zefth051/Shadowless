@@ -18,7 +18,7 @@ does not replace its authorship or imply upstream endorsement.
 | Linux FFmpeg | Local `2:9.0.2-2.1` declares **GPL-3.0-only** | Assess bundle under GPLv3-compatible terms; exact source/configuration |
 | Linux libmpv | Local `1:0.41.0-6.1` declares GPL-2.0-or-later AND LGPL-2.1-or-later | Audit complete dependency closure |
 | LayerShellQt | Local 6.8.2 library and Wayland plugin | Exact sources, build inputs and upstream notices |
-| GSR | External 6.1.5, GPL-3.0-only; plugin header used | Review header/plugin boundary and ABI; not bundled or permission-configured |
+| GSR | Bundled 6.1.7, GPL-3.0-only; maintained modified source and matching plugin header | Engine source, license, provenance and build inputs are bundled; review header/plugin ABI and exact dependency notices. Old 0.2.4 draft still uses external 6.1.5 |
 | NAudio / H.NotifyIcon / .NET | NuGet lock file and published runtime | Dependency/runtime license and copyright texts |
 | AppImage type2 runtime | SHA-256-pinned `runtime-x86_64`, embedded ahead of the bundle | Exact runtime/dependency copyright, licenses and corresponding source as applicable |
 | Game catalog | Reduced MIT catalog with pinned source revision | Full MIT notice retained in `THIRD_PARTY_NOTICES.md` |

@@ -15,7 +15,7 @@ struct AudioCatalog {
     QList<AudioDevice> outputs, inputs;
     QStringList applications;
     QString error;
-    static AudioCatalog probe(const QString &program = "gpu-screen-recorder");
+    static AudioCatalog probe(const QString &program = managedGsrProgram());
 };
 
 class CaptureAudio : public QObject {

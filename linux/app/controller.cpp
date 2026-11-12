@@ -1,4 +1,5 @@
 #include "controller.h"
+#include "desktop_entry.h"
 #include "../ui/dashboard.h"
 #include "../ui/settings_page.h"
 #include "../ui/theme.h"
@@ -93,7 +94,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         else m_options.levels.systemVolume = volume;
         updateAudioLevels();
     });
-    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active(), m_shortcutKeys, m_accent, m_indicatorPosition); });
+    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active(), m_shortcutKeys, m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch()); });
     connect(m_dashboard.get(), &Dashboard::overlayEnabled, this, [this](bool enabled) {
         auto scene = m_scene;
         scene.enabled = enabled;
@@ -101,6 +102,16 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     });
     connect(m_dashboard.get(), &Dashboard::editorRequested, this, [this] { m_dashboard->overlayEditor()->edit(m_scene); });
     connect(m_dashboard->settingsPage(), &SettingsPage::saved, this, [this](const GsrOptions &options, bool indicator, const QStringList &keys, const QString &accent, const QString &position) {
+        auto *page = m_dashboard->settingsPage();
+        const bool previousLaunch = m_settings.launchAtLogin();
+        const auto startupError = page->launchAtLogin() == previousLaunch ? QString{} :
+            configureAutostart(page->launchAtLogin(), QCoreApplication::applicationFilePath());
+        if (!startupError.isEmpty()) { page->showError(startupError); return; }
+        QString error;
+        if (!m_settings.saveStartup(page->launchAtLogin(), page->startReplayOnLaunch(), &error)) {
+            if (page->launchAtLogin() != previousLaunch) configureAutostart(previousLaunch, QCoreApplication::applicationFilePath());
+            page->showError(error); return;
+        }
         m_indicatorPosition = position;
         OverlaySurface::setPosition(m_indicator.get(), position);
         if (m_accent != accent) setAccent(accent);
@@ -147,6 +158,15 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_validating = false; const auto error = m_validation.result(); finishApply(error.isEmpty(), error);
     });
     refresh(); if (!background) show(); m_shortcuts.start();
+    if (m_settings.launchAtLogin()) {
+        const auto error = configureAutostart(true, QCoreApplication::applicationFilePath());
+        if (!error.isEmpty()) m_dashboard->notice(error);
+    }
+    if (m_settings.startReplayOnLaunch()) QTimer::singleShot(0, this, [this] {
+        if (m_quitting || m_engine.active()) return;
+        m_options.continuousRecording = false;
+        toggleCapture();
+    });
 }
 Controller::~Controller() = default;
 void Controller::show() { if (!m_quitting) { m_dashboard->refreshLibrary(m_options.outputDirectory); OverlaySurface::show(m_dashboard.get()); } }

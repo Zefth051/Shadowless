@@ -1,5 +1,5 @@
 #include "compositor.h"
-#include <gsr/plugin.h>
+#include <plugin/plugin.h>
 #define GL_GLEXT_PROTOTYPES
 #include <GL/gl.h>
 #include <QFileInfo>

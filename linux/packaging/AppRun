@@ -5,7 +5,13 @@ bundle=$(CDPATH= cd -- "$bundle" && pwd)
 
 check_dependencies() {
     missing=0
-    for tool in gpu-screen-recorder ffmpeg ffprobe hyprctl pactl pw-loopback; do
+    for tool in gpu-screen-recorder gpu-screen-recorder.bin gsr-kms-server; do
+        if [ ! -x "$bundle/usr/engine/$tool" ]; then
+            printf 'Shadowless needs its managed recording engine: %s\n' "$tool" >&2
+            missing=1
+        fi
+    done
+    for tool in ffmpeg ffprobe hyprctl pactl pw-loopback; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             printf 'Shadowless needs the host tool: %s\n' "$tool" >&2
             missing=1
@@ -22,7 +28,7 @@ case "${1:-}" in --help|-h) ;; *) check_dependencies || exit 1 ;; esac
 # Host capture/audio tools must not inherit the bundled Qt/FFmpeg libraries.
 export SHADOWLESS_HOST_PATH="$PATH"
 export SHADOWLESS_HOST_LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}"
-export PATH="$bundle/usr/libexec/shadowless-host:$PATH"
+export PATH="$bundle/usr/engine:$bundle/usr/libexec/shadowless-host:$PATH"
 export LD_LIBRARY_PATH="$bundle/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export QT_PLUGIN_PATH="$bundle/usr/plugins"
 export QT_QPA_PLATFORM_PLUGIN_PATH="$bundle/usr/plugins/platforms"

@@ -4,6 +4,7 @@ TEMPLATE = lib
 CONFIG += shared c++17 link_pkgconfig
 TARGET = shadowless-overlay
 PKGCONFIG += libavformat libavcodec libavutil libswscale
+INCLUDEPATH += $$PWD/../third_party/gpu-screen-recorder
 LIBS += -lGL -lpthread
 SOURCES += plugin.cpp compositor.cpp ../overlays/layer.cpp ../overlays/media.cpp
 HEADERS += compositor.h ../overlays/layer.h ../overlays/media.h

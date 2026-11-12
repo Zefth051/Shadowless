@@ -4,6 +4,24 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-12
+
+### Added
+
+- **Managed recording engine:** Linux builds compile and bundle Shadowless's maintained GSR 6.1.7 engine and matching helper. A separate GSR installation or GSR interface is no longer needed. The source is included in the Linux branch for reviewed engine changes.
+- **Startup options:** Independently choose whether Shadowless opens at login and whether Instant Clip buffering starts whenever Shadowless launches. Both options are off by default; login registration supports XDG sessions and default Hyprland Lua/legacy configuration paths.
+- **Clip folders:** Open a clip's containing folder directly from its row, between playback and deletion.
+
+### Upgrade notes
+
+- The older Linux 0.2.4 draft is unchanged and still requires host GSR. New source does not update an existing AppImage automatically.
+- Direct KMS capture can request administrator authorization through Polkit. Shadowless itself stays unprivileged, and no permanent capture capabilities are installed.
+
+### Known limitations
+
+- Offline tests and AppImage startup checks passed; live capture and authorization with the bundled helper, a real login cycle, and clean-host distribution compatibility still need validation.
+- HEX colors, game-folder correctness, refreshed icons/UI, Discord presence, editable input overlays, compression and cross-platform recording/audio parity remain on the shared roadmap.
+
 ## [0.2.4] - 2026-09-23
 
 ### Added

@@ -206,6 +206,8 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program)
     });
     connect(&m_process, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
         readLog();
+        for (const auto &name : QDir(m_runtime.path()).entryList({"shadowless-kms-*"}, QDir::Dirs | QDir::NoDotAndDotDot))
+            QDir(m_runtime.filePath(name)).removeRecursively();
         m_readyTimer.stop(); m_startTimeout.stop(); m_stopTimeout.stop();
         m_audio->stop();
         const bool expected = m_stopping && code == 0 && status == QProcess::NormalExit;
@@ -276,6 +278,7 @@ void GsrCapture::startRecorder(const QString &output, const QString &input) {
     QFile::remove(overlaySocketPath() + ".preview");
     auto environment = QProcessEnvironment::systemEnvironment();
     environment.insert("SHADOWLESS_OVERLAY_SOCKET", overlaySocketPath());
+    environment.insert("SHADOWLESS_GSR_KMS_RUNTIME", m_runtime.path());
     m_process.setProcessEnvironment(environment);
     m_ready = false; m_stopping = false; m_stopQueued = false; m_replayRecording = false;
     m_logTail.clear();

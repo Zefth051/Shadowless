@@ -1,6 +1,7 @@
 # Linux AppImage preview
 
-This packages the native Qt application, its overlay plugin, and dynamically
+This packages the native Qt application, its overlay plugin, the maintained GSR
+6.1.7 engine and matching KMS helper, and dynamically
 discovered Qt/FFmpeg/libmpv libraries. It is an x86_64 **private-test artifact**,
 not a claim of compatibility with every Linux distribution.
 
@@ -24,14 +25,21 @@ on a clean target host before distributing.
 ## Host requirements
 
 Hyprland on native Wayland, compatible graphics drivers, PipeWire/pipewire-pulse,
-`gpu-screen-recorder` with the tested IPC/plugin API (6.1.5), `ffmpeg`, `ffprobe`,
+`ffmpeg`, `ffprobe`,
 `hyprctl`, `pactl` and `pw-loopback` must be installed through the distribution.
-GSR and the KMS helper are not bundled, installed, elevated or reconfigured.
-The media overlay plugin must be tested with the host GSR/FFmpeg ABI combination.
+GSR does not need to be installed. Only the recording engine and helper are
+included, without GSR UI/services. The overlay uses the bundled source header.
+Direct KMS capture may ask for Polkit administrator authentication. The managed
+launcher copies its matching helper and private libdrm to a fresh private `/tmp`
+directory so root can access them outside FUSE. Helper RUNPATH resolves the private
+library after Polkit clears environment paths. Staged files are removed on exit;
+no permanent capabilities or system installation are performed.
 The host tools run with the original host library search path, separate from
 the bundled application's libraries. The host FFmpeg executable remains necessary
 for editor/thumbnail subprocesses; the bundled FFmpeg libraries serve Qt/libmpv
-and the application. This avoids silently shipping host capture services.
+and the application. The managed recorder uses bundled libraries, while editor/audio tools use host
+libraries. Engine source, licenses, provenance, hashes and build inputs are under
+`usr/share/doc/shadowless/` in the AppImage.
 
 Download the AppImage and `SHA256SUMS.txt` from the Linux release:
 

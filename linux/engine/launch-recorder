@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+engine=$(CDPATH= cd -- "${0%/*}" && pwd)
+if [ ! -x "$engine/gpu-screen-recorder.bin" ] || [ ! -x "$engine/gsr-kms-server" ] || [ ! -d "$engine/helper-libs" ]; then
+    printf 'Shadowless managed recording engine is incomplete; reinstall or rebuild Shadowless.\n' >&2
+    exit 1
+fi
+# Polkit cannot read user-only AppImage FUSE mounts or retain LD_LIBRARY_PATH.
+umask 077
+helper_dir=$(mktemp -d "${SHADOWLESS_GSR_KMS_RUNTIME:-/tmp}/shadowless-kms-XXXXXXXXXX")
+trap 'rm -rf -- "$helper_dir"' EXIT
+mkdir "$helper_dir/lib"
+cp -- "$engine/gsr-kms-server" "$helper_dir/gsr-kms-server"
+cp -L -- "$engine/helper-libs/"* "$helper_dir/lib/"
+export SHADOWLESS_GSR_KMS_SERVER="$helper_dir/gsr-kms-server"
+export SHADOWLESS_GSR_PARENT_PID=$$
+"$engine/gpu-screen-recorder.bin" "$@" &
+recorder_pid=$!
+trap 'kill -INT "$recorder_pid" 2>/dev/null || true' INT TERM HUP
+status=0
+wait "$recorder_pid" || status=$?
+# A trapped signal interrupts wait before the recorder finishes flushing files.
+if kill -0 "$recorder_pid" 2>/dev/null; then
+    status=0
+    wait "$recorder_pid" || status=$?
+fi
+exit "$status"

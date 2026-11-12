@@ -34,8 +34,8 @@ downloadable update for the application.
 Windows checks when its dashboard/settings window first loads. The UI offers the new version;
 the user starts the update, which downloads and checks SHA-256 before invoking
 Setup for installed builds or the copy/relaunch helper for Portable builds.
-This is not unattended installation. Windows `0.x` builds include prereleases;
-major versions above zero skip prereleases. Drafts and Linux tags are excluded.
+This is not unattended installation. The Windows branch now only offers published
+final releases, including on `0.x` builds. Prereleases, drafts and Linux tags are excluded.
 
 Linux public-enabled builds check shortly after startup; the tray also provides
 **Check for updates**. The user confirms the download. Shadowless checks the

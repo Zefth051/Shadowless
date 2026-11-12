@@ -32,6 +32,9 @@
 #include <algorithm>
 #include <clocale>
 #include <QScopeGuard>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QLayout>
 
 using namespace Shadowless;
 Q_DECLARE_METATYPE(Shadowless::GsrOptions)
@@ -45,7 +48,60 @@ class UiTests : public QObject {
         for (auto *candidate : parent->findChildren<QPushButton *>()) if (candidate->text() == text) return candidate;
         return nullptr;
     }
+    QUrl m_openedUrl;
 private slots:
+    void captureOpenedUrl(const QUrl &url) { m_openedUrl = url; }
+    void startupOptionsAreIndependentAndPersisted() {
+        QTemporaryDir directory;
+        const auto path = directory.filePath("settings.ini");
+        Settings settings(path);
+        QVERIFY(!settings.launchAtLogin());
+        QVERIFY(!settings.startReplayOnLaunch());
+        SettingsPage page(caps);
+        GsrOptions options; options.source = "DP-1"; options.outputDirectory = directory.path();
+        page.edit(options, false, false, keys);
+        auto *login = page.findChild<QCheckBox *>("launchAtLogin");
+        auto *replay = page.findChild<QCheckBox *>("startReplayOnLaunch");
+        QVERIFY(login); QVERIFY(replay);
+        for (bool launch : {false, true}) for (bool start : {false, true}) {
+            page.edit(options, false, false, keys, "violet", "top-right", launch, start);
+            QCOMPARE(login->isChecked(), launch);
+            QCOMPARE(replay->isChecked(), start);
+            QVERIFY(replay->isEnabled());
+            QString error;
+            QVERIFY(settings.saveStartup(page.launchAtLogin(), page.startReplayOnLaunch(), &error));
+            QCOMPARE(Settings(path).launchAtLogin(), launch);
+            QCOMPARE(Settings(path).startReplayOnLaunch(), start);
+        }
+    }
+    void failedStartupSavePreservesCurrentValues() {
+        QTemporaryDir directory;
+        QFile blocked(directory.filePath("not-a-directory"));
+        QVERIFY(blocked.open(QIODevice::WriteOnly)); blocked.write("keep"); blocked.close();
+        Settings settings(blocked.fileName() + "/settings.ini");
+        QString error;
+        QVERIFY(!settings.saveStartup(true, true, &error));
+        QVERIFY(!error.isEmpty());
+        QVERIFY(!settings.launchAtLogin());
+        QVERIFY(!settings.startReplayOnLaunch());
+    }
+    void libraryOpensContainingGameFolder() {
+        QTemporaryDir directory;
+        QVERIFY(QDir(directory.path()).mkpath("A game"));
+        QFile file(directory.filePath("A game/replay.mp4"));
+        QVERIFY(file.open(QIODevice::WriteOnly)); file.write("clip"); file.close();
+        Library library; library.show(); library.refresh(directory.path());
+        QTRY_VERIFY(library.findChild<QPushButton *>("openClipFolder"));
+        auto *folder = library.findChild<QPushButton *>("openClipFolder");
+        auto *remove = library.findChild<QPushButton *>("deleteClip");
+        QVERIFY(remove); QVERIFY(!folder->icon().isNull());
+        QCOMPARE(folder->parentWidget()->layout()->indexOf(folder) + 1,
+                 folder->parentWidget()->layout()->indexOf(remove));
+        QDesktopServices::setUrlHandler("file", this, "captureOpenedUrl");
+        const auto cleanup = qScopeGuard([] { QDesktopServices::unsetUrlHandler("file"); });
+        folder->click();
+        QCOMPARE(m_openedUrl.toLocalFile(), directory.filePath("A game"));
+    }
     void libraryKeepsNewestTwentyInEveryCollection() {
         QTemporaryDir directory;
         const auto origin = QDateTime::fromSecsSinceEpoch(1700000000);

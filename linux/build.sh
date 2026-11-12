@@ -6,6 +6,7 @@ if [[ -z ${SHADOWLESS_LAYERSHELL_PREFIX:-} && -f "$project_root/.qa/deps/usr/lib
     export SHADOWLESS_LAYERSHELL_PREFIX="$project_root/.qa/deps/usr"
 fi
 mkdir -p -- "$build_dir"
+"$project_root/linux/engine/build.sh"
 cd -- "$build_dir"
 qmake6 "$project_root/linux/Shadowless.pro" "SHADOWLESS_PUBLIC_UPDATES=${SHADOWLESS_PUBLIC_UPDATES:-false}"
 make qmake_all

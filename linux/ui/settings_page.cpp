@@ -242,6 +242,15 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     connect(picker, &QFileDialog::rejected, this, [pages, settings] { pages->setCurrentWidget(settings); });
     m_pages = pages;
 
+    auto *startup = section(bodyLayout, "STARTUP");
+    m_launchAtLogin = new QCheckBox("Launch Shadowless at login");
+    m_launchAtLogin->setObjectName("launchAtLogin");
+    startup->addRow(m_launchAtLogin);
+    m_startReplayOnLaunch = new QCheckBox("Start Instant Clip when Shadowless launches");
+    m_startReplayOnLaunch->setObjectName("startReplayOnLaunch");
+    startup->addRow(m_startReplayOnLaunch);
+    startup->addRow(note("Replay starts on any launch, including manual launches. Both options are independent."));
+
     auto *appearance = section(bodyLayout, "APPEARANCE");
     m_accent = new ClickToAdjust<QComboBox>;
     m_accent->setObjectName("accentColor");
@@ -341,7 +350,12 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
         emit saved(options, m_indicator->isChecked(), keys, m_accent->currentData().toString(), m_indicatorPosition->currentData().toString());
     });
 }
-void SettingsPage::edit(const GsrOptions &o, bool indicator, bool active, const QStringList &keys, const QString &accent, const QString &position) {
+bool SettingsPage::launchAtLogin() const { return m_launchAtLogin->isChecked(); }
+bool SettingsPage::startReplayOnLaunch() const { return m_startReplayOnLaunch->isChecked(); }
+void SettingsPage::showError(const QString &error) { m_error->setText(error); }
+void SettingsPage::edit(const GsrOptions &o, bool indicator, bool active, const QStringList &keys, const QString &accent, const QString &position, bool launch, bool replay) {
+    m_launchAtLogin->setChecked(launch);
+    m_startReplayOnLaunch->setChecked(replay);
     m_indicatorPosition->setCurrentIndex(qMax(0, m_indicatorPosition->findData(position)));
     m_accent->setCurrentIndex(qMax(0, m_accent->findData(accent)));
     m_pages->setCurrentIndex(0);

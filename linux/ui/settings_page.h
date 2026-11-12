@@ -16,7 +16,10 @@ class SettingsPage : public QWidget {
     Q_OBJECT
 public:
     explicit SettingsPage(const GsrCapabilities &caps, QWidget *parent = nullptr);
-    void edit(const GsrOptions &options, bool indicator, bool active, const QStringList &keys, const QString &accent = "violet", const QString &position = "top-right");
+    void edit(const GsrOptions &options, bool indicator, bool active, const QStringList &keys, const QString &accent = "violet", const QString &position = "top-right", bool launchAtLogin = false, bool startReplayOnLaunch = false);
+    bool launchAtLogin() const;
+    bool startReplayOnLaunch() const;
+    void showError(const QString &error);
     void showVideo();
     void showStorage();
     void showAudio();
@@ -38,6 +41,7 @@ private:
     QCheckBox *m_system, *m_microphone, *m_separate, *m_indicator;
     QLineEdit *m_folder;
     QCheckBox *m_organizeByGame;
+    QCheckBox *m_launchAtLogin, *m_startReplayOnLaunch;
     QLabel *m_error, *m_shortcuts, *m_activeNotice;
     QList<QKeySequenceEdit *> m_keys;
     QTableWidget *m_applications;

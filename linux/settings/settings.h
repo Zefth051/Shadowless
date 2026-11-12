@@ -13,6 +13,9 @@ public:
     QString accent() const;
     QString indicatorPosition() const;
     QStringList shortcutKeys() const;
+    bool launchAtLogin() const;
+    bool startReplayOnLaunch() const;
+    bool saveStartup(bool launchAtLogin, bool startReplayOnLaunch, QString *error);
     bool save(const GsrOptions &options, const OverlayScene &scene, bool indicator, QString *error,
               const QStringList &keys = {"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"}, const QString &accent = {}, const QString &position = "top-right");
 private:

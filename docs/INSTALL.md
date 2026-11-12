@@ -14,27 +14,41 @@ Source ZIPs are for developers, not installers.
 
 ## Windows x64
 
+In Settings, **Start with Windows** launches Shadowless at sign-in. The separate
+**Start Instant Replay when Shadowless launches** option starts replay buffering
+on any normal launch, including a manual one; it is off until explicitly enabled.
+
 Open [Releases](https://github.com/Zefth051/Shadowless/releases), choose a Windows
 `vX.Y.Z` release and download `Shadowless-X.Y.Z-Setup-win-x64.exe`. Run the
 installer, then launch Shadowless. Windows 10 version 2004 or Windows 11 x64
 and a supported hardware encoder are required; .NET is included.
 
+Windows capture uses bundled OBS components (`libobs`); installing OBS Studio
+separately is not required.
+
 For Portable, extract the entire ZIP into a writable directory and run the
 top-level `Shadowless.exe`; keep `runtime/` and `docs/` beside it.
-Private builds update manually. Public-enabled desktop builds offer an in-app,
-SHA-256-verified update. Store installations use Microsoft Store updates.
+Existing private drafts update manually. New Windows Release builds enable
+in-app, SHA-256-verified public-release updates by default. Until the repository
+and a newer release are public, no update is accessible without GitHub credentials;
+none are embedded in the application. Store installations use Microsoft Store updates.
 Preview binaries are unsigned; review the release source and checksum.
 
 ## Linux x86_64 / Hyprland
+
+New Linux builds include Shadowless's maintained GSR 6.1.7 recording engine and
+matching KMS helper. No separate GSR installation or GSR interface is required.
+The older Linux 0.2.4 draft still needs an installed GSR; replacing source does
+not change that existing binary.
 
 Open [Linux releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v)
 and download an AppImage and its checksum file. Match the release's glibc baseline
 to your system; local CachyOS/Arch previews are not validated on older distributions.
 
-Install GSR 6.1.5 with IPC/plugin support, FFmpeg/ffprobe, Hyprland/hyprctl,
+Install FFmpeg/ffprobe, Hyprland/hyprctl,
 PipeWire/pipewire-pulse, `pactl` and `pw-loopback` through your distribution.
-Graphics drivers and capture permissions must already work; the AppImage does not
-install or configure privileged helpers.
+Graphics drivers must work. Direct KMS capture with the managed engine may request
+administrator authorization through Polkit; Shadowless's interface stays unprivileged.
 
 Keep the AppImage in a permanent location, replace `X.Y.Z` below, and run:
 

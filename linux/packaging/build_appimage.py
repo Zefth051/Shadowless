@@ -58,7 +58,9 @@ def acquire_tools(cache):
 
 def stage_appdir(build, appdir):
     required = [build / "app/shadowless", build / "plugins/libshadowless-overlay.so"]
-    for path in required:
+    engine_required = [build / "engine" / name for name in [
+        "gpu-screen-recorder", "gpu-screen-recorder.bin", "gsr-kms-server", "helper-libs/libdrm.so.2", "GSR_PROVENANCE.md"]]
+    for path in required + engine_required:
         if not path.is_file():
             raise FileNotFoundError(f"Build the Linux application and plugin first: {path.name}")
     appdir.mkdir()  # Never merge or clean a caller's existing directory.
@@ -66,6 +68,12 @@ def stage_appdir(build, appdir):
         (appdir / directory).mkdir(parents=True)
     for source, target in zip(required, ["usr/bin/shadowless", "usr/plugins/libshadowless-overlay.so"]):
         shutil.copy2(source, appdir / target)
+    shutil.copytree(build / "engine", appdir / "usr/engine")
+    docs = appdir / "usr/share/doc/shadowless"
+    shutil.copytree(REPO / "linux/third_party/gpu-screen-recorder", docs / "gsr-source")
+    shutil.copytree(REPO / "linux/engine", docs / "gsr-build-inputs")
+    shutil.copy2(REPO / "linux/third_party/GSR_PROVENANCE.md", docs / "GSR_PROVENANCE.md")
+    shutil.copy2(REPO / "linux/third_party/GSR_SOURCES.sha256", docs / "GSR_SOURCES.sha256")
     shutil.copy2(PACKAGING / "AppRun", appdir / "AppRun")
     (appdir / "AppRun").chmod(0o755)
     desktop = "io.github.zefth051.Shadowless"
@@ -77,7 +85,7 @@ def stage_appdir(build, appdir):
     for name in ["AI_DEVELOPMENT.md", "FEATURES.md", "DEPENDENCY_AUDIT.md"]:
         shutil.copy2(REPO / "docs" / name, appdir / "usr/share/doc/shadowless" / name)
     shutil.copytree(REPO / "licenses", appdir / "usr/share/doc/shadowless/licenses")
-    for tool in ["gpu-screen-recorder", "ffmpeg", "ffprobe", "hyprctl", "pactl", "pw-loopback"]:
+    for tool in ["ffmpeg", "ffprobe", "hyprctl", "pactl", "pw-loopback"]:
         target = appdir / "usr/libexec/shadowless-host" / tool
         shutil.copy2(PACKAGING / "host-tool", target)
         target.chmod(0o755)
@@ -135,6 +143,11 @@ def main():
         env = dict(os.environ, ARCH="x86_64")
         subprocess.run([str(tools["linuxdeploy"]), "--appdir", str(appdir), "--deploy-deps-only", str(appdir / "usr"),
                         "--custom-apprun", str(PACKAGING / "AppRun")], env=env, check=True)
+        # Deployment tools may rewrite RUNPATHs; the staged privileged helper must
+        # still resolve its private closure after Polkit removes library variables.
+        subprocess.run(["patchelf", "--set-rpath", "$ORIGIN/lib", str(appdir / "usr/engine/gsr-kms-server")], check=True)
+        for library in (appdir / "usr/engine/helper-libs").iterdir():
+            subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(library)], check=True)
         # linuxdeploy may generate its own AppRun; preserve our dependency/host boundary.
         (appdir / "AppRun").unlink(missing_ok=True)
         shutil.copy2(PACKAGING / "AppRun", appdir / "AppRun")

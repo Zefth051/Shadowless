@@ -13,8 +13,11 @@ Qt, LayerShellQt, FFmpeg and libmpv retain their own licenses and third-party
 notices. The local Linux FFmpeg package declares GPL-3.0-only; the Windows LGPL
 build notice below does not describe Linux libraries. Qt 6's LGPLv3/GPLv3 routes
 also require a compatible combined distribution. The source grant permits the
-GPLv3 route where required. GSR remains an external GPL-3.0-only process, while
-its plugin/header boundary still needs review. See [the dependency audit](docs/DEPENDENCY_AUDIT.md)
+GPLv3 route where required. GSR 6.1.7 is a bundled GPL-3.0-only engine in a separate process. Its maintained
+source is in `linux/third_party/gpu-screen-recorder/`, with its full LICENSE and
+upstream copyrights. Local changes and exact upstream revision are recorded in
+`linux/third_party/GSR_PROVENANCE.md`. AppImages include the modified engine
+source and engine build inputs. The plugin/header boundary still needs review. See [the dependency audit](docs/DEPENDENCY_AUDIT.md)
 before distributing either source/binary combination or an AppImage. A list of
 project names is not a substitute for the exact required texts and sources.
 

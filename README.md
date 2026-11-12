@@ -13,6 +13,12 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Linux AppImage releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v) ·
 [Installation guide](docs/INSTALL.md)
 
+**Capture engines:** Windows uses OBS components (`libobs`), included in the
+installer and Portable package; OBS Studio does not need to be installed.
+New Linux builds bundle a Shadowless-managed GPU Screen Recorder (GSR) engine,
+built from source maintained in the Linux branch. No separate GSR installation or
+GSR interface is needed. The existing 0.2.4 draft still requires host GSR.
+
 <p align="center">
   <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
   <a href="https://github.com/Zefth051/Shadowless/releases/tag/untagged-e5258d391b46e29e7bd6"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
@@ -28,10 +34,10 @@ permissions. See [available packages and pending validation](docs/RELEASE_STATUS
 
 | | Windows edition | Linux edition |
 | --- | --- | --- |
-| Interface / capture | WPF/.NET and libobs | Qt 6 and external GPU Screen Recorder |
+| Interface / capture | WPF/.NET and libobs | Qt 6 and a managed GSR engine |
 | Target | Windows 10/11 x64 | Hyprland on native Wayland, x86_64 |
 | Capture | Desktop and direct game capture | Monitor capture through GSR |
-| Distribution | Setup EXE / Portable ZIP | AppImage; host GSR, PipeWire and FFmpeg required |
+| Distribution | Setup EXE / Portable ZIP | AppImage; managed GSR, host PipeWire and FFmpeg |
 | Real in-app upgrade | Not yet tested | Not yet tested |
 
 The editions have separate interfaces and platform requirements. See the

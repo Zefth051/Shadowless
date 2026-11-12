@@ -1,7 +1,7 @@
 # Shadowless for Linux
 
 Native C++17 / Qt 6 application for **Hyprland on Wayland**. Shadowless owns its
-control overlay, settings, library, and media-layer editor. An external
+control overlay, settings, library, and media-layer editor. A bundled, source-built
 `gpu-screen-recorder` process performs capture/encoding/replay buffering; a
 Shadowless plugin composites media layers.
 The initial capture experiment is documented in `docs/LINUX_GSR_SPIKE.md`.
@@ -12,8 +12,11 @@ Required: GNU Make, a C++17 compiler, qmake6, Qt 6 Core/Gui/Widgets/Network/DBus
 Concurrent/Test/Multimedia/MultimediaWidgets/OpenGLWidgets, libmpv development files,
 the Qt SVG and WebP image plugins (`qt6-svg` / `qt6-imageformats` on Arch), the native Qt Wayland plugin, LayerShellQt (tested 6.8.2), OpenGL
 headers, FFmpeg development libraries (`libavformat`, `libavcodec`, `libavutil`,
-`libswscale`), FFmpeg/ffprobe executables, and GSR with IPC/plugin support
-(tested 6.1.5, including `/usr/include/gsr/plugin.h`).
+`libswscale`), FFmpeg/ffprobe executables, Meson, Ninja, patchelf, Vulkan headers,
+and the GSR development dependencies in its Meson file (X11 extensions, Wayland,
+libdrm, libva, libcap, PulseAudio, PipeWire and D-Bus). No GSR package is needed:
+the recorder, helper and matching plugin header come from the maintained
+6.1.7 source in `linux/third_party/gpu-screen-recorder/`.
 Desktop and microphone capture also use PipeWire, pipewire-pulse, `pw-loopback`
 and `pactl`.
 
@@ -23,7 +26,7 @@ and `pactl`.
 ./linux/run.sh --background
 ```
 
-`build.sh` builds the app, plugin, and offline tests under `.qa/linux-build`.
+`build.sh` builds the recording engine, app, plugin, and offline tests under `.qa/linux-build`.
 Set `SHADOWLESS_BUILD_DIR` to select another output directory. An installed
 LayerShellQt is used normally; `SHADOWLESS_LAYERSHELL_PREFIX=/path/to/prefix` selects
 a development installation with `include/` and `lib/`. An existing local
@@ -33,6 +36,15 @@ the Windows solution.
 
 Closing/hiding the panel keeps the application and capture running. Use the
 tray menu or `./linux/run.sh --quit` to exit cleanly. Capture starts off.
+See [startup settings](../docs/STARTUP.md) for the independent login and replay options.
+
+Shadowless always launches its own engine, even if another GSR is installed.
+No GSR graphical interface or service is included. Direct KMS capture can request
+administrator authentication through Polkit for the matching helper only. The
+launcher stages that helper and its private libdrm outside AppImage's FUSE mount,
+then removes them on exit. It does not run Shadowless as root or install permanent
+capabilities. Engine changes are released together with Shadowless; provenance,
+local modifications and build input hashes are in `linux/third_party/`.
 
 ## Controls and configuration
 
@@ -268,7 +280,8 @@ Shadowless as developed with AI assistance, retaining Captail attribution.
 
 Shadowless source retains GPL-2.0-or-later. Qt, LayerShellQt, FFmpeg and other
 libraries retain their respective licenses; the local FFmpeg build is GPL-3.0-only,
-so the Linux bundle needs a GPLv3-compatible distribution assessment. GSR remains an external GPL-3.0-only
-program; its source was not copied into this implementation. The LayerShellQt
+so the Linux bundle needs a GPLv3-compatible distribution assessment. The bundled GSR
+engine is GPL-3.0-only; its complete modified source, license and build inputs are
+included in the AppImage's documentation directory. The LayerShellQt
 development package in ignored `.qa/` is not a distributable. Review notices,
 licenses, and source requirements when preparing an actual package.
