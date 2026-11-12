@@ -99,6 +99,7 @@
   <sys:String x:Key="L.Size.5GB">5 GB</sys:String>
   <sys:String x:Key="L.Size.10GB">10 GB</sys:String>
   <sys:String x:Key="L.Replay.StartWindows">Zacznij od Windowsa</sys:String>
+  <sys:String x:Key="L.Replay.StartOnLaunch">Uruchom klipy po otwarciu Shadowless</sys:String>
 
   <sys:String x:Key="L.Video.Source">Źródło</sys:String>
   <sys:String x:Key="L.Video.Desktop">Pulpit</sys:String>

@@ -26,6 +26,7 @@ public sealed class Config
     /// <summary>"replay" or "recording".</summary>
     public string CaptureMode { get; set; } = "replay";
     public bool ReplayEnabled { get; set; } = true;
+    public bool StartReplayOnLaunch { get; set; }
     public bool WarnWhenGameStartsWithReplayOff { get; set; } = true;
     public bool ShowRecordingIndicator { get; set; } = true;
     public bool CaptureOverlaysEnabled { get; set; }
@@ -181,6 +182,15 @@ public sealed class Config
         return clone;
     }
 
+    public void ApplyLaunchPreferences()
+    {
+        ReplayEnabled = StartReplayOnLaunch;
+        if (StartReplayOnLaunch)
+            CaptureMode = "replay";
+        // A capture-recovery process reloads the effective state from disk.
+        Save();
+    }
+
     public void CopyFrom(Config source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -194,6 +204,7 @@ public sealed class Config
         OverlayHotkey = source.OverlayHotkey;
         CaptureMode = source.CaptureMode;
         ReplayEnabled = source.ReplayEnabled;
+        StartReplayOnLaunch = source.StartReplayOnLaunch;
         WarnWhenGameStartsWithReplayOff = source.WarnWhenGameStartsWithReplayOff;
         ShowRecordingIndicator = source.ShowRecordingIndicator;
         CaptureOverlaysEnabled = source.CaptureOverlaysEnabled;

@@ -1,6 +1,45 @@
 using Shadowless;
 
 int passed = 0;
+string configDirectory = Path.Combine(Path.GetTempPath(), "shadowless-startup-qa-" + Guid.NewGuid());
+AppDataPaths.ConfigFile = Path.Combine(configDirectory, "config.json");
+try
+{
+var persistedLaunch = new Config
+{
+    StartReplayOnLaunch = true,
+    ReplayEnabled = false,
+    CaptureMode = "recording",
+};
+persistedLaunch.Save();
+persistedLaunch.ApplyLaunchPreferences();
+var recoveredLaunch = Config.Load();
+Check(recoveredLaunch.ReplayEnabled && recoveredLaunch.CaptureMode == "replay",
+    "A recovery process must reload the effective replay startup state from disk");
+foreach (bool enabled in new[] { false, true })
+{
+    var launch = System.Text.Json.JsonSerializer.Deserialize<Config>(
+        "{\"StartReplayOnLaunch\":" + (enabled ? "true" : "false") +
+        ",\"ReplayEnabled\":" + (enabled ? "false" : "true") +
+        ",\"CaptureMode\":\"recording\"}")!.Clone();
+    var saved = System.Text.Json.JsonSerializer.SerializeToElement(launch);
+    Check(saved.TryGetProperty("StartReplayOnLaunch", out var preference) && preference.GetBoolean() == enabled,
+        "Replay startup preference must survive loading and staged settings cloning");
+    launch.ApplyLaunchPreferences();
+    Check(launch.ReplayEnabled == enabled && (!enabled || launch.CaptureMode == "replay"),
+        "Launch must follow the replay startup preference instead of the last runtime state or recording mode");
+    var diskState = Config.Load();
+    Check(diskState.ReplayEnabled == enabled && (!enabled || diskState.CaptureMode == "replay"),
+        "Recovery reload must preserve the applied startup preference for enabled and disabled replay");
+}
+Check(!new Config().StartReplayOnLaunch &&
+    !System.Text.Json.JsonSerializer.Deserialize<Config>("{}")!.StartReplayOnLaunch,
+    "Automatic replay startup must require opt-in for new and existing configurations");
+var running = new Config();
+var nextLaunch = running.Clone();
+nextLaunch.StartReplayOnLaunch = true;
+Check(running.PipelineEquals(nextLaunch) && nextLaunch.PipelineEquals(running),
+    "Changing the next-launch preference must not restart capture in the current session");
 Check(new Config().GpuPreference == "high-performance",
     "New configurations must prefer discrete graphics");
 Check(System.Text.Json.JsonSerializer.Deserialize<Config>("{}")!.GpuPreference == "high-performance",
@@ -73,6 +112,12 @@ foreach (Action<Config> change in new Action<Config>[]
     Check(!before.PipelineEquals(after), "encoder/routing changes must still rebuild");
 }
 Console.WriteLine($"AUDIO_SOURCE_CONFIG PASS: {passed} cases");
+}
+finally
+{
+    if (Directory.Exists(configDirectory))
+        Directory.Delete(configDirectory, recursive: true);
+}
 
 void Check(bool condition, string message)
 {
@@ -81,12 +126,12 @@ void Check(bool condition, string message)
     passed++;
 }
 
-// File persistence and WPF localization are outside these pipeline classification tests.
+// Keep config persistence isolated from the real user profile.
 namespace Shadowless
 {
     internal static class AppDataPaths
     {
-        internal static string ConfigFile => throw new NotSupportedException();
+        internal static string ConfigFile { get; set; } = "";
     }
     internal static class Localization
     {

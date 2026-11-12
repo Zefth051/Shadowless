@@ -16,8 +16,9 @@ code and open issues before claiming a problem still exists.
 
 ## Hardware validation
 
-- RTX 40/50 paths have public testing.
-- Older NVIDIA, AMD, and Intel paths need broader real-world coverage.
+- Shadowless capture has been exercised on Linux / Hyprland with a GTX 1650.
+- Native Windows capture, other NVIDIA adapters, AMD, and Intel need validation.
+  Upstream Captail RTX reports do not establish Shadowless hardware coverage.
 - Do not turn capability detection into a compatibility claim without a real
   recording and playback test.
 

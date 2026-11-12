@@ -30,6 +30,11 @@ overlay notifications, and recording indicator.
 
 - Settings edits are staged. Done applies; Cancel discards. Closing dirty
   settings shows the save/discard notice and keeps the window open.
+- Windows-login autostart and replay-on-launch are independent. Replay startup
+  requires explicit opt-in, including for older configurations; manual and
+  background launches use the same preference and start replay rather than a
+  continuous recording. Capture-recovery relaunches retain the active capture
+  state. Changing the preference only affects the next normal launch.
 - Recording bitrate includes 35 Mbps and custom whole numbers from 1 to 100 Mbps;
   zero retains adaptive mode. Invalid custom input blocks Done without discarding edits.
 - Settings apply failures name the failing option or operation and retain the

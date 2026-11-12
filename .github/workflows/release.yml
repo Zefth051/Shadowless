@@ -10,12 +10,12 @@ on:
       prerelease:
         description: Mark release as an early preview
         required: true
-        default: true
+        default: false
         type: boolean
       enable_public_updates:
-        description: Enable in-app updates (public repository only)
+        description: Enable in-app updates from public releases (ready for public transition)
         required: true
-        default: false
+        default: true
         type: boolean
       publish:
         description: Publish after validation (false creates a draft)
@@ -48,12 +48,6 @@ jobs:
         run: |
           if ($env:VERSION -notmatch '^\d+\.\d+\.\d+$') {
             throw "Invalid semantic version: $env:VERSION"
-          }
-          if ($env:ENABLE_PUBLIC_UPDATES -eq 'true') {
-            $repository = gh api "repos/$env:GITHUB_REPOSITORY" | ConvertFrom-Json
-            if ($LASTEXITCODE -ne 0 -or $repository.private -ne $false) {
-              throw "In-app updates require a public repository; never embed a private access token."
-            }
           }
           $releases = gh release list --repo "$env:GITHUB_REPOSITORY" --limit 100 --json tagName |
             ConvertFrom-Json

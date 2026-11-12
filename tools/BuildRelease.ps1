@@ -10,7 +10,7 @@ param(
 
     [switch]$SkipInstaller,
 
-    [switch]$EnablePublicUpdates
+    [switch]$EnablePublicUpdates = $true
 )
 
 $ErrorActionPreference = "Stop"

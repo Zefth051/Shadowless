@@ -58,7 +58,7 @@ $lines.Add("- **Portable:** extract the entire ``Shadowless-$Version-Portable-wi
 $lines.Add("")
 $lines.Add("## Compatibility and feedback")
 $lines.Add("")
-$lines.Add("Shadowless is tested on NVIDIA GeForce RTX 40 and RTX 50 series. Older NVIDIA, AMD, and Intel hardware needs broader public testing. Report problems through [GitHub Issues](https://github.com/$Repository/issues).")
+$lines.Add("Shadowless capture has been tested on Linux / Hyprland with an NVIDIA GeForce GTX 1650. Native Windows package tests do not establish GPU capture compatibility; Windows and other hardware still need validation. Report problems through [GitHub Issues](https://github.com/$Repository/issues).")
 $lines.Add("")
 $lines.Add("Release binaries are not Authenticode-signed yet. Windows may show an unknown-publisher or SmartScreen warning. Use ``SHA256SUMS.txt`` and GitHub build provenance to verify the download.")
 

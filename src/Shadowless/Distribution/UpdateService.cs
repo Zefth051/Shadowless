@@ -40,7 +40,7 @@ internal sealed record PreparedUpdate(
 
 internal sealed class UpdateService
 {
-    // Private/development builds must not download or overwrite local changes.
+    // Release builds check public releases without embedding repository credentials.
 #if SHADOWLESS_PUBLIC_UPDATES
     internal static bool SelfUpdateEnabled { get; } = true;
 #else
@@ -115,7 +115,6 @@ internal sealed class UpdateService
             checkCts.CancelAfter(TimeSpan.FromSeconds(15));
             CancellationToken checkToken = checkCts.Token;
 
-            bool includePrereleases = CurrentVersion.Major == 0;
             UpdateRelease? newest = null;
             for (int page = 1; ; page++)
             {
@@ -130,8 +129,7 @@ internal sealed class UpdateService
                 List<GitHubRelease>? releases = await JsonSerializer.DeserializeAsync<List<GitHubRelease>>(
                     stream, cancellationToken: checkToken);
                 UpdateRelease? candidate = releases?
-                    .Where(release => !release.Draft)
-                    .Where(release => includePrereleases || !release.Prerelease)
+                    .Where(release => !release.Draft && !release.Prerelease)
                     .Select(TryMapRelease)
                     .Where(release => release is not null)
                     .Cast<UpdateRelease>()

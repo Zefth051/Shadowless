@@ -14,8 +14,10 @@ Each release contains:
 - SHA-256 checksum file
 - GitHub build-provenance attestations
 
-During private staging, releases default to **drafts**, in-app updates default
-off, and public attestations are skipped. Complete [GITHUB.md](GITHUB.md) and
+During private staging, releases default to **drafts** and public attestations
+are skipped. Windows in-app updates default on for new Release builds so they
+are ready for the public transition; no repository credentials are embedded.
+Complete [GITHUB.md](GITHUB.md) and
 [DEPENDENCY_AUDIT.md](DEPENDENCY_AUDIT.md) before sharing packages. The Linux
 AppImage uses the separate `linux-vX.Y.Z` release channel described there.
 
@@ -56,9 +58,11 @@ From GitHub:
 2. Select **Build release**.
 3. Click **Run workflow**.
 4. Enter a semantic version without `v`, for example `0.2.0`.
-5. Keep **Pre-release** enabled while Shadowless is in preview.
+5. Leave **Pre-release** off for a final-release candidate. Windows updates never
+   offer releases marked as pre-release, including on `0.x` versions.
 6. Keep **Publish** off to create a reviewable draft; enable it only for an approved release.
-7. Keep **Enable in-app updates** off while private. Enable only after public transition.
+7. Keep **Enable in-app updates** on to prepare candidates for the public transition.
+   Disable it explicitly for an isolated manual-update test build.
 
 From GitHub CLI:
 
@@ -67,7 +71,7 @@ gh workflow run release.yml `
   --repo Zefth051/Shadowless `
   --ref windows `
   -f version=0.2.0 `
-  -f prerelease=true
+  -f prerelease=false
 ```
 
 The workflow validates the version, builds and verifies both packages and prepares
@@ -95,8 +99,11 @@ Install Inno Setup 7.1.0 or newer, then run:
 
 Output is written to `artifacts\release\0.2.0`.
 
-Add `-EnablePublicUpdates` only for an approved public desktop build. Ordinary
-and private builds retain blocked update checks/downloads/installation. Test both
+Release builds enable public-release updates by default. Use
+`-EnablePublicUpdates:$false` for a manual-update package, or MSBuild
+`-p:EnablePublicUpdates=false`. Debug builds default off, and Store builds use
+Store-managed updates. Enabled candidates can be built while private, but only
+publicly accessible releases can be downloaded. Test both
 policies with `tools/ForkUpdateQa` and `tools/PublicUpdateQa` before release.
 
 ## Version rules

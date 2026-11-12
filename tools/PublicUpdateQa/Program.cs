@@ -27,9 +27,11 @@ try
 
     var releaseType = typeof(UpdateService).GetNestedType("GitHubRelease", BindingFlags.NonPublic)!;
     var mapper = typeof(UpdateService).GetMethod("TryMapRelease", BindingFlags.Static | BindingFlags.NonPublic)!;
-    string ReleaseJson(string repository, string tag = "v9.0.0") => JsonSerializer.Serialize(new
+    string ReleaseJson(string repository, string tag = "v9.0.0", bool draft = false, bool prerelease = false) => JsonSerializer.Serialize(new
     {
         tag_name = tag,
+        draft,
+        prerelease,
         html_url = repository + "/releases/tag/" + tag,
         assets = new[]
         {
@@ -63,7 +65,21 @@ try
         throw new Exception("Archive traversal wrote outside its destination.");
 
     using (var client = new HttpClient(new ReleasePages(
-        "[" + string.Join(",", Enumerable.Range(0, 10).Select(i => ReleaseJson(UpdateService.RepositoryUrl, $"linux-v9.0.{i}"))) + "]",
+        "[" + ReleaseJson(UpdateService.RepositoryUrl, prerelease: true) + "]", "[]")))
+    {
+        if (await new UpdateService(client).CheckAsync(true, CancellationToken.None) is not null)
+            throw new Exception("Prereleases must never be offered as Windows updates, including on 0.x builds.");
+    }
+
+    using (var client = new HttpClient(new ReleasePages(
+        "[" + ReleaseJson(UpdateService.RepositoryUrl, draft: true) + "]", "[]")))
+    {
+        if (await new UpdateService(client).CheckAsync(true, CancellationToken.None) is not null)
+            throw new Exception("Draft releases must never be offered as Windows updates.");
+    }
+
+    using (var client = new HttpClient(new ReleasePages(
+        "[" + ReleaseJson(UpdateService.RepositoryUrl, "v10.0.0", prerelease: true) + "," + string.Join(",", Enumerable.Range(0, 10).Select(i => ReleaseJson(UpdateService.RepositoryUrl, $"linux-v9.0.{i}"))) + "]",
         "[" + ReleaseJson(UpdateService.RepositoryUrl) + "]")))
     {
         var found = await new UpdateService(client).CheckAsync(true, CancellationToken.None);
@@ -135,6 +151,8 @@ sealed class ReleasePages(string firstPage, string secondPage) : HttpMessageHand
     private int _requests;
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        if (request.Headers.Authorization is not null)
+            throw new Exception("Public update checks must not send repository credentials.");
         bool first = ++_requests == 1;
         if (!first && !request.RequestUri!.Query.Split('&').Contains("page=2"))
             throw new Exception("The updater did not advance the API page.");

@@ -483,6 +483,7 @@ public partial class SettingsWindow : Window
             _pendingAdvancedMicrophoneTrack = _config.AdvancedMicrophoneTrack;
 
             SettingsReplayToggle.IsChecked = _config.ReplayEnabled;
+            StartReplayOnLaunchBox.IsChecked = _config.StartReplayOnLaunch;
             WarnGameOffBox.IsChecked = _config.WarnWhenGameStartsWithReplayOff;
             RecordingIndicatorBox.IsChecked = _config.ShowRecordingIndicator;
             SelectRadioByTag(
@@ -1069,6 +1070,7 @@ public partial class SettingsWindow : Window
             DashboardCaptureModeOptions,
             "replay");
         candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
+        candidate.StartReplayOnLaunch = StartReplayOnLaunchBox.IsChecked == true;
         candidate.WarnWhenGameStartsWithReplayOff = WarnGameOffBox.IsChecked == true;
         candidate.ShowRecordingIndicator = RecordingIndicatorBox.IsChecked == true;
         candidate.RecordingIndicatorPosition = GetSelectedRadioTag(
@@ -1118,6 +1120,7 @@ public partial class SettingsWindow : Window
     private static bool SettingsValuesEqual(Config left, Config right) =>
         string.Equals(left.CaptureMode, right.CaptureMode, StringComparison.Ordinal) &&
         left.ReplayEnabled == right.ReplayEnabled &&
+        left.StartReplayOnLaunch == right.StartReplayOnLaunch &&
         left.WarnWhenGameStartsWithReplayOff == right.WarnWhenGameStartsWithReplayOff &&
         left.ShowRecordingIndicator == right.ShowRecordingIndicator &&
         string.Equals(
@@ -2429,6 +2432,7 @@ public partial class SettingsWindow : Window
             DashboardCaptureModeOptions,
             "replay");
         candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
+        candidate.StartReplayOnLaunch = StartReplayOnLaunchBox.IsChecked == true;
         candidate.WarnWhenGameStartsWithReplayOff = WarnGameOffBox.IsChecked == true;
         candidate.ShowRecordingIndicator =
             RecordingIndicatorBox.IsChecked == true;

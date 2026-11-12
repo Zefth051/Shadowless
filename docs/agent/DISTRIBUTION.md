@@ -2,10 +2,11 @@
 
 ## Channels
 
-Portable ZIP and Setup share ordinary desktop behavior. Private/development builds disable
-release checks, downloads and installation in `Distribution/UpdateService.cs`.
-Explicit `EnablePublicUpdates=true` builds enable repository-scoped desktop updates;
-private builds update manually.
+Portable ZIP and Setup share ordinary desktop behavior. Release builds enable
+repository-scoped public-release updates by default, including candidates built
+before the public transition. Debug builds and explicit `EnablePublicUpdates=false`
+builds disable release checks, downloads and installation in
+`Distribution/UpdateService.cs`. No private repository credentials are embedded.
 Microsoft Store uses MSIX identity, package-managed state, Store updates, and a
 separate Partner Center release workflow.
 
@@ -16,8 +17,8 @@ separate Partner Center release workflow.
   `ApplicationData` paths for Store builds.
 - `StorePackageLifecycle` responds to package update/removal lifetime events.
 - `Autostart` uses the channel-appropriate mechanism.
-- `UpdateService.SelfUpdateEnabled` defaults to false, including forced checks;
-  `SHADOWLESS_PUBLIC_UPDATES` enables it only for explicit public builds.
+- `SHADOWLESS_PUBLIC_UPDATES` enables `UpdateService.SelfUpdateEnabled` for Release
+  builds by default; Debug and explicitly disabled builds block even forced checks.
 - `DiagnosticLogExporter` sanitizes local diagnostic context before a bug form
   is opened; logs and recordings are never attached automatically.
 - Portable builds include `ExportDiagnostics.cmd` for a sanitized local ZIP.
@@ -42,6 +43,8 @@ separate Partner Center release workflow.
 ## Invariants
 
 - Never mix Store package files into a GitHub Release.
+- Windows updates only accept published final releases, including on `0.x` builds;
+  prereleases, drafts, and Linux tags are excluded.
 - Never hard-code a Store Package Family Name in product logic or docs.
 - Store internal identity has four fields and ends in `.0`.
 - Package-root native dependency collisions fail validation.

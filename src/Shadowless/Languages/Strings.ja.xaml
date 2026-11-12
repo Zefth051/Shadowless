@@ -99,6 +99,7 @@
   <sys:String x:Key="L.Size.5GB">5GB</sys:String>
   <sys:String x:Key="L.Size.10GB">10GB</sys:String>
   <sys:String x:Key="L.Replay.StartWindows">Windows から始める</sys:String>
+  <sys:String x:Key="L.Replay.StartOnLaunch">Shadowless 起動時にインスタントクリップを開始</sys:String>
 
   <sys:String x:Key="L.Video.Source">ソース</sys:String>
   <sys:String x:Key="L.Video.Desktop">デスクトップ</sys:String>

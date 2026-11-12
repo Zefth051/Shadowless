@@ -20,7 +20,9 @@ validation. See [release status and pending tests](RELEASE_STATUS.md) and
 | Shortcuts | Configurable Windows global hotkeys | Desktop portal and temporary Hyprland bindings |
 | Updates | Native package upgrades tested; public-release/UI flow pending | SHA-256-verified AppImage replacement implemented for public builds; real upgrade untested |
 
-Private/development builds update manually; no GitHub access token is embedded.
+Existing private drafts and development builds update manually; new Windows
+Release builds enable public-release updates by default, including before the
+public transition. No GitHub access token is embedded.
 Windows Store builds use Store-managed updates. The Linux AppImage still needs
 host GSR, PipeWire, FFmpeg tools and compatible drivers; it is not a promise of
 KDE/GNOME/X11 or older-glibc compatibility. See [installation](INSTALL.md) and

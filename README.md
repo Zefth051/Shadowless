@@ -9,6 +9,12 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Linux AppImage releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v) ·
 [Installation guide](docs/INSTALL.md)
 
+**Capture engines:** Windows uses OBS components (`libobs`), included in the
+installer and Portable package; OBS Studio does not need to be installed.
+Linux uses GPU Screen Recorder (GSR) as an external capture engine. Install
+`gpu-screen-recorder` separately before running Shadowless on Linux; the AppImage
+does not bundle or install it. Shadowless starts and manages GSR for you.
+
 ## Current release status
 
 **Private validation drafts only; no published release.** The Windows draft
@@ -26,7 +32,8 @@ permissions. See [available packages and pending validation](docs/RELEASE_STATUS
 | Real in-app upgrade | Not yet tested | Not yet tested |
 
 The editions have separate interfaces and platform requirements. See the
-[full comparison](docs/FEATURES.md). Private builds update manually. Automated
+[full comparison](docs/FEATURES.md). Existing private drafts update manually;
+new Windows Release builds enable public-release checks by default. Automated
 updater tests do not establish a successful upgrade between two released versions.
 [Windows native package upgrades passed](docs/WINDOWS_UPDATE_VALIDATION.md);
 the complete published-release/UI path remains pending.
@@ -114,9 +121,10 @@ Every Windows package includes .NET, libobs, FFmpeg, and the embedded preview pl
 > Release binaries are not Authenticode-signed yet. Windows SmartScreen may show “Unknown publisher.” Verify `SHA256SUMS.txt` and GitHub build provenance if you want to confirm the download.
 
 > [!IMPORTANT]
-> Public-enabled builds implement GitHub update checks and checksum verification.
-> A real in-app upgrade remains untested on Windows and Linux. Private/development
-> builds update manually; Store builds use Microsoft Store updates.
+> New Windows Release builds enable GitHub update checks and checksum verification
+> by default, including candidates built before the repository becomes public.
+> A real in-app upgrade remains untested on Windows and Linux. Existing private
+> drafts and development builds update manually; Store builds use Microsoft Store updates.
 
 ## How do I save my first replay?
 

@@ -508,6 +508,8 @@ public partial class App : Application
                 return;
             }
 
+            if (!_startedAfterCaptureRecovery)
+                _config.ApplyLaunchPreferences();
             CreateTrayIcon();
             BindHotkeyAtStartup();
             StartHealthMonitor();

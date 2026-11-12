@@ -931,6 +931,18 @@
                                     <ToggleButton x:Name="AutostartBox" HorizontalAlignment="Right"
                                                   Style="{StaticResource ToggleSwitch}"/>
                                 </Grid>
+                                <Border Style="{StaticResource RowDivider}"/>
+                                <Grid Margin="13,11">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource L.Replay.StartOnLaunch}"
+                                               Style="{StaticResource RowLabelText}" TextWrapping="Wrap" Margin="0,0,12,0"/>
+                                    <ToggleButton x:Name="StartReplayOnLaunchBox" Grid.Column="1"
+                                                  AutomationProperties.Name="{DynamicResource L.Replay.StartOnLaunch}"
+                                                  Style="{StaticResource ToggleSwitch}"/>
+                                </Grid>
                             </StackPanel>
                         </Border>
 

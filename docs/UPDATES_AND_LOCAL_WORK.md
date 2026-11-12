@@ -7,6 +7,11 @@ The repository remains private. The existing `v0.2.4` Windows and
 An installed private build does not start updating merely because the repository
 later becomes public. No GitHub token is embedded in either application.
 
+New Windows Release builds now enable public-release updates by default, even
+when built while the repository is private. They can discover later public
+releases after the repository becomes public without another rebuild. Existing
+draft assets are unchanged and still need one manual upgrade to an enabled build.
+
 Give a tester repository access and a reviewed package through an authorized
 GitHub download. Draft releases need sufficient repository permissions; read-only
 source access alone is not enough. Until reviewed packages are released, do not
@@ -23,8 +28,9 @@ Repository visibility and release publication are separate actions requiring the
 owner's approval. A public repository with only draft releases still has no
 downloadable update for the application.
 
-1. Build a new candidate with public updates enabled: Windows release workflow
-   `enable_public_updates=true`; Linux build
+1. Build a new candidate with public updates enabled: the Windows release workflow
+   defaults to `enable_public_updates=true` and can prepare it before public transition;
+   Linux build
    `SHADOWLESS_PUBLIC_UPDATES=true SHADOWLESS_VERSION=X.Y.Z ./linux/build.sh`.
 2. Review the candidate, exact dependencies/sources/notices, checksum file and
    platform screenshots. Publish the matching platform release only after approval.
@@ -34,8 +40,8 @@ downloadable update for the application.
 Windows checks when its dashboard/settings window first loads. The UI offers the new version;
 the user starts the update, which downloads and checks SHA-256 before invoking
 Setup for installed builds or the copy/relaunch helper for Portable builds.
-This is not unattended installation. Windows `0.x` builds include prereleases;
-major versions above zero skip prereleases. Drafts and Linux tags are excluded.
+This is not unattended installation. Windows only offers published final releases,
+including on `0.x` builds. Prereleases, drafts and Linux tags are excluded.
 
 Linux public-enabled builds check shortly after startup; the tray also provides
 **Check for updates**. The user confirms the download. Shadowless checks the

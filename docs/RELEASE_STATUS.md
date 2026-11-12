@@ -53,7 +53,10 @@ See the [capture requirements](SCREENSHOTS.md).
 Neither Linux nor Windows has completed a real in-app upgrade between two
 released Shadowless versions. Automated tests and package installation checks
 are separate evidence and must not be described as that validation.
-Private/development candidates have in-app updates disabled and update manually.
+Existing private drafts and development builds have in-app updates disabled and
+update manually. New Windows Release builds enable public-release updates by
+default, including candidates built before the repository becomes public; this
+does not change the existing draft binaries.
 Windows Store updates use a separate Store-managed channel.
 
 | Platform | Existing evidence | Still required |

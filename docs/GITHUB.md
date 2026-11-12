@@ -60,7 +60,9 @@ personal tokens into the app, source or remote URL.
 ## Private test packages
 
 Windows: dispatch **Build release** on `windows`, keeping
-`enable_public_updates=false` and `publish=false`. The workflow creates installer,
+`publish=false`. Public-release updates default on, including before the public
+transition; set `enable_public_updates=false` for a manual-update test build.
+The workflow creates installer,
 Portable ZIP and checksums, tests installation/uninstallation on Windows, and
 creates a **draft** release. Provenance attestation runs only when public.
 
@@ -83,9 +85,10 @@ complete exact dependency sources/notices; verify Windows upgrades and the AppIm
 on a clean supported host; replace old screenshots. Changing visibility remains
 a separate explicit action in GitHub Settings.
 
-For a public Windows build, set `enable_public_updates=true`; the workflow rejects
-this while the repository is private. Local builds use
-`BuildRelease.ps1 -EnablePublicUpdates` or MSBuild `-p:EnablePublicUpdates=true`.
+Windows Release builds and `BuildRelease.ps1` default to public-release updates.
+Keep `enable_public_updates=true` in the workflow; this is allowed while private
+to prepare for the public transition. No private token is embedded; updates only
+become accessible when the repository and matching releases are public.
 Private builds already installed need one manual upgrade to that public-enabled
 build. Desktop updates then use the in-app flow, repository-scoped URLs and
 SHA-256 verification. Store updates remain Store-managed. Linux public builds use the tray updater;

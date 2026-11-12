@@ -4,6 +4,26 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-12
+
+### Added
+
+- **Replay on launch:** Choose whether Instant Replay starts whenever Shadowless opens, independently of the option to launch Shadowless when signing in to Windows.
+
+### Improved
+
+- **Public updates:** New Release builds include the updater, ready to discover future public Windows releases without reinstalling merely because the repository becomes public. Only published final releases are offered; drafts, pre-releases and Linux packages are excluded.
+
+### Upgrade notes
+
+- Install this version manually when upgrading from a private build with updates disabled. Existing draft binaries do not gain an updater when repository visibility changes.
+- Automatic replay startup now requires enabling **Start Instant Replay when Shadowless launches** in Settings. The previous session's replay state no longer decides whether capture starts on a normal launch. Capture-recovery restarts retain their running state.
+
+### Known limitations
+
+- This candidate is uploaded as a private validation draft. Full in-app upgrades between published releases and capture on native Windows GPUs remain unverified; installer/update-policy tests cover a narrower scope.
+- The inherited Windows screenshots do not show this build. Fresh screenshots and the hardware showcase remain pending.
+
 ## [0.2.4] - 2026-09-23
 
 ### Added
