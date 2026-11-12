@@ -2,6 +2,8 @@
 
 Shadowless has two maintained platform branches in one repository. Releases are
 shared by the repository, so select the tag for your operating system.
+These are implemented capabilities, not a statement of completed end-to-end
+validation. See [release status and pending tests](RELEASE_STATUS.md).
 
 | Feature | `windows` | `linux` |
 | --- | --- | --- |
@@ -15,7 +17,7 @@ shared by the repository, so select the tag for your operating system.
 | Editing | Trimming, audio-track selection and configurable export | Trimming, audio-track selection/merge and stream-copy export |
 | Overlays | Composited media layers, live preview editor and optional passive capture status indicator | Hyprland control panel, optional passive indicator and composited media layers |
 | Shortcuts | Configurable Windows global hotkeys | Desktop portal and temporary Hyprland bindings |
-| Updates | Confirmed in-app download/install for public Setup/Portable builds | Confirmed, SHA-256-verified AppImage replacement for public builds; takes effect next launch |
+| Updates | In-app download/install implemented for public Setup/Portable builds; real upgrade untested | SHA-256-verified AppImage replacement implemented for public builds; real upgrade untested |
 
 Private/development builds update manually; no GitHub access token is embedded.
 Windows Store builds use Store-managed updates. The Linux AppImage still needs

@@ -1,5 +1,9 @@
 # Publishing Shadowless on GitHub
 
+See [current packages and outstanding validation](RELEASE_STATUS.md). Both
+platform packages are attached to private drafts; no release is published.
+Real in-app upgrades on Linux and Windows remain untested.
+
 Use one GitHub repository named `Shadowless` with the description
 **Shadowless - An app for clipping**. Use `windows` as the default branch and
 `linux` for the native Qt/Hyprland edition. The default Windows branch contains dispatchable workflows for both platforms;

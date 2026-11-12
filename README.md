@@ -9,8 +9,26 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Linux AppImage releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v) ·
 [Installation guide](docs/INSTALL.md)
 
-Private preview builds update manually. In-app updates are enabled only in
-explicit public release builds; see [private staging](docs/GITHUB.md).
+## Current release status
+
+**Private validation drafts only; no published release.** The Windows draft
+contains Setup and Portable packages. The Linux draft contains
+`Shadowless-0.2.4-linux-x86_64.AppImage`; binaries are attached to Releases,
+not included in the source ZIP. Viewing drafts requires sufficient repository
+permissions. See [available packages and pending validation](docs/RELEASE_STATUS.md).
+
+| | Windows edition | Linux edition |
+| --- | --- | --- |
+| Interface / capture | WPF/.NET and libobs | Qt 6 and external GPU Screen Recorder |
+| Target | Windows 10/11 x64 | Hyprland on native Wayland, x86_64 |
+| Capture | Desktop and direct game capture | Monitor capture through GSR |
+| Distribution | Setup EXE / Portable ZIP | AppImage; host GSR, PipeWire and FFmpeg required |
+| Real in-app upgrade | Not yet tested | Not yet tested |
+
+The editions have separate interfaces and platform requirements. See the
+[full comparison](docs/FEATURES.md). Private builds update manually. Automated
+updater tests do not establish a successful upgrade between two real versions.
+See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release process.
 
 [Linux edition](../../tree/linux) · [Publishing both branches](docs/GITHUB.md)
 
@@ -25,9 +43,6 @@ explicit public release builds; see [private staging](docs/GITHUB.md).
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-252b2e" alt="Windows 10/11">
 </p>
 <p align="center">
-  <a href='https://ko-fi.com/Q4E824D8J4' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
-</p>
-<p align="center">
   <strong>Save what just happened.</strong><br>
   Lightweight, open-source instant replay for Windows — built to stay recording.
 </p>
@@ -37,15 +52,13 @@ explicit public release builds; see [private staging](docs/GITHUB.md).
 </p>
 
 <p align="center">
-  <a href="https://zefth051.github.io/Shadowless/">Visit the Shadowless website</a>
-  ·
   <a href="https://github.com/Zefth051/Shadowless/issues/new/choose">Report a problem</a>
 </p>
 
 Shadowless is a fork of [Captail by FaulMit](https://github.com/FaulMit/captail) and a focused alternative to NVIDIA ShadowPlay Instant Replay. It can keep the latest seconds or minutes in a rolling buffer or write a continuous recording until you stop it. No scenes, streaming setup, account, cloud upload, analytics, or telemetry.
 
 > [!WARNING]
-> Shadowless `v0.2.4` is an early public preview. Recording works, but bugs and hardware-specific problems are expected. NVIDIA RTX 40 and RTX 50 series are tested; other GPUs need broader public testing.
+> Shadowless `v0.2.4` is a private validation candidate. Native Windows capture and hardware compatibility need validation for this fork; inherited upstream test reports are not candidate verification.
 
 ## What's new in Shadowless 0.2.4?
 
@@ -74,25 +87,13 @@ Shadowless is not a streaming application, scene compositor, DRM bypass, or clou
 
 ## What does it look like?
 
-These Windows screenshots show the previous build with the original Captail branding.
+Windows screenshots remain pending; inherited Captail screenshots are excluded.
+The image below shows the **Linux Qt/Hyprland edition**, captured from its actual
+`linux-v0.2.4` AppImage with capture off and synthetic demo media.
+See [all six Linux captures and provenance](docs/screenshots/linux/README.md)
+and [Windows capture requirements](docs/SCREENSHOTS.md).
 
-<p align="center">
-  <img src="docs/shadowless-main.png" alt="Shadowless main window showing replay status, audio sources, recording format, disk space, and recent replays" width="420">
-  <img src="docs/shadowless-feature-recording.png" alt="Shadowless main window showing active continuous Recording mode with AV1, 4K, and 240 FPS" width="420">
-</p>
-
-<p align="center">
-  <img src="docs/shadowless-settings-video.png" alt="Shadowless video settings with hardware AV1, 80 Mbps, 3840 by 2160 resolution, and 240 FPS selected" width="390">
-  <img src="docs/shadowless-settings-audio.png" alt="Shadowless audio settings with system audio, microphone, volume controls, microphone boost, and per-application routing" width="390">
-</p>
-
-<p align="center">
-  <img src="docs/shadowless-audio-routing.png" alt="Shadowless application audio routing with selected apps, live level meters, application icons, microphone, and track assignments" width="620">
-</p>
-
-<p align="center">
-  <img src="docs/shadowless-player.png" alt="Shadowless player and editor showing a real AV1 4K 240 FPS replay, trim timeline, audio tracks, output settings, and save actions" width="820">
-</p>
+![Linux edition: Shadowless dashboard with capture off and one demo clip](docs/screenshots/linux/dashboard.png)
 
 ## How do I install it?
 
@@ -104,15 +105,15 @@ Shadowless builds produce the following Windows packages. Published builds are l
 | `Shadowless-x.y.z-Portable-win-x64.zip` | You want a movable, self-contained folder | Extract the entire ZIP, then run `Shadowless.exe` inside it. Do not run it from the archive. |
 | `SHA256SUMS.txt` | You want to verify the download | Compare the package SHA-256 with the published value before running it. |
 
-Every Shadowless package includes .NET, libobs, FFmpeg, and the embedded preview player. You do not need to install OBS Studio or extra runtimes.
+Every Windows package includes .NET, libobs, FFmpeg, and the embedded preview player. You do not need to install OBS Studio or extra runtimes.
 
 > [!NOTE]
 > Release binaries are not Authenticode-signed yet. Windows SmartScreen may show “Unknown publisher.” Verify `SHA256SUMS.txt` and GitHub build provenance if you want to confirm the download.
 
 > [!IMPORTANT]
-> Public release builds check GitHub for updates and install a verified update
-> after confirmation. Private/development builds update manually; Store builds
-> use Microsoft Store updates.
+> Public-enabled builds implement GitHub update checks and checksum verification.
+> A real in-app upgrade remains untested on Windows and Linux. Private/development
+> builds update manually; Store builds use Microsoft Store updates.
 
 ## How do I save my first replay?
 
@@ -236,7 +237,7 @@ Enable **Organize games into folders** in Storage. Replays saved while a game is
 
 No. Shadowless has no account, cloud upload, analytics, or telemetry. Replays, thumbnails, settings, and logs stay on your PC.
 
-GitHub builds contact the GitHub Releases API to check whether a newer version exists. They download an update package only after you click the update control. The Microsoft Store build uses Store-managed updates instead.
+Public-update-enabled GitHub builds contact the GitHub Releases API to check whether a newer version exists. They download an update package only after you click the update control. The Microsoft Store build uses Store-managed updates instead.
 
 ## How is Shadowless different from ShadowPlay and OBS Replay Buffer?
 
@@ -264,8 +265,8 @@ Current hardware status:
 
 | Hardware | Status |
 | --- | --- |
-| NVIDIA GeForce RTX 50 series | Tested |
-| NVIDIA GeForce RTX 40 series | Tested |
+| NVIDIA GeForce RTX 50 series | Upstream report; current Shadowless candidate validation pending |
+| NVIDIA GeForce RTX 40 series | Upstream report; current Shadowless candidate validation pending |
 | Older NVIDIA GPUs | Not yet verified; expected to work when supported by libobs/NVENC |
 | AMD GPUs | Capability detection implemented; public hardware testing needed |
 | Intel GPUs | Capability detection implemented; public hardware testing needed |

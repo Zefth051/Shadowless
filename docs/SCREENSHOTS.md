@@ -1,5 +1,23 @@
 # Shadowless README screenshot plan
 
+## Current provenance and status
+
+The inherited PNG files show Captail or earlier upstream builds. Their
+`shadowless-*` filenames do not establish that they depict the current fork.
+They are historical references and must not appear as current Shadowless product
+images in README, the website, Store listings or release notes. Fresh Windows
+screenshots remain pending. Six real Linux candidate captures are available in
+[the Linux gallery](screenshots/linux/README.md), with exact build provenance.
+Capture each edition separately and record the platform, source commit, displayed
+version and capture date.
+
+The Windows checklist below is a capture procedure, not evidence that it has
+been completed for Shadowless. Linux needs real captures of its Qt dashboard,
+capture/audio settings, clip library, editor and Hyprland overlays using
+supported settings; Windows screenshots cannot stand in for them.
+
+## Capture purpose
+
 README screenshots answer one user question: what will Shadowless look like after I install this release?
 
 Every release must ship a fresh screenshot set captured from the exact release-candidate build. A screenshot from an older version is stale even when the screen appears unchanged.
@@ -87,14 +105,14 @@ Small copy changes, internal performance work, dependency updates, and invisible
 8. Confirm `git diff` contains no accidental private information or cursor overlays.
 9. Merge screenshots in the same release PR as the version and changelog.
 
-## Current 0.2.x refresh queue
+## Current refresh queue
 
-The six-image baseline was refreshed from the `0.2.4` release candidate. The combined player/editor uses the documented showcase fixture derived from a real AV1 240 FPS Shadowless replay with two audio tracks. A separate native AV1 4K 240 FPS capture was saved and decoded successfully; playback of that new capture in the embedded player still needs verification.
+- Capture the current Shadowless Windows candidate on native Windows.
+- Linux candidate `linux-v0.2.4`: six real captures completed on Hyprland; see
+  [the gallery and provenance](screenshots/linux/README.md). Refresh for each new candidate.
+- Review branding, safe demo data and platform-specific feature claims.
+- Replace inherited images only after visual review and record capture provenance.
 
-Recommended additional real screenshots:
-
-- compact language selector open with several native language names visible;
-- display-identification action and its matching numbered monitor overlay;
-- sanitized Report bug form only if the in-app transition is visible and useful.
-
-Replay indicator screenshot is intentionally deferred. Current capture behavior cannot produce a truthful image of the indicator, and fixing that behavior is outside this documentation task. Do not use the existing concept graphic as a README product screenshot.
+Earlier upstream showcase and hardware-validation notes do not establish that
+these Shadowless candidates were captured or tested. Do not use concept graphics
+as product screenshots.
