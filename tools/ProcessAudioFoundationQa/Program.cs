@@ -13,6 +13,16 @@ internal static class Program
     {
         try
         {
+            if (args.Length == 2 && args[0] == "--update-settings")
+            {
+                var config = JsonSerializer.Deserialize<Config>(System.IO.File.ReadAllText(args[1]))!;
+                config.Normalize();
+                if (config.Language != "en" || config.BufferSeconds != 120 ||
+                    config.AccentColor != "violet" || config.ReplayEnabled)
+                    throw new Exception("Update settings fixture does not survive production normalization.");
+                Console.WriteLine("PASS: update settings fixture survives production Config.Normalize.");
+                return 0;
+            }
             if (args.Contains("--bitrate"))
             {
                 Run("custom bitrate range and persistence", BitrateQa.Run);

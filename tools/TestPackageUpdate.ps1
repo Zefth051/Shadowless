@@ -33,8 +33,10 @@ function Assert-Version([string]$Target) {
 $settings = Join-Path $env:APPDATA 'Shadowless/config.json'
 if (Test-Path $settings) { throw 'Refusing to replace existing runner settings.' }
 New-Item -ItemType Directory -Force (Split-Path $settings) | Out-Null
-$sentinel = '{"Language":"en","BufferSeconds":173,"AccentColor":"violet","ReplayEnabled":false}'
+$sentinel = '{"Language":"en","BufferSeconds":120,"AccentColor":"violet","ReplayEnabled":false}'
 Set-Content -LiteralPath $settings -Value $sentinel -NoNewline
+dotnet run --project "$PSScriptRoot/ProcessAudioFoundationQa" -c Release -- --update-settings $settings
+if ($LASTEXITCODE -ne 0) { throw 'Update settings fixture normalization failed.' }
 $settingsHash = (Get-FileHash $settings).Hash
 $installed = Join-Path $root 'installed'
 Run-Installer (Join-Path $OldPackages "Shadowless-$OldVersion-Setup-win-x64.exe") $installed "$root/install-old.log"
@@ -61,7 +63,7 @@ Get-CimInstance Win32_Process | Where-Object {
     $_.ExecutablePath -and $_.ExecutablePath.StartsWith($portable, [StringComparison]::OrdinalIgnoreCase)
 } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 $config = Get-Content $settings -Raw | ConvertFrom-Json
-if ($config.Language -ne 'en' -or $config.BufferSeconds -ne 173 -or
+if ($config.Language -ne 'en' -or $config.BufferSeconds -ne 120 -or
     $config.AccentColor -ne 'violet' -or $config.ReplayEnabled -ne $false) {
     throw 'Portable update/relaunch changed configured settings.'
 }
