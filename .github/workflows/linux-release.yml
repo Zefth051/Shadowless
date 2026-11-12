@@ -27,12 +27,13 @@ jobs:
       SHADOWLESS_VERSION: ${{ inputs.version }}
       SHADOWLESS_PUBLIC_UPDATES: ${{ inputs.enable_public_updates }}
       QT_QPA_PLATFORM: offscreen
+      PULSE_SERVER: unix:/tmp/shadowless-ci-pulse/native
     steps:
       - name: Install native build dependencies
         run: >-
           pacman -Syu --noconfirm --needed git python qt6-base qt6-multimedia
           qt6-wayland qt6-svg qt6-imageformats layer-shell-qt ffmpeg mpv gpu-screen-recorder
-          pkgconf mesa libpulse pipewire github-cli
+          pkgconf mesa libpulse pipewire pulseaudio github-cli
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
@@ -48,6 +49,18 @@ jobs:
             echo 'Public updates require a public repository; no private tokens belong in applications.'
             exit 1
           fi
+      - name: Start isolated timed audio for playback tests
+        shell: bash
+        run: |
+          install -d -o pulse -g pulse -m 0755 /tmp/shadowless-ci-pulse
+          pulseaudio --system --daemonize=yes --use-pid-file=no \
+            --disallow-exit=yes --disallow-module-loading=yes \
+            --exit-idle-time=-1 --fail=yes -n \
+            --load='module-null-sink sink_name=shadowless_ci rate=48000 channels=2' \
+            --load='module-native-protocol-unix socket=/tmp/shadowless-ci-pulse/native auth-anonymous=1' \
+            --log-target=file:/tmp/shadowless-ci-pulse/server.log
+          pactl list short sinks
+          [[ "$(pactl get-default-sink)" == shadowless_ci ]]
       - name: Build and run offline regressions
         shell: bash
         run: ./linux/build.sh
