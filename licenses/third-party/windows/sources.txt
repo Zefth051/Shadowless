@@ -1,0 +1,30 @@
+Recovered Windows 0.3.0 build/source evidence (partial; native dependency closure incomplete).
+Source archives remain local audit artifacts and are not included with these notices.
+
+mpv-bcde6b93cca4d128d84e1a60d1a6db2cd81c889e.tar.gz
+https://codeload.github.com/mpv-player/mpv/tar.gz/bcde6b93cca4d128d84e1a60d1a6db2cd81c889e
+SHA256 d87d17a4a6fde0c963db1425cae6d4b413788bb935353d3cfedb376acd15cd5f
+
+ffmpeg-c179411bbb2864cc71323d3055acda25d5c2aace.tar.gz
+https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/c179411bbb2864cc71323d3055acda25d5c2aace
+SHA256 4270bde68c027b376899f26f7973e213aeaa5ddb6fef8a352e0d6ee457766c67
+
+libmpv-ffmpeg-cd4e96eb314630788b7ff2f9820c395788c023e2.tar.gz
+https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/cd4e96eb314630788b7ff2f9820c395788c023e2
+SHA256 e3976ef0636e9c12d68c193abc4898ab50f05be3a4996026abc60c18be7447d4
+
+OBS-Studio-32.2.2-Sources.tar.gz
+https://github.com/obsproject/obs-studio/releases/download/32.2.2/OBS-Studio-32.2.2-Sources.tar.gz
+SHA256 ec81fb66b03e75ddb3076b576f62679c39262e0e9960cef3e17a40dc5d68e6b4
+
+mpv-winbuild-bda10a2.tar.gz
+https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/tarball/bda10a2816ce9908d419b3f4b564227330457e76
+SHA256 e8fd9c9e78459cc699f2307aa8e81e3560d4a11e723df04b20652fc1ded1aaae
+
+mpv-build-logs.zip
+https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/actions/runs/42927840447/logs
+SHA256 5e45302cc6062b0707f8a1ef5fe680cb97c2538c7f68f7dcca793c7d29f05bdc
+
+Shadowless-0.3.0-source.tar.gz
+https://github.com/Zefth051/Shadowless/tree/b810d33f7f9649fd77ed70529f755aa982001ba2
+SHA256 880076c2712c3afbcb5b001043ee2026d1ff116e7c1afde021f7b2baf048967a

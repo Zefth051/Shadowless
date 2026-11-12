@@ -21,6 +21,9 @@ The bundle records its glibc baseline and file hashes in `BUNDLE_MANIFEST.txt`.
 Build on the oldest supported system; a build on current CachyOS/Arch does not
 support older glibc distributions. Verify Wayland, SVG and multimedia plugins
 on a clean target host before distributing.
+Packaging requires and includes Qt's OpenSSL TLS backend and the matching OpenSSL
+runtime libraries, including their versioned loader aliases, for HTTPS update
+checks and downloads. TLS uses the system certificate trust store.
 
 ## Host requirements
 

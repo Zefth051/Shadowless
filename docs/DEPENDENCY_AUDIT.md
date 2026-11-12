@@ -13,7 +13,7 @@ does not replace its authorship or imply upstream endorsement.
 | Captail/Shadowless | GPL-2.0-or-later; upstream history | Exact modified source and build scripts |
 | Windows OBS 32.2.2 | Pinned acquisition; GPL-2.0-or-later | OBS sources, native modifications and transitive notices |
 | Windows FFmpeg | Pinned LGPL shared/static build; upstream archive ships LGPL-3.0 | Exact build configuration, LGPL texts and corresponding sources |
-| Windows libmpv | Pinned `git-bcde6b93cc`; full binary build licensing pending verification | Confirm entire build and dependency configuration; strings alone are insufficient |
+| Windows libmpv | Pinned `git-bcde6b93cc`; upstream recipe enables GPL/version3 FFmpeg components | Obtain exact static dependency sources/build inputs and notices |
 | Qt 6 | Local 6.12.0 declares LGPL-3.0-only / GPL-3.0-only options | Compatible distribution route, Qt/third-party notices and library replacement as applicable |
 | Linux FFmpeg | Local `2:9.0.2-2.1` declares **GPL-3.0-only** | Assess bundle under GPLv3-compatible terms; exact source/configuration |
 | Linux libmpv | Local `1:0.41.0-6.1` declares GPL-2.0-or-later AND LGPL-2.1-or-later | Audit complete dependency closure |
@@ -41,6 +41,9 @@ Before sharing binaries:
 The AppImage's `BUNDLE_MANIFEST.txt` records file hashes and the glibc baseline.
 It does not yet provide all third-party sources or certify license completeness;
 these remain release blockers. This is a technical audit, not legal certification.
+
+See [the artifact-specific release preflight](RELEASE_PREFLIGHT.md) for verified
+Windows/Linux candidate identities, recovered materials and remaining blockers.
 
 References: [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.en.html),
 [Qt licensing](https://doc.qt.io/qt-6/licensing.html),

@@ -93,7 +93,10 @@ def stage_appdir(build, appdir):
 
 def stage_qt_plugins(appdir):
     plugins = Path(subprocess.check_output(["qmake6", "-query", "QT_INSTALL_PLUGINS"], text=True).strip())
-    selected = []
+    tls = plugins / "tls/libqopensslbackend.so"
+    if not tls.is_file():
+        raise FileNotFoundError("Install the Qt OpenSSL TLS backend before packaging HTTPS updates.")
+    selected = [tls]
     for pattern in ["platforms/libqwayland*.so", "platforms/libqoffscreen.so", "wayland-shell-integration/lib*.so",
                     "wayland-graphics-integration-client/lib*.so", "imageformats/libqjpeg.so", "imageformats/libqgif.so",
                     "imageformats/libqwebp.so", "imageformats/libqsvg.so", "iconengines/libqsvgicon.so", "multimedia/lib*.so"]:
@@ -111,6 +114,20 @@ def stage_qt_plugins(appdir):
     if not layer_shell.is_file():
         raise FileNotFoundError("LayerShellQt's Wayland shell plugin is required.")
     shutil.copy2(layer_shell, appdir / "usr/plugins/wayland-shell-integration/liblayer-shell.so")
+    # Some Qt builds dlopen OpenSSL, which dependency scanning cannot discover.
+    openssl = Path(subprocess.check_output(["pkg-config", "--variable=libdir", "openssl"], text=True).strip())
+    libraries = appdir / "usr/lib"
+    libraries.mkdir(parents=True, exist_ok=True)
+    for name in ["libssl.so", "libcrypto.so"]:
+        source = openssl / name
+        if not source.is_file():
+            raise FileNotFoundError(f"Install the OpenSSL runtime library before packaging: {source}")
+        resolved = source.resolve(strict=True)
+        shutil.copy2(resolved, libraries / resolved.name)
+        while source.is_symlink():
+            linked = source.parent / os.readlink(source)
+            (libraries / source.name).symlink_to(linked.name)
+            source = linked
 
 
 def main():

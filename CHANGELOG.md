@@ -4,6 +4,16 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-12
+
+### Fixed
+
+- **AppImage HTTPS updates:** Include Qt's OpenSSL TLS backend and its runtime libraries, so update checks and downloads can use HTTPS without relying on a system Qt installation.
+
+### Known limitations
+
+- Public binary distribution remains pending the exact third-party source and notice audit. Packaging and HTTPS checks do not establish a complete update between published releases.
+
 ## [0.3.0] - 2026-11-12
 
 ### Added

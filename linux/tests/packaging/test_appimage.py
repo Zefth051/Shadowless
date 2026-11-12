@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 PACKAGING = Path(__file__).resolve().parents[2] / "packaging"
 SPEC = importlib.util.spec_from_file_location("build_appimage", PACKAGING / "build_appimage.py")
@@ -25,6 +26,46 @@ class AppImageTests(unittest.TestCase):
             (self.build / "engine" / name).chmod(0o755)
         self.module = importlib.util.module_from_spec(SPEC)
         SPEC.loader.exec_module(self.module)
+
+    def qt_plugin_fixture(self):
+        plugins = self.root / "qt-plugins"
+        for name in ["platforms/libqwayland.so", "imageformats/libqsvg.so",
+                     "wayland-shell-integration/liblayer-shell.so", "tls/libqopensslbackend.so"]:
+            path = plugins / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(name)
+        libraries = self.root / "openssl"
+        libraries.mkdir()
+        for name in ["libssl", "libcrypto"]:
+            (libraries / (name + ".so.3.6")).write_text(name)
+            (libraries / (name + ".so.3")).symlink_to(name + ".so.3.6")
+            (libraries / (name + ".so")).symlink_to(name + ".so.3")
+        return plugins, libraries
+
+    def test_qt_staging_includes_tls_backend_and_openssl_runtime_aliases(self):
+        plugins, libraries = self.qt_plugin_fixture()
+        appdir = self.root / "AppDir"
+        with patch.object(self.module.subprocess, "check_output", side_effect=[str(plugins), str(libraries)]):
+            self.module.stage_qt_plugins(appdir)
+        self.assertEqual((appdir / "usr/plugins/tls/libqopensslbackend.so").read_text(),
+                         "tls/libqopensslbackend.so")
+        for name in ["libssl", "libcrypto"]:
+            for suffix in [".so", ".so.3", ".so.3.6"]:
+                self.assertEqual((appdir / "usr/lib" / (name + suffix)).read_text(), name)
+
+    def test_missing_qt_tls_backend_fails_packaging(self):
+        plugins, libraries = self.qt_plugin_fixture()
+        (plugins / "tls/libqopensslbackend.so").unlink()
+        with patch.object(self.module.subprocess, "check_output", side_effect=[str(plugins), str(libraries)]):
+            with self.assertRaisesRegex(FileNotFoundError, "OpenSSL TLS"):
+                self.module.stage_qt_plugins(self.root / "AppDir")
+
+    def test_missing_openssl_runtime_fails_packaging(self):
+        plugins, libraries = self.qt_plugin_fixture()
+        (libraries / "libcrypto.so.3.6").unlink()
+        with patch.object(self.module.subprocess, "check_output", side_effect=[str(plugins), str(libraries)]):
+            with self.assertRaisesRegex(FileNotFoundError, "OpenSSL runtime library"):
+                self.module.stage_qt_plugins(self.root / "AppDir")
 
     def test_staging_preserves_plugin_path_and_licenses(self):
         appdir = self.root / "AppDir"

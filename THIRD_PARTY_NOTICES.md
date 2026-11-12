@@ -59,7 +59,7 @@ public libobs headers used to compile the module.
 - Project: https://mpv.io/
 - Source revision: `git-bcde6b93cc`
 - Native Windows build: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261111
-- License: mpv supports LGPL-2.1-or-later builds; the complete configuration and transitive licenses of this pinned binary still require verification before redistribution.
+- License: the pinned upstream build recipe enables GPL/version3 FFmpeg components. Exact transitive source and notice material remains incomplete; see `docs/RELEASE_PREFLIGHT.md`.
 
 Shadowless dynamically loads the replaceable `libmpv-2.dll` for embedded editor playback, hardware decoding, seeking, and local mixing of selected audio tracks. Shadowless does not bundle or launch the standalone `mpv.exe` player.
 
