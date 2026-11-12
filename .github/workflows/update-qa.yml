@@ -1,0 +1,59 @@
+name: Native package update QA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Acquire minimal OBS runtime
+        shell: pwsh
+        run: ./tools/AcquireObsRuntime.ps1
+      - name: Install verified Inno Setup compiler
+        id: inno
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'innosetup.exe'
+          $installDirectory = Join-Path $env:RUNNER_TEMP 'innosetup7'
+          Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe' -OutFile $installer
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne '0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f') {
+            throw 'Inno Setup SHA-256 verification failed.'
+          }
+          $signature = Get-AuthenticodeSignature $installer
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+            throw 'Inno Setup signature verification failed.'
+          }
+          $process = Start-Process $installer -Wait -PassThru -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=$installDirectory")
+          if ($process.ExitCode -ne 0) { throw 'Inno Setup installation failed.' }
+          "compiler=$(Join-Path $installDirectory 'ISCC.exe')" >> $env:GITHUB_OUTPUT
+      - name: Build private packages and test native upgrades
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./tools/BuildRelease.ps1 -Version 9.8.6 -OutputDirectory artifacts/update-qa/old -InnoSetupCompiler '${{ steps.inno.outputs.compiler }}'
+          ./tools/BuildRelease.ps1 -Version 9.8.7 -OutputDirectory artifacts/update-qa/new -InnoSetupCompiler '${{ steps.inno.outputs.compiler }}'
+          ./tools/TestPackageUpdate.ps1 -OldPackages artifacts/update-qa/old -NewPackages artifacts/update-qa/new
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: native-update-qa-evidence
+          path: |
+            artifacts/update-qa/new/update-qa-result.txt
+            ${{ runner.temp }}/shadowless-update-*/**/*.log
+            ${{ runner.temp }}/shadowless-update-*/*.json
+            ${{ runner.temp }}/shadowless-update-*/*.relaunch
+          if-no-files-found: warn
+          retention-days: 7

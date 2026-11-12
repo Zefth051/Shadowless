@@ -75,9 +75,9 @@ internal sealed class UpdateService
         FormatVersion(CurrentVersion);
 
     private static readonly HttpClient Client = CreateClient();
-    private readonly HttpClient _checkClient;
+    private readonly HttpClient _client;
 
-    internal UpdateService(HttpClient? checkClient = null) => _checkClient = checkClient ?? Client;
+    internal UpdateService(HttpClient? client = null) => _client = client ?? Client;
 
     private readonly SemaphoreSlim _checkGate = new(1, 1);
     private UpdateRelease? _cachedRelease;
@@ -123,7 +123,7 @@ internal sealed class UpdateService
                     HttpMethod.Get, $"{ReleasesApiUrl}?per_page=100&page={page}");
                 request.Headers.Accept.ParseAdd("application/vnd.github+json");
                 request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-                using HttpResponseMessage response = await _checkClient.SendAsync(
+                using HttpResponseMessage response = await _client.SendAsync(
                     request, HttpCompletionOption.ResponseHeadersRead, checkToken);
                 response.EnsureSuccessStatusCode();
                 await using Stream stream = await response.Content.ReadAsStreamAsync(checkToken);
@@ -405,7 +405,7 @@ internal sealed class UpdateService
         }
     }
 
-    private static async Task<string> ResolveExpectedHashAsync(
+    private async Task<string> ResolveExpectedHashAsync(
         UpdateAsset package,
         UpdateAsset? checksums,
         CancellationToken cancellationToken)
@@ -432,7 +432,7 @@ internal sealed class UpdateService
                 "Checksum file is unexpectedly large.");
         }
 
-        string content = await Client.GetStringAsync(
+        string content = await _client.GetStringAsync(
             checksums.DownloadUri,
             cancellationToken);
         foreach (string line in content.Split(
@@ -452,7 +452,7 @@ internal sealed class UpdateService
             $"SHA-256 digest for {package.Name} was not found.");
     }
 
-    private static async Task DownloadVerifiedAsync(
+    private async Task DownloadVerifiedAsync(
         UpdateAsset asset,
         string destinationPath,
         string expectedHash,
@@ -495,7 +495,7 @@ internal sealed class UpdateService
             if (File.Exists(temporaryPath))
                 File.Delete(temporaryPath);
 
-            using HttpResponseMessage response = await Client.GetAsync(
+            using HttpResponseMessage response = await _client.GetAsync(
                 asset.DownloadUri,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
