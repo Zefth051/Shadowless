@@ -7,6 +7,16 @@ The inherited README/website screenshots are not verified captures of these
 Shadowless candidates; the earlier demo-data review below is not proof of their
 branding, version or platform provenance.
 
+## 2026-11-12 follow-up
+
+[Native Windows package QA](WINDOWS_UPDATE_VALIDATION.md) passed Setup/Portable
+upgrades, real package preparation/hash rejection/recovery and settings
+preservation. The test used controlled transport, not published releases or the
+interactive update UI. The ordinary Windows build/analyzer/distribution CI also
+passed. Six Linux screenshots were captured from the checksum-verified draft
+AppImage. Both branches were updated; the repository and releases remain private
+validation drafts pending the owner's final publication review.
+
 ## Scope and repository
 
 The user authorized uploading the Windows and Linux branches to GitHub and

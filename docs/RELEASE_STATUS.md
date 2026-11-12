@@ -50,10 +50,14 @@ Windows Store updates use a separate Store-managed channel.
 
 | Platform | Existing evidence | Still required |
 | --- | --- | --- |
-| Windows Setup / Portable | Automated updater policy, URL/checksum and copy-retry QA; CI installer install/uninstall | Real in-app discovery, download, confirmation, upgrade and relaunch between two versions on native Windows, for both packages |
-| Linux AppImage | Offline release-selection, checksum and replacement tests; CI AppImage build/startup smoke checks | Real in-app discovery, download, confirmation, AppImage replacement and relaunch between two versions on a supported Hyprland host |
+| Windows Setup / Portable | Native Setup and Portable upgrades between real QA packages, SHA-256 rejection/recovery, launcher start and settings preservation; [evidence and limits](WINDOWS_UPDATE_VALIDATION.md) | Real in-app discovery, download, confirmation, upgrade and relaunch between two versions on native Windows, for both packages |
+| Linux AppImage | Offline updater tests; AppImage checksum/startup verification; real Hyprland UI, synthetic playback/editor and six screenshots on this host | Real in-app discovery, download, confirmation, AppImage replacement and relaunch between two versions on a supported Hyprland host |
 
-Before claiming update support is verified:
+Package-level Windows upgrade QA passed on 2026-11-12; it used controlled
+package transport and does not complete the real published-release/UI checks below.
+The private installer still has updates disabled.
+
+Before claiming the full in-app update flow is verified:
 
 - [ ] Test the complete Windows Setup upgrade and confirm the new running version.
 - [ ] Test the complete Windows Portable upgrade and confirm the new running version.

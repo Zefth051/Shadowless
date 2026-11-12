@@ -27,7 +27,9 @@ permissions. See [available packages and pending validation](docs/RELEASE_STATUS
 
 The editions have separate interfaces and platform requirements. See the
 [full comparison](docs/FEATURES.md). Private builds update manually. Automated
-updater tests do not establish a successful upgrade between two real versions.
+updater tests do not establish a successful upgrade between two released versions.
+[Windows native package upgrades passed](docs/WINDOWS_UPDATE_VALIDATION.md);
+the complete published-release/UI path remains pending.
 See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release process.
 
 [Linux edition](../../tree/linux) · [Publishing both branches](docs/GITHUB.md)
