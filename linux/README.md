@@ -85,6 +85,9 @@ The player supports Space (play/pause), Left/Right (seek five seconds), Up/Down
 (fullscreen). Escape first exits fullscreen. Fullscreen controls hide after 2.4
 seconds of inactivity while playing. Playback owns a separate decoder from GSR,
 limits its demux buffers, and stops/releases its clip when the panel is hidden.
+Playback audio uses the existing pipewire-pulse/PulseAudio interface to avoid a
+native PipeWire initialization deadlock in libmpv 0.41; see the
+[playback backend note](../docs/LINUX_PLAYBACK.md).
 Fullscreen video fills the player, with auto-hiding controls overlaid at the bottom.
 Showing or hiding the controls keeps the video size fixed. Space pauses or resumes
 playback even when a transport button has focus.

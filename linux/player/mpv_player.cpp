@@ -89,6 +89,8 @@ bool MpvPlayer::initialize() {
         {"config", "no"}, {"terminal", "no"}, {"input-default-bindings", "no"},
         {"input-vo-keyboard", "no"}, {"osc", "no"}, {"load-scripts", "no"},
         {"vo", "libmpv"}, {"hwdec", m_software ? "no" : "auto-safe"}, {"vd-lavc-threads", "2"},
+        // Use required pipewire-pulse; libmpv 0.41 native PipeWire initialization can deadlock.
+        {"ao", "pulse"},
         {"ad-lavc-threads", "1"}, {"demuxer-max-bytes", "32MiB"},
         {"demuxer-max-back-bytes", "8MiB"}, {"cache", "no"}, {"keep-open", "yes"},
         {"volume", "80"}, {"audio-client-name", "Shadowless player"}

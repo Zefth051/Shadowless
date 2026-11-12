@@ -4,6 +4,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QOpenGLWidget>
+#include <QScopeGuard>
+#include <QRegularExpression>
 using namespace Shadowless;
 class PlaybackTests : public QObject {
     Q_OBJECT
@@ -46,6 +48,22 @@ private slots:
         QTest::qWait(300); QCOMPARE(player.duration(), 0); QCOMPARE(player.position(), 0);
         QCOMPARE(errors.size(), 0);
         const int count = frames.size(); QTest::qWait(200); QCOMPARE(frames.size(), count);
+    }
+    void usesPulseAudioForPlayback() {
+        const bool tracing = qEnvironmentVariableIsSet("SHADOWLESS_PLAYER_TRACE");
+        const auto previousTrace = qgetenv("SHADOWLESS_PLAYER_TRACE");
+        const auto restore = qScopeGuard([&] {
+            if (tracing) qputenv("SHADOWLESS_PLAYER_TRACE", previousTrace);
+            else qunsetenv("SHADOWLESS_PLAYER_TRACE");
+        });
+        qputenv("SHADOWLESS_PLAYER_TRACE", "1");
+        QTest::ignoreMessage(QtInfoMsg, QRegularExpression("^ao Trying audio driver 'pulse'$"));
+        QTest::ignoreMessage(QtInfoMsg, QRegularExpression("^cplayer AO: \\[pulse\\] .+$"));
+        MpvPlayer player; player.resize(480, 270); player.show(); player.open(m_clip);
+        QTRY_VERIFY(player.loaded());
+        QTRY_VERIFY(player.position() > 0);
+        player.release();
+        QVERIFY(player.source().isEmpty());
     }
     void repeatedLoadsAndMissingClip() {
         MpvPlayer player; player.show(); QSignalSpy errors(&player, &MpvPlayer::error);

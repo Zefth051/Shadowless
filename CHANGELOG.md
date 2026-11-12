@@ -9,6 +9,7 @@ All notable user-facing changes are documented here.
 ### Fixed
 
 - **AppImage HTTPS updates:** Include Qt's OpenSSL TLS backend and its runtime libraries, so update checks and downloads can use HTTPS without relying on a system Qt installation.
+- **Player lifecycle:** Use the existing pipewire-pulse/PulseAudio interface for playback, avoiding a libmpv native PipeWire connection race that could freeze the app when leaving a clip after changing audio tracks.
 
 ### Known limitations
 
