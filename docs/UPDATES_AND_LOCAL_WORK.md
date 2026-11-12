@@ -1,15 +1,15 @@
 # Updates and local development
 
-## Current private preview
+## Public source and draft packages
 
-The repository remains private. The existing `v0.2.4` Windows and
+The repository became public on 2026-11-12. The existing `v0.2.4` Windows and
 `linux-v0.2.4` Linux packages are validation drafts, with in-app updates disabled.
 An installed private build does not start updating merely because the repository
-later becomes public. No GitHub token is embedded in either application.
+becomes public. No GitHub token is embedded in either application.
 
 New Windows Release builds now enable public-release updates by default, even
 when built while the repository is private. They can discover later public
-releases after the repository becomes public without another rebuild. Existing
+final Windows releases without another rebuild for the visibility transition. Existing
 draft assets are unchanged and still need one manual upgrade to an enabled build.
 
 Give a tester repository access and a reviewed package through an authorized
@@ -22,10 +22,10 @@ installation. Keep the same install directory and retain settings/recordings.
 A Linux tester replaces the old AppImage manually after quitting. Current
 validation and remaining restrictions are recorded in [release status](RELEASE_STATUS.md).
 
-## After the public transition
+## Publishing binary releases
 
-Repository visibility and release publication are separate actions requiring the
-owner's approval. A public repository with only draft releases still has no
+The owner authorized public source on 2026-11-12. Release publication remains
+a separate action; a public repository with only draft releases still has no
 downloadable update for the application.
 
 1. Build a new candidate with public updates enabled: the Windows release workflow

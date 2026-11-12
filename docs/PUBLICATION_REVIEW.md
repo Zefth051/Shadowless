@@ -1,6 +1,12 @@
 # Publication review — 2026-11-11
 
 See [current release status and outstanding validation](RELEASE_STATUS.md).
+
+**Visibility update, 2026-11-12:** The owner authorized making the repository
+public. Both maintained branches and reachable history passed the credential
+pattern scanner with zero findings immediately before the visibility change.
+The source is now public; binary releases remain unpublished drafts. Earlier
+private-stage notes below are historical and do not describe current visibility.
 Six real Linux draft AppImage screenshots were added on 2026-11-12;
 [their gallery](screenshots/linux/README.md) records the artifact hash and demo-media limits.
 The inherited README/website screenshots are not verified captures of these
