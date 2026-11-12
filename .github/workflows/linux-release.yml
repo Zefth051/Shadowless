@@ -52,6 +52,8 @@ jobs:
       - name: Start isolated timed audio for playback tests
         shell: bash
         run: |
+          getent group pulse >/dev/null || groupadd --system pulse
+          getent passwd pulse >/dev/null || useradd --system --gid pulse --home-dir /var/lib/pulse --create-home --shell /usr/bin/nologin pulse
           install -d -o pulse -g pulse -m 0755 /tmp/shadowless-ci-pulse
           pulseaudio --system --daemonize=yes --use-pid-file=no \
             --disallow-exit=yes --disallow-module-loading=yes \
