@@ -94,3 +94,23 @@ The lookup now handles failure; the preview documents its inherited HwndHost
 finalizer, matching the existing MpvHost policy. The same analyzer command passes
 locally with zero errors and 1,306 non-gating existing warnings; native target
 suppression was used only for this Linux-hosted managed check.
+
+## Linux release evidence
+
+GitHub run `43148322139` completed successfully with 103 passing QtTest results,
+zero failures and ten optional/live/graphics skips, plus the desktop identity
+check and six packaging tests. It generated and smoke-tested the AppImage and
+created draft `linux-v0.2.4` at `d5ed159591c41c8ddd98ca5e82858642fb918c9b`.
+The cloud artifact records its Arch build packages; broad distribution/driver
+compatibility is not established.
+
+Both releases remain private validation drafts. Their checksum files were fetched
+and compared with GitHub's asset digests: Windows Setup/Portable and Linux
+AppImage all match. No published binary redistribution clearance is asserted.
+The maintained branches may advance past the exact candidate commit recorded
+in each draft. Private builds use manual updates; public-enabled update behavior
+is documented in `FEATURES.md` and `INSTALL.md`.
+
+The original platform worktrees are retained. Private diagnostic notes, audio
+snapshots, build logs, downloaded runtimes and original-note backups stay ignored
+and are not part of the GitHub source branches or release packages.
