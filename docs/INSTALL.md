@@ -3,8 +3,10 @@
 **Current status: private validation drafts only.** Setup, Portable and AppImage
 assets exist in draft releases; no release is published. Draft access requires
 sufficient repository permissions. See [release status](RELEASE_STATUS.md).
-Neither platform has completed a real in-app upgrade between two versions.
-The public-update flows below describe the implementation awaiting that test.
+Windows native package upgrades passed controlled-transport QA; see
+[the evidence and limits](WINDOWS_UPDATE_VALIDATION.md). Neither platform has
+completed the full in-app upgrade through two published releases. The
+public-update flows below still await that test.
 
 Private testers must sign in with a GitHub account granted repository access.
 Public downloads become available after reviewed releases are published.

@@ -31,7 +31,7 @@ downloadable update for the application.
 3. Existing private-build users manually install this public-enabled build once.
 4. Later published releases with a greater version become eligible updates.
 
-Windows checks on opening its settings window. The UI offers the new version;
+Windows checks when its dashboard/settings window first loads. The UI offers the new version;
 the user starts the update, which downloads and checks SHA-256 before invoking
 Setup for installed builds or the copy/relaunch helper for Portable builds.
 This is not unattended installation. Windows `0.x` builds include prereleases;
@@ -43,7 +43,8 @@ GitHub SHA-256 digest and replaces the writable regular AppImage atomically.
 Quit and reopen after recording to run the new version. Read-only paths and
 symlinks require manual updates. Windows Store installations use Store updates.
 
-Successful package-level QA is not proof of a full production network update:
+[Windows native package QA](WINDOWS_UPDATE_VALIDATION.md) passed. This is not
+proof of a full production network update:
 that still requires two eligible published releases and the real application UI.
 See [the validation status](RELEASE_STATUS.md) before claiming otherwise.
 

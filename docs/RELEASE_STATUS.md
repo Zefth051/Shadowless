@@ -3,13 +3,15 @@
 Last checked: 2026-11-12. This is a private validation stage, not a published
 Shadowless release. Draft assets require repository access and permission to view
 draft releases; being able to browse source does not guarantee draft access.
+Open Releases and select the matching draft title/tag. GitHub may change a
+draft's temporary `untagged-*` URL when its notes are edited.
 
 ## Available build candidates
 
 | Platform | Draft tag | Attached binaries | Publication |
 | --- | --- | --- | --- |
-| Windows x64 | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-f8959af9b40b9ec12642) | Setup EXE, Portable ZIP, `SHA256SUMS.txt` | Draft, not published |
-| Linux x86_64 / Hyprland | [`linux-v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-5f6b6ea99d03e868ae6f) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt` | Draft, not published |
+| Windows x64 | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | Setup EXE, Portable ZIP, `SHA256SUMS.txt` | Draft, not published |
+| Linux x86_64 / Hyprland | [`linux-v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt` | Draft, not published |
 
 The Linux asset is `Shadowless-0.2.4-linux-x86_64.AppImage` (97,430,008 bytes).
 It is attached to the Linux draft under
@@ -48,10 +50,14 @@ Windows Store updates use a separate Store-managed channel.
 
 | Platform | Existing evidence | Still required |
 | --- | --- | --- |
-| Windows Setup / Portable | Automated updater policy, URL/checksum and copy-retry QA; CI installer install/uninstall | Real in-app discovery, download, confirmation, upgrade and relaunch between two versions on native Windows, for both packages |
-| Linux AppImage | Offline release-selection, checksum and replacement tests; CI AppImage build/startup smoke checks | Real in-app discovery, download, confirmation, AppImage replacement and relaunch between two versions on a supported Hyprland host |
+| Windows Setup / Portable | Native Setup and Portable upgrades between real QA packages, SHA-256 rejection/recovery, launcher start and settings preservation; [evidence and limits](WINDOWS_UPDATE_VALIDATION.md) | Real in-app discovery, download, confirmation, upgrade and relaunch between two versions on native Windows, for both packages |
+| Linux AppImage | Offline updater tests; AppImage checksum/startup verification; real Hyprland UI, synthetic playback/editor and six screenshots on this host | Real in-app discovery, download, confirmation, AppImage replacement and relaunch between two versions on a supported Hyprland host |
 
-Before claiming update support is verified:
+Package-level Windows upgrade QA passed on 2026-11-12; it used controlled
+package transport and does not complete the real published-release/UI checks below.
+The private installer still has updates disabled.
+
+Before claiming the full in-app update flow is verified:
 
 - [ ] Test the complete Windows Setup upgrade and confirm the new running version.
 - [ ] Test the complete Windows Portable upgrade and confirm the new running version.
