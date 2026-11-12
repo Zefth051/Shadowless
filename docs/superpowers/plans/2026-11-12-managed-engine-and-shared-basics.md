@@ -51,8 +51,8 @@
 - [x] Update identical shared roadmaps, striking only tasks complete on both platforms and recording remaining verification limits.
 - [x] Review diffs and source/license inputs; run updater QA, context checks, secret scans and appropriate native suites.
 - [x] Commit completed Windows changes, reconcile the remote README commit and push; build version 0.3.0 via pinned Windows Actions with public updates enabled, prerelease=false, publish=false.
-- [ ] Verify hosted installer/uninstaller/package checks; download release assets and validate SHA-256, record candidate evidence.
-- [ ] Commit/push verified Linux work and synchronized documentation. Do not claim live GPU/public-update coverage without evidence.
+- [x] Verify hosted installer/uninstaller/package checks; download release assets and validate SHA-256, record candidate evidence.
+- [x] Commit/push verified Linux work and synchronized documentation. Do not claim live GPU/public-update coverage without evidence.
 
 ## Decisions
 
@@ -67,11 +67,11 @@
   verified by disk roundtrip. Native Windows Build workflow 43275192665 passed.
 - Managed GSR forced-stop review found an orphaned recorder after shell SIGKILL.
   Added parent-death ownership to recorder/helper, tested with a compiled stubborn
-  recorder; Qt owns and removes staged helper files. Packaging14 and Qt108 pass.
+  recorder; Qt owns and removes staged helper files. Packaging 14 and Qt 108 pass.
 - Linux startup review found failed-save cached settings were inconsistent with
   external rollback. Added a failing write fixture and restored previous values;
-  UI51 and desktop command-execution tests pass.
-- Ruling: Keep source defaults aligned at0.3.0; previously built validation
+  UI 51 and desktop command-execution tests pass.
+- Ruling: Keep source defaults aligned at 0.3.0; previously built validation
   AppImage already used explicit SHADOWLESS_VERSION=0.3.0.
 - Ruling: Test generated autostart commands in isolated config directories; do
   not modify the developer's real session config or log them out. Real login
@@ -79,8 +79,14 @@
 - Ruling: Do not authenticate Polkit interactively on the user's behalf. Actual
   bundled helper loader/capability checks pass; KMS recording remains unverified.
 
-- Source verification: all190 vendored files are tracked and staged bytes match
+- Source verification: all 190 vendored files are tracked and staged bytes match
   the pinned SHA-256 manifest. Upstream whitespace is preserved deliberately;
   diff checks pass outside the imported upstream tree.
-- Local AppImage0.3.0 SHA-256: `4cc5ce9fc7625bc4caeb3154f84a7245253b31f8c353c3981916198948a00339`.
+- Local AppImage 0.3.0 SHA-256: `4cc5ce9fc7625bc4caeb3154f84a7245253b31f8c353c3981916198948a00339`.
   This is local validation evidence, not an uploaded Linux release.
+
+- Clean committed-source archive verified 190 source hashes, executable build/
+  launcher modes and 14 packaging tests. Source pushes: Linux 1bb4791, Windows
+  b810d33. Windows draft v0.3.0 uploaded by run 43275206850 with native installer/
+  uninstaller/layout/checksum QA all passing. Public network/UI upgrade testing
+  remains pending; no repository visibility or release publication changed.

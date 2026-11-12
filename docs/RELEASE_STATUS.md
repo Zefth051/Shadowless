@@ -10,7 +10,8 @@ draft's temporary `untagged-*` URL when its notes are edited.
 
 | Platform | Draft tag | Attached binaries | Publication |
 | --- | --- | --- | --- |
-| Windows x64 | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | Setup EXE, Portable ZIP, `SHA256SUMS.txt` | Draft, not published |
+| Windows x64 | [`v0.3.0` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-ac8a93b4af9367377e3a) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; final-only public updates enabled | Draft, not published |
+| Windows x64 (older) | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; updater disabled | Draft, not published |
 | Linux x86_64 / Hyprland | [`linux-v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt` | Draft, not published |
 
 The Linux asset is `Shadowless-0.2.4-linux-x86_64.AppImage` (97,430,008 bytes).
@@ -109,3 +110,21 @@ Both branches implement independent opt-in login startup and replay-on-launch
 settings and a containing-folder action in clip rows. Windows config tests include
 a persisted-state recovery regression. Completed roadmap work and remaining
 features are tracked in [the shared roadmap](ROADMAP.md).
+
+## Windows 0.3.0 installer candidate
+
+[Release build 43275206850](https://github.com/Zefth051/Shadowless/actions/runs/43275206850)
+completed successfully from `b810d33f7f9649fd77ed70529f755aa982001ba2`, with
+`enable_public_updates=true`, `prerelease=false`, `publish=false`. Native checks
+passed for public/private updater policy, Portable layout, installation, running
+application shutdown during uninstall, and SHA-256.
+[Windows CI 43275192665](https://github.com/Zefth051/Shadowless/actions/runs/43275192665)
+also passed, including native build, analyzers and UI/localization checks.
+
+The uploaded Setup is 167,116,033 bytes, SHA-256
+`ea32328f910c414245e84361042f511ba32a807915eabd0a1f42a92c7219800a`.
+The Portable ZIP is 216,667,723 bytes, SHA-256
+`104222e29423ee917853f957658a36b368ab9af57afab5427a00003277e65247`.
+The draft is not publicly downloadable and cannot itself be selected by the
+updater. Once accessible final releases exist, this enabled build can discover
+them without another manual installation merely for the visibility transition.

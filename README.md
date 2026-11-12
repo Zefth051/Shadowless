@@ -26,8 +26,8 @@ GSR interface is needed. The existing 0.2.4 draft still requires host GSR.
 
 ## Current release status
 
-**Private validation drafts only; no published release.** The Windows draft
-contains Setup and Portable packages. The Linux draft contains
+**Private validation drafts only; no published release.** The Windows 0.3.0 draft
+contains Setup and Portable packages with final-only public updates enabled. The Linux draft contains
 `Shadowless-0.2.4-linux-x86_64.AppImage`; binaries are attached to Releases,
 not included in the source ZIP. Viewing drafts requires sufficient repository
 permissions. See [available packages and pending validation](docs/RELEASE_STATUS.md).
@@ -41,7 +41,9 @@ permissions. See [available packages and pending validation](docs/RELEASE_STATUS
 | Real in-app upgrade | Not yet tested | Not yet tested |
 
 The editions have separate interfaces and platform requirements. See the
-[full comparison](docs/FEATURES.md). Private builds update manually. Automated
+[full comparison](docs/FEATURES.md). Existing 0.2.4 drafts and Linux development
+builds update manually; new Windows Release builds include final-only public
+update checks, ready for the public transition. Automated
 updater tests do not establish a successful upgrade between two released versions.
 [Windows native package upgrades passed](docs/WINDOWS_UPDATE_VALIDATION.md);
 the complete published-release/UI path remains pending.
