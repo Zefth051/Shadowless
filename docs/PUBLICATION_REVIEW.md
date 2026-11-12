@@ -12,8 +12,11 @@ recordings and local diagnostic output are excluded.
 
 The current non-ignored source files, index and all reachable history were scanned
 for recognizable credentials and sensitive filenames on both branches, with zero
-findings. Eight scanner regressions pass on each branch. No matching secret was
-found to remove. Reviewed primary README screenshots use demo clip/app names.
+findings. Eight scanner regressions pass on each branch. No matching credential was
+found. Manual review subsequently found internal Windows test notes with local
+paths and recording filenames. They were removed from the six new Windows commits;
+a backup remains only in ignored local storage. Upstream history was unchanged.
+Reviewed primary README screenshots use demo clip/app names.
 Upstream author attribution is retained. Pattern scanning cannot establish the
 absence of every possible private datum.
 
@@ -72,3 +75,22 @@ Local AppImage `linux-0.2.4-publication` was rebuilt with update code, AI disclo
 and GNU license texts; its published checksum file verifies and extracted startup
 reports `shadowless 0.2.4`. Cloud release builds are tracked in GitHub Actions;
 private drafts remain subject to the binary distribution audit above.
+
+## Windows release evidence
+
+GitHub run `43146952853` completed successfully: native packages built, installer
+installation and uninstallation passed, Portable layout and embedded FFmpeg license
+were checked, and asset SHA-256 values were verified. Draft `v0.2.4` contains Setup,
+Portable and checksums, targeting sanitized commit `8d4670694cfcc997a4dfa9c4cb65e3d85e533eab`.
+No GPU/game capture validation on a physical Windows host is implied.
+
+Linux container validation required explicit Qt WebP plugins, a writable isolated
+Trash/data directory and a timed null audio sink for headless playback. These
+changes apply to validation environments, not the user's audio configuration.
+
+The full Windows analyzer gate found two pre-existing issues: an unchecked Win32
+thread/process lookup and a native-window ownership warning in the overlay preview.
+The lookup now handles failure; the preview documents its inherited HwndHost
+finalizer, matching the existing MpvHost policy. The same analyzer command passes
+locally with zero errors and 1,306 non-gating existing warnings; native target
+suppression was used only for this Linux-hosted managed check.

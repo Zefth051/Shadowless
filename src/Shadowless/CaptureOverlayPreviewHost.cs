@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Interop;
 using System.Windows.Media;
 
@@ -8,6 +9,8 @@ public sealed record CaptureOverlayPreviewState(
     bool Running = false, uint Width = 1920, uint Height = 1080,
     uint Rendered = 0, uint Lagged = 0, string Warnings = "");
 
+[SuppressMessage("Usage", "CA2216:Disposable types should declare finalizer",
+    Justification = "WPF HwndHost owns the native window and calls DestroyWindowCore on the UI thread.")]
 public sealed class CaptureOverlayPreviewHost : HwndHost
 {
     private nint _window;

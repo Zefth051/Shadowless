@@ -12,7 +12,7 @@ does not replace its authorship or imply upstream endorsement.
 | --- | --- | --- |
 | Captail/Shadowless | GPL-2.0-or-later; upstream history | Exact modified source and build scripts |
 | Windows OBS 32.2.2 | Pinned acquisition; GPL-2.0-or-later | OBS sources, native modifications and transitive notices |
-| Windows FFmpeg | Script selects `win64-lgpl` builds | Exact build configuration, LGPL texts and corresponding sources |
+| Windows FFmpeg | Pinned LGPL shared/static build; upstream archive ships LGPL-3.0 | Exact build configuration, LGPL texts and corresponding sources |
 | Windows libmpv | Pinned `git-bcde6b93cc`; full binary build licensing pending verification | Confirm entire build and dependency configuration; strings alone are insufficient |
 | Qt 6 | Local 6.12.0 declares LGPL-3.0-only / GPL-3.0-only options | Compatible distribution route, Qt/third-party notices and library replacement as applicable |
 | Linux FFmpeg | Local `2:9.0.2-2.1` declares **GPL-3.0-only** | Assess bundle under GPLv3-compatible terms; exact source/configuration |
@@ -23,7 +23,7 @@ does not replace its authorship or imply upstream endorsement.
 | Game catalog | Reduced MIT catalog with pinned source revision | Full MIT notice retained in `THIRD_PARTY_NOTICES.md` |
 
 The GPL-2.0-or-later source grant permits choosing GPLv3 where required by the
-dependency combination. Do not describe the Linux bundle as GPLv2-only or reuse
+dependency combination, including LGPLv3/GPLv3 components in either platform's bundle. Do not describe the Linux bundle as GPLv2-only or reuse
 the Windows LGPL FFmpeg notice for the system's GPL Linux build.
 
 Before sharing binaries:

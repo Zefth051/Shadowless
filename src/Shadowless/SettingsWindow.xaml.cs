@@ -1761,7 +1761,8 @@ public partial class SettingsWindow : Window
         {
             Dispatcher.BeginInvoke(() =>
             {
-                GetWindowThreadProcessId(GetForegroundWindow(), out uint processId);
+                if (GetWindowThreadProcessId(GetForegroundWindow(), out uint processId) == 0)
+                    return;
                 if (IsVisible && processId != 0 && processId != Environment.ProcessId)
                 {
                     CloseDisplayIdentifiers();
