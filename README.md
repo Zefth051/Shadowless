@@ -1,5 +1,9 @@
 # Shadowless - An app for clipping
 
+<p align="center">
+  <img src="src/Shadowless/Assets/ShadowlessMoon.png" alt="Shadowless moon logo" width="160">
+</p>
+
 **Developed with AI assistance, including OpenAI Codex.** This is a fork of
 Captail by FaulMit; original attribution and licensing are retained.
 See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
@@ -42,6 +46,14 @@ for repository setup.
 
 Shadowless is based on [Captail by FaulMit](https://github.com/FaulMit/captail)
 and retains its [GPL-2.0-or-later license](LICENSE).
+
+## Hardware testing
+
+Shadowless hardware testing has only been performed on this `linux` branch with
+an NVIDIA GeForce GTX 1650, Hyprland / Wayland and GPU Screen Recorder.
+Other GPUs and Windows capture have not been validated by this project.
+RTX test reports belong to upstream Captail on Windows, not Shadowless.
+Automated Windows package upgrade checks do not establish capture compatibility.
 
 ## Linux preview screenshots
 

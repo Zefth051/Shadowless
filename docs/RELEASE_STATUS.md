@@ -31,6 +31,14 @@ tools and compatible graphics drivers. An AppImage does not install those tools
 or establish support for GNOME, KDE, X11 or older glibc systems.
 See the [feature comparison](FEATURES.md) and [installation guide](INSTALL.md).
 
+## Hardware validation scope
+
+Shadowless hardware testing is limited to the `linux` branch on an NVIDIA GeForce
+GTX 1650 with Hyprland / Wayland and GSR. Other GPUs and Windows capture remain
+unvalidated by this project. RTX test reports belong to upstream Captail on
+Windows and must not be presented as Shadowless test results.
+The Windows package QA below checks installation and updates, not GPU capture.
+
 ## Screenshots
 
 The inherited Windows screenshots show Captail or an earlier upstream build.

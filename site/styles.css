@@ -110,17 +110,7 @@ button { font: inherit; }
   letter-spacing: -0.02em;
 }
 
-.brand-mark { width: 28px; height: 28px; overflow: visible; }
-.brand-mark circle:first-child {
-  fill: none;
-  stroke: var(--mint);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 72 28;
-  transform-origin: 20px 20px;
-  transform: rotate(-55deg);
-}
-.brand-dot { fill: var(--mint); }
+.brand-mark { width: 28px; height: 28px; object-fit: contain; }
 
 .site-nav { display: flex; align-items: center; gap: 30px; }
 .site-nav a, .header-source {
