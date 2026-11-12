@@ -44,7 +44,12 @@ public libobs headers used to compile the module.
 - Project: https://mpv.io/
 - Source revision: `git-bcde6b93cc`
 - Native Windows build: https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20261111
-- License: mpv supports LGPL-2.1-or-later builds; the complete configuration and transitive licenses of this pinned binary still require verification before redistribution.
+- License: this pinned build uses a GPLv3-enabled dependency configuration. Its exact upstream build recipe enables FFmpeg `--enable-gpl --enable-version3` and links GPL components; the availability of LGPL builds of mpv does not describe this binary.
+
+The release links upstream workflow `42927840447`, whose build recipes are at
+`shinchiro/mpv-winbuild-cmake` commit `bda10a2816ce9908d419b3f4b564227330457e76`.
+Exact source revisions and notices for its complete static dependency closure
+remain unverified. See [the Windows 0.3.0 preflight](docs/RELEASE_PREFLIGHT.md).
 
 Shadowless dynamically loads the replaceable `libmpv-2.dll` for embedded editor playback, hardware decoding, seeking, and local mixing of selected audio tracks. Shadowless does not bundle or launch the standalone `mpv.exe` player.
 
@@ -55,6 +60,9 @@ Shadowless dynamically loads the replaceable `libmpv-2.dll` for embedded editor 
 - System.Drawing.Common — MIT License: https://github.com/dotnet/runtime
 
 Licenses and copyright notices from these projects remain applicable to their respective components.
+Verified notice texts and their source/hash manifest are in `licenses/third-party/windows/`.
+These files are included by future packaging runs; the existing 0.3.0 draft
+does not contain this newly collected set.
 
 ## Discord Quest Completer game catalog
 

@@ -12,6 +12,7 @@ draft's temporary `untagged-*` URL when its notes are edited.
 | --- | --- | --- | --- |
 | Windows x64 | [`v0.3.0` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-ac8a93b4af9367377e3a) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; final-only public updates enabled | Draft, not published |
 | Windows x64 (older) | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; updater disabled | Draft, not published |
+| Linux x86_64 / Hyprland | [`linux-v0.3.0` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-f6e392d8989b809c5d7f) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt`; updater enabled but bundled TLS backend missing | Draft, do not publish |
 | Linux x86_64 / Hyprland | [`linux-v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt` | Draft, not published |
 
 The Linux asset is `Shadowless-0.2.4-linux-x86_64.AppImage` (97,430,008 bytes).
@@ -128,3 +129,18 @@ The Portable ZIP is 216,667,723 bytes, SHA-256
 The draft is not publicly downloadable and cannot itself be selected by the
 updater. Once accessible final releases exist, this enabled build can discover
 them without another manual installation merely for the visibility transition.
+
+## Publication preflight follow-up
+
+The owner authorized publishing finished releases. The [artifact-specific
+preflight](RELEASE_PREFLIGHT.md) found missing exact native dependency sources
+and notices in both candidates. They remain drafts; automated package tests
+do not clear the distribution gate. Eleven verified Windows dependency notice
+texts are now available for future packaging, with source/hash provenance.
+
+Linux public-update build 43279436777 succeeded with its updater enabled, but
+its AppImage lacked Qt's TLS backend. The corrected 0.3.1 packaging requires and
+includes that backend plus OpenSSL libraries. Seventeen packaging tests pass;
+an isolated full-AppImage probe loaded only bundled Qt/TLS/OpenSSL libraries
+and received HTTP 200 from GitHub. This is HTTPS transport evidence, not a full
+production upgrade between released Shadowless versions.

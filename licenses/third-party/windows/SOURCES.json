@@ -1,0 +1,71 @@
+[
+  {
+    "file": "dotnet-runtime-10.0.15-LICENSE.TXT",
+    "url": "https://raw.githubusercontent.com/dotnet/runtime/v10.0.15/LICENSE.TXT",
+    "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310",
+    "bytes": 1116
+  },
+  {
+    "file": "dotnet-runtime-10.0.15-THIRD-PARTY-NOTICES.TXT",
+    "url": "https://raw.githubusercontent.com/dotnet/runtime/v10.0.15/THIRD-PARTY-NOTICES.TXT",
+    "sha256": "66f1d4e44973185519bb4aa8a9718eb22fc7af2cc532e3ae9cfc4c127ee7fc54",
+    "bytes": 76623
+  },
+  {
+    "file": "dotnet-wpf-10.0.15-LICENSE.TXT",
+    "url": "https://raw.githubusercontent.com/dotnet/wpf/v10.0.15/LICENSE.TXT",
+    "sha256": "ae48df11a335dc1a615f4f938b69cba73bcf4485c4f97af49b38efb0f216353b",
+    "bytes": 1115
+  },
+  {
+    "file": "dotnet-wpf-10.0.15-THIRD-PARTY-NOTICES.TXT",
+    "url": "https://raw.githubusercontent.com/dotnet/wpf/v10.0.15/THIRD-PARTY-NOTICES.TXT",
+    "sha256": "d23dba2fee20c6b59d8f7088ee9ed372459c952a319b7ca90f3eec370cc76eb9",
+    "bytes": 2703
+  },
+  {
+    "file": "NAudio-c89fee9-license.txt",
+    "url": "https://raw.githubusercontent.com/naudio/NAudio/c89fee940ee6f8d7374d18714a6b85d8b7a18ab0/license.txt",
+    "sha256": "303e01786b271eb464b3f43d18a375f2f17d37bc708a37c2fdf45b289fb5bfaa",
+    "bytes": 1059
+  },
+  {
+    "file": "H.NotifyIcon-bcaaabe-LICENSE.md",
+    "url": "https://raw.githubusercontent.com/HavenDV/H.NotifyIcon/bcaaabecf16566dd910a3798fe874014e251b28d/LICENSE.md",
+    "sha256": "b41f5adb8391601e3c693462925317e4cbe446270bcd646bdb8d02572821fe80",
+    "bytes": 1064
+  },
+  {
+    "file": "dotnet-winforms-10.0.15-LICENSE.TXT",
+    "url": "https://raw.githubusercontent.com/dotnet/winforms/v10.0.15/LICENSE.TXT",
+    "sha256": "ae48df11a335dc1a615f4f938b69cba73bcf4485c4f97af49b38efb0f216353b",
+    "bytes": 1115
+  },
+  {
+    "file": "dotnet-winforms-10.0.15-THIRD-PARTY-NOTICES.TXT",
+    "url": "https://raw.githubusercontent.com/dotnet/winforms/v10.0.15/THIRD-PARTY-NOTICES.TXT",
+    "sha256": "5a412b38efae0b162dc0893b319023f4cd14a8985a0f9f9ae01ac052b37a36eb",
+    "bytes": 1966
+  },
+  {
+    "file": "system.drawing.common-10.0.0-LICENSE.TXT",
+    "url": "https://api.nuget.org/v3-flatcontainer/system.drawing.common/10.0.0/system.drawing.common.10.0.0.nupkg",
+    "path_in_package": "LICENSE.TXT",
+    "sha256": "a89886665765362eb77e0f8e26602c924520041d1711b2eedc136434fe4d01ab",
+    "bytes": 1137
+  },
+  {
+    "file": "system.drawing.common-10.0.0-THIRD-PARTY-NOTICES.TXT",
+    "url": "https://api.nuget.org/v3-flatcontainer/system.drawing.common/10.0.0/system.drawing.common.10.0.0.nupkg",
+    "path_in_package": "THIRD-PARTY-NOTICES.TXT",
+    "sha256": "2ffe89f325685881e9fb3a64451632abe784db07a193a2633b241ea8d85e7a85",
+    "bytes": 2007
+  },
+  {
+    "file": "microsoft.win32.systemevents-10.0.0-THIRD-PARTY-NOTICES.TXT",
+    "url": "https://api.nuget.org/v3-flatcontainer/microsoft.win32.systemevents/10.0.0/microsoft.win32.systemevents.10.0.0.nupkg",
+    "path_in_package": "THIRD-PARTY-NOTICES.TXT",
+    "sha256": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21",
+    "bytes": 78041
+  }
+]
