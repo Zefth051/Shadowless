@@ -36,18 +36,19 @@ Preview binaries are unsigned; review the release source and checksum.
 
 ## Linux x86_64 / Hyprland
 
-Linux capture uses GPU Screen Recorder (GSR) as an external process. GSR must be
-installed separately on the host; it is not included in the AppImage. Shadowless
-starts and manages it, so you do not need to open the GSR GUI or start it manually.
+New Linux builds include Shadowless's maintained GSR 6.1.7 recording engine and
+matching KMS helper. No separate GSR installation or GSR interface is required.
+The older Linux 0.2.4 draft still needs an installed GSR; replacing source does
+not change that existing binary.
 
 Open [Linux releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v)
 and download an AppImage and its checksum file. Match the release's glibc baseline
 to your system; local CachyOS/Arch previews are not validated on older distributions.
 
-Install GSR 6.1.5 with IPC/plugin support, FFmpeg/ffprobe, Hyprland/hyprctl,
+Install FFmpeg/ffprobe, Hyprland/hyprctl,
 PipeWire/pipewire-pulse, `pactl` and `pw-loopback` through your distribution.
-Graphics drivers and capture permissions must already work; the AppImage does not
-install or configure privileged helpers.
+Graphics drivers must work. Direct KMS capture with the managed engine may request
+administrator authorization through Polkit; Shadowless's interface stays unprivileged.
 
 Keep the AppImage in a permanent location, replace `X.Y.Z` below, and run:
 

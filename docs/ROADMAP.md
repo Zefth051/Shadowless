@@ -9,16 +9,21 @@ items are implemented; platform verification limits are recorded separately.
 
 - [x] ~~Windows: enable public updates in Release builds, accepting only published
   final Windows releases, excluding drafts and prereleases even on `0.x`.~~
-  Automated policy tests pass. Hosted installer validation is pending.
-- [ ] Linux: keep a maintained copy of the GSR recording engine source in the Linux
-  branch and bundle its build with Shadowless. No separate GSR installation or
-  GSR graphical interface. Preserve the subprocess integration initially.
+  Automated policy tests and native Windows CI pass; installer validation is
+  tracked in release status.
+- [x] ~~Linux: keep a maintained copy of GSR engine source in the Linux branch
+  and bundle its build with Shadowless, without a separate GSR installation or
+  graphical interface.~~ GSR 6.1.7 and its matching helper are bundled; Shadowless
+  retains subprocess integration. Build, source provenance, engine selection,
+  forced-stop handling and AppImage startup checks pass. Live KMS authorization
+  and capture with the bundled helper still need interactive validation.
 
 ## Minor changes
 
-- [ ] Two independent settings: launch Shadowless at system login and automatically
-  start replay buffering when Shadowless launches. Define their interaction
-  clearly, including manual launches.
+- [x] ~~Two independent settings: launch Shadowless at login and start replay
+  buffering whenever Shadowless launches, including manual launches.~~
+  Both branches implement opt-in settings. Recovery preserves active capture.
+  Linux supports XDG and the default Hyprland Lua/legacy configuration paths.
 - [ ] Let users choose the UI accent color using a HEX value.
 - [ ] Organize clips into the correct game folders. Check detection and fallback
   behavior, not just the folder creation toggle; preserve existing files.
@@ -30,8 +35,9 @@ items are implemented; platform verification limits are recorded separately.
 - [ ] Improve overlay performance and settings usability. Reproduce and fix laptop
   behavior issues individually; exact cases still need to be described.
 - [ ] Refresh icons across both branches.
-- [ ] Add an open-containing-folder button between playback and deletion in both
-  branches, matching the supplied screenshot. Windows already has this action.
+- [x] ~~Add an open-containing-folder button between playback and deletion in both
+  branches, matching the supplied screenshot.~~ Windows already had this action;
+  Linux now opens the clip's actual directory, including game subfolders.
 - [ ] Add simple Discord Rich Presence that works without user configuration.
 
 ## Major changes
@@ -63,6 +69,10 @@ items are implemented; platform verification limits are recorded separately.
    input overlays and idle compression before committing to their designs.
 
 Linux already documents optional organization by game and concurrent replay /
-recording. Windows already has an autostart component. These are starting points,
-not evidence that every roadmap requirement is complete or verified on hardware.
+recording. These remain unchecked until the requested behavior is reviewed across
+both branches. Implementation checks do not establish full hardware coverage.
+
+Startup/config tests pass on both platforms; Linux UI and command-execution
+fixtures pass. A real Linux logout/login cycle, custom Hyprland config locations,
+Windows GPU capture and public-release UI upgrades remain unverified.
 Public visibility and release publication remain separate owner decisions.

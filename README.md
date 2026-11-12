@@ -11,24 +11,25 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 
 **Capture engines:** Windows uses OBS components (`libobs`), included in the
 installer and Portable package; OBS Studio does not need to be installed.
-Linux uses GPU Screen Recorder (GSR) as an external capture engine. Install
-`gpu-screen-recorder` separately before running Shadowless on Linux; the AppImage
-does not bundle or install it. Shadowless starts and manages GSR for you.
+New Linux builds compile and bundle a maintained copy of the GPU Screen Recorder
+(GSR) recording engine and its required helper, without GSR's graphical interface.
+Shadowless manages that engine; no separate GSR installation is needed. The older
+Linux 0.2.4 draft still requires host GSR.
 
 ## Current release status
 
-**Private validation drafts only; no published release.** The Windows draft
-contains Setup and Portable packages. The Linux draft contains
+**Private validation drafts only; no published release.** The Windows 0.3.0 draft
+contains Setup and Portable packages with final-only public updates enabled. The Linux draft contains
 `Shadowless-0.2.4-linux-x86_64.AppImage`; binaries are attached to Releases,
 not included in the source ZIP. Viewing drafts requires sufficient repository
 permissions. See [available packages and pending validation](docs/RELEASE_STATUS.md).
 
 | | Windows edition | Linux edition |
 | --- | --- | --- |
-| Interface / capture | WPF/.NET and libobs | Qt 6 and external GPU Screen Recorder |
+| Interface / capture | WPF/.NET and libobs | Qt 6 and a Shadowless-managed GSR engine |
 | Target | Windows 10/11 x64 | Hyprland on native Wayland, x86_64 |
 | Capture | Desktop and direct game capture | Monitor capture through GSR |
-| Distribution | Setup EXE / Portable ZIP | AppImage; host GSR, PipeWire and FFmpeg required |
+| Distribution | Setup EXE / Portable ZIP | New builds bundle GSR; host PipeWire and FFmpeg required |
 | Real in-app upgrade | Not yet tested | Not yet tested |
 
 The editions have separate interfaces and platform requirements. See the

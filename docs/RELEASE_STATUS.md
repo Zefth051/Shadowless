@@ -10,7 +10,8 @@ draft's temporary `untagged-*` URL when its notes are edited.
 
 | Platform | Draft tag | Attached binaries | Publication |
 | --- | --- | --- | --- |
-| Windows x64 | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | Setup EXE, Portable ZIP, `SHA256SUMS.txt` | Draft, not published |
+| Windows x64 | [`v0.3.0` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-ac8a93b4af9367377e3a) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; final-only public updates enabled | Draft, not published |
+| Windows x64 (older) | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; updater disabled | Draft, not published |
 | Linux x86_64 / Hyprland | [`linux-v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt` | Draft, not published |
 
 The Linux asset is `Shadowless-0.2.4-linux-x86_64.AppImage` (97,430,008 bytes).
@@ -25,9 +26,10 @@ Complete the [dependency/source audit](DEPENDENCY_AUDIT.md) before sharing binar
 
 These editions use separate interfaces, capture backends and packaging.
 Windows uses WPF/.NET and libobs, with desktop/direct game capture and Setup or
-Portable packages. Linux uses Qt and external GPU Screen Recorder, targets
-Hyprland on Wayland, captures monitors, and requires host GSR, PipeWire, FFmpeg
-tools and compatible graphics drivers. An AppImage does not install those tools
+Portable packages. New Linux builds use Qt and a bundled, maintained GSR 6.1.7
+engine with its matching helper, without GSR's UI. The older Linux 0.2.4 draft
+still needs host GSR. Hyprland on Wayland, PipeWire, FFmpeg tools and compatible
+graphics drivers remain host requirements. An AppImage does not install those tools
 or establish support for GNOME, KDE, X11 or older glibc systems.
 See the [feature comparison](FEATURES.md) and [installation guide](INSTALL.md).
 
@@ -53,10 +55,9 @@ See the [capture requirements](SCREENSHOTS.md).
 Neither Linux nor Windows has completed a real in-app upgrade between two
 released Shadowless versions. Automated tests and package installation checks
 are separate evidence and must not be described as that validation.
-Existing private drafts and development builds have in-app updates disabled and
-update manually. New Windows Release builds enable public-release updates by
-default, including candidates built before the repository becomes public; this
-does not change the existing draft binaries.
+The older 0.2.4 draft builds and Linux development builds update manually. New
+Windows Release builds enable anonymous public updates and only accept published
+final Windows releases, excluding drafts and pre-releases even on 0.x versions.
 Windows Store updates use a separate Store-managed channel.
 
 | Platform | Existing evidence | Still required |
@@ -66,7 +67,8 @@ Windows Store updates use a separate Store-managed channel.
 
 Package-level Windows upgrade QA passed on 2026-11-12; it used controlled
 package transport and does not complete the real published-release/UI checks below.
-The private installer still has updates disabled.
+The older 0.2.4 installer still has updates disabled; install an enabled build
+manually once before relying on later public-release updates.
 
 Before claiming the full in-app update flow is verified:
 
@@ -89,3 +91,40 @@ also remain release gates. Detailed prior build evidence is recorded in
 
 See [updates and local development](UPDATES_AND_LOCAL_WORK.md) for the private/public
 transition and why a Git push alone does not update installed applications.
+
+## Managed engine and shared startup verification
+
+Linux source now includes GSR 6.1.7 at commit
+`1d4946a16139b446e6308f741e9ba99f2ed5b3a7` with documented local helper/lifetime
+patches. The local 0.3.0 AppImage includes the engine source and passes startup,
+capability detection, source-hash and private-helper-library checks. The new
+engine is not retroactively included in the old uploaded 0.2.4 draft.
+
+Automated Linux verification: 108 Qt passes, nine skips, no failures; separate
+desktop/autostart checks pass; 14 packaging tests pass, including forced recorder
+shutdown. Live KMS capture and interactive Polkit authorization/cancellation with
+the managed helper, and a real logout/login cycle, remain pending. Source and
+package checks do not establish clean-host or older-glibc compatibility.
+
+Both branches implement independent opt-in login startup and replay-on-launch
+settings and a containing-folder action in clip rows. Windows config tests include
+a persisted-state recovery regression. Completed roadmap work and remaining
+features are tracked in [the shared roadmap](ROADMAP.md).
+
+## Windows 0.3.0 installer candidate
+
+[Release build 43275206850](https://github.com/Zefth051/Shadowless/actions/runs/43275206850)
+completed successfully from `b810d33f7f9649fd77ed70529f755aa982001ba2`, with
+`enable_public_updates=true`, `prerelease=false`, `publish=false`. Native checks
+passed for public/private updater policy, Portable layout, installation, running
+application shutdown during uninstall, and SHA-256.
+[Windows CI 43275192665](https://github.com/Zefth051/Shadowless/actions/runs/43275192665)
+also passed, including native build, analyzers and UI/localization checks.
+
+The uploaded Setup is 167,116,033 bytes, SHA-256
+`ea32328f910c414245e84361042f511ba32a807915eabd0a1f42a92c7219800a`.
+The Portable ZIP is 216,667,723 bytes, SHA-256
+`104222e29423ee917853f957658a36b368ab9af57afab5427a00003277e65247`.
+The draft is not publicly downloadable and cannot itself be selected by the
+updater. Once accessible final releases exist, this enabled build can discover
+them without another manual installation merely for the visibility transition.
