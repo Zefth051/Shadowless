@@ -895,3 +895,7 @@ body.has-download-dialog { overflow: hidden; }
   [data-reveal] { opacity: 1; transform: none; }
   .scroll-signal { display: none; }
 }
+
+/* Use text-only layouts until current Shadowless screenshots are reviewed. */
+.hero, .capture, .controls, .routing { grid-template-columns: minmax(0, 1fr); }
+.capture-copy, .routing-copy { justify-self: center; }

@@ -1,5 +1,12 @@
 # Publication review — 2026-11-11
 
+See [current release status and outstanding validation](RELEASE_STATUS.md).
+Six real Linux draft AppImage screenshots were added on 2026-11-12;
+[their gallery](screenshots/linux/README.md) records the artifact hash and demo-media limits.
+The inherited README/website screenshots are not verified captures of these
+Shadowless candidates; the earlier demo-data review below is not proof of their
+branding, version or platform provenance.
+
 ## Scope and repository
 
 The user authorized uploading the Windows and Linux branches to GitHub and

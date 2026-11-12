@@ -87,8 +87,8 @@ async function resolveLatestDownloads() {
         : release.tag_name;
     });
   } catch (error) {
-    downloadStatus.textContent = 'Latest verified fallback · V0.2.3';
-    console.warn('Could not resolve latest Shadowless release; using v0.2.3 links.', error);
+    downloadStatus.textContent = 'No published download resolved; check Releases and repository access.';
+    console.warn('Could not resolve a published Shadowless release; showing the Releases page.', error);
   }
 }
 

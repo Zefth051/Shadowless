@@ -1,5 +1,11 @@
 # Install Shadowless
 
+**Current status: private validation drafts only.** Setup, Portable and AppImage
+assets exist in draft releases; no release is published. Draft access requires
+sufficient repository permissions. See [release status](RELEASE_STATUS.md).
+Neither platform has completed a real in-app upgrade between two versions.
+The public-update flows below describe the implementation awaiting that test.
+
 Private testers must sign in with a GitHub account granted repository access.
 Public downloads become available after reviewed releases are published.
 Source ZIPs are for developers, not installers.

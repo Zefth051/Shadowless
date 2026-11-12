@@ -1,5 +1,11 @@
 # Microsoft Store listing
 
+**Validation status:** the inherited images are historical Captail/upstream assets,
+not verified captures of the current Shadowless candidate. Do not submit this
+listing until fresh Windows captures and provenance have been reviewed under
+[the screenshot requirements](../docs/SCREENSHOTS.md). See
+[release status](../docs/RELEASE_STATUS.md).
+
 This directory is the source of truth for Shadowless's English and Russian
 Microsoft Store listings.
 

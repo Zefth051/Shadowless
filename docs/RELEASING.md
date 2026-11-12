@@ -1,5 +1,10 @@
 # Releasing Shadowless
 
+See [current release status](RELEASE_STATUS.md) before building or publishing.
+Real in-app upgrades on Windows Setup, Windows Portable and Linux AppImage
+remain untested. Complete and record those checks before claiming verified
+update support; automated updater QA alone is insufficient.
+
 Shadowless releases are built entirely by GitHub Actions on a pinned Windows runner.
 
 Each release contains:
