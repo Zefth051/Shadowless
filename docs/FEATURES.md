@@ -26,6 +26,11 @@ host GSR, PipeWire, FFmpeg tools and compatible drivers; it is not a promise of
 KDE/GNOME/X11 or older-glibc compatibility. See [installation](INSTALL.md) and
 [dependency audit](DEPENDENCY_AUDIT.md) before distributing binaries.
 
+Project hardware testing is limited to the `linux` branch on an NVIDIA GeForce
+GTX 1650 with Hyprland / Wayland and GSR. Windows capture and other GPUs remain
+unvalidated by Shadowless. RTX test reports are from upstream Captail on Windows;
+automated Windows package QA is separate from hardware/capture validation.
+
 Windows tags: `vX.Y.Z`, with `Shadowless-X.Y.Z-Setup-win-x64.exe`.
 Linux tags: `linux-vX.Y.Z`, with `Shadowless-X.Y.Z-linux-x86_64.AppImage`.
 Linux releases must use `--latest=false` to avoid replacing the Windows latest release.

@@ -35,7 +35,7 @@ See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release pro
 [Linux edition](../../tree/linux) · [Publishing both branches](docs/GITHUB.md)
 
 <p align="center">
-  <img src="docs/banner.svg" alt="Shadowless — instant replay that stays on" width="920">
+  <img src="docs/banner.svg" alt="Shadowless — instant replay that stays on, with the Shadowless moon logo" width="920">
 </p>
 
 <p align="center">
@@ -263,15 +263,17 @@ Requirements:
 - x64 processor and operating system;
 - a GPU and driver exposing a supported hardware H.264, HEVC, or AV1 encoder.
 
-Current hardware status:
+Shadowless hardware testing has only been performed on the `linux` branch with
+an NVIDIA GeForce GTX 1650. This does not validate the Windows edition.
+RTX test reports belong to upstream Captail on Windows, not Shadowless.
+
+Current Shadowless hardware status:
 
 | Hardware | Status |
 | --- | --- |
-| NVIDIA GeForce RTX 50 series | Upstream report; current Shadowless candidate validation pending |
-| NVIDIA GeForce RTX 40 series | Upstream report; current Shadowless candidate validation pending |
-| Older NVIDIA GPUs | Not yet verified; expected to work when supported by libobs/NVENC |
-| AMD GPUs | Capability detection implemented; public hardware testing needed |
-| Intel GPUs | Capability detection implemented; public hardware testing needed |
+| NVIDIA GeForce GTX 1650 / Linux | Tested on the `linux` branch with Hyprland / Wayland and GSR |
+| Windows / all GPUs | Shadowless capture and hardware validation pending |
+| Other Linux GPUs | Not tested by this project |
 
 Codec options are based on detected encoder support. Shadowless falls back to another available codec if a previously selected encoder disappears.
 
