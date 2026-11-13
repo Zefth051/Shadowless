@@ -1,22 +1,23 @@
 # Release and validation status
 
-Last checked: 2026-11-12. The repository source is public. Binary packages remain
-unpublished validation drafts; no Shadowless release has been published. Draft
-assets need permission to view drafts; public source access does not grant it.
-Open Releases and select the matching draft title/tag. GitHub may change a
-draft's temporary `untagged-*` URL when its notes are edited.
+Last checked: 2026-11-13. The repository source and releases are public. The
+current public releases are Windows 0.3.1 and Linux 0.3.3. Older validation
+candidates remain drafts; their assets require repository access.
 
 ## Available build candidates
 
-| Platform | Draft tag | Attached binaries | Publication |
+| Platform | Tag | Attached assets | Status |
 | --- | --- | --- | --- |
+| Linux x86_64 / Hyprland | [`linux-v0.3.3`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3) | AppImage, checksums, build inventory, dependency source materials | Public release |
+| Windows x64 | [`v0.3.1`](https://github.com/Zefth051/Shadowless/releases/tag/v0.3.1) | Setup EXE, Portable ZIP, checksums | Public release |
+| Linux x86_64 / Hyprland | [`linux-v0.3.2`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.2) | AppImage, checksums, build inventory, dependency source materials | Public release |
 | Windows x64 | [`v0.3.0` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-ac8a93b4af9367377e3a) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; final-only public updates enabled | Draft, not published |
 | Windows x64 (older) | [`v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | Setup EXE, Portable ZIP, `SHA256SUMS.txt`; updater disabled | Draft, not published |
 | Linux x86_64 / Hyprland | [`linux-v0.3.0` draft](https://github.com/Zefth051/Shadowless/releases/tag/untagged-f6e392d8989b809c5d7f) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt`; updater enabled but bundled TLS backend missing | Draft, do not publish |
 | Linux x86_64 / Hyprland | [`linux-v0.2.4` draft](https://github.com/Zefth051/Shadowless/releases) | AppImage, `SHA256SUMS.txt`, `BUILD_PACKAGES.txt` | Draft, not published |
 
-The Linux asset is `Shadowless-0.2.4-linux-x86_64.AppImage` (97,430,008 bytes).
-It is attached to the Linux draft under
+The older Linux asset is `Shadowless-0.2.4-linux-x86_64.AppImage` (97,430,008 bytes).
+It remains attached to the Linux 0.2.4 draft under
 [GitHub Releases](https://github.com/Zefth051/Shadowless/releases).
 It is not stored in the source tree or included in GitHub's source ZIP.
 The default `windows` branch does not contain the native Linux source:
@@ -47,7 +48,7 @@ The Windows package QA below checks installation and updates, not GPU capture.
 The inherited Windows screenshots show Captail or an earlier upstream build.
 They do not validate the current Shadowless interface or the Linux edition.
 They are excluded from the current product presentation. Six real Linux captures
-from the draft AppImage are available in [the Linux gallery](screenshots/linux/README.md).
+from the 0.2.4 draft AppImage are available in [the Linux gallery](screenshots/linux/README.md).
 Windows captures remain pending; renaming image files or editing branding is insufficient.
 See the [capture requirements](SCREENSHOTS.md).
 

@@ -6,7 +6,7 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Windows / Linux feature comparison](docs/FEATURES.md).
 
 [Windows installer / releases](https://github.com/Zefth051/Shadowless/releases) ·
-[Linux AppImage releases](https://github.com/Zefth051/Shadowless/releases?q=linux-v) ·
+[Linux AppImage 0.3.3](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3) ·
 [Installation guide](docs/INSTALL.md)
 
 **Capture engines:** Windows uses OBS components (`libobs`), included in the
@@ -18,11 +18,9 @@ Linux 0.2.4 draft still requires host GSR.
 
 ## Current release status
 
-**Public source; binary releases are not published yet.** The Windows 0.3.0 draft
-contains Setup and Portable packages with final-only public updates enabled. The Linux draft contains
-`Shadowless-0.2.4-linux-x86_64.AppImage`; binaries are attached to Releases,
-not included in the source ZIP. Public source access does not grant access to
-unpublished drafts; viewing them requires sufficient repository permissions. See [available packages and pending validation](docs/RELEASE_STATUS.md).
+**Public source and releases.** Linux 0.3.3 is available as an AppImage with
+checksums, build inventory and dependency source materials. Windows 0.3.1 is the
+current Windows release. See [available packages and validation status](docs/RELEASE_STATUS.md).
 
 | | Windows edition | Linux edition |
 | --- | --- | --- |
@@ -59,7 +57,7 @@ See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release pro
 
 <p align="center">
   <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
-  <a href="https://github.com/Zefth051/Shadowless/releases/tag/untagged-e5258d391b46e29e7bd6"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
 </p>
 
 <p align="center">
