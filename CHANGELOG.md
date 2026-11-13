@@ -4,6 +4,20 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-12
+
+### Improved
+
+- **Distribution notices:** Include verified upstream license and copyright texts with the packaged runtime, with provenance records for the selected dependency builds.
+
+### Upgrade notes
+
+- Builds with the updater disabled need one manual installation of an enabled build. Later final Windows releases can be downloaded and installed from inside Shadowless.
+
+### Known limitations
+
+- Public distribution depends on the exact source and notice materials recorded in the release preflight. Native GPU capture and a complete update through two published releases remain unverified.
+
 ## [0.3.0] - 2026-11-12
 
 ### Added

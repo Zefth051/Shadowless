@@ -1,0 +1,903 @@
+{
+  "scope": "OBS-derived subset of Shadowless Windows 0.3.0, not full Shadowless binary redistribution clearance",
+  "candidate_source_commit": "b810d33f7f9649fd77ed70529f755aa982001ba2",
+  "candidate_portable_sha256": "104222e29423ee917853f957658a36b368ab9af57afab5427a00003277e65247",
+  "obs_release": "32.2.2",
+  "obs_runtime_url": "https://github.com/obsproject/obs-studio/releases/download/32.2.2/OBS-Studio-32.2.2-Windows-x64.zip",
+  "obs_runtime_sha256": "4d6e40e3ab155f56b30de517380566a206d74b63cdf5ad49aa596924768f97e1",
+  "obs_deps_tag": "2026-07-15",
+  "obs_deps_source_commit": "8683107a02300923abe4f293920f4b5edc8cb624",
+  "obs_deps_source_archive_sha256": "a4f6ce9d3dbdf50e9756a80b2f279942db5a39e0e15551d41019f59f0a5872f5",
+  "source_archives": [
+    {
+      "component": "zlib",
+      "version": "1.3.1",
+      "recipe": "deps.ffmpeg/10-zlib.ps1",
+      "pin": "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/madler/zlib/tar.gz/51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf",
+      "file": "zlib-1.3.1-source.tar.gz",
+      "sha256": "d9e270d46252734aa49770fbc544125391617956266f220bd63216c834f3a522",
+      "bytes": 1572004,
+      "status": "acquired"
+    },
+    {
+      "component": "libpng",
+      "version": "1.6.47",
+      "recipe": "deps.ffmpeg/20-libpng.ps1",
+      "pin": "${PSScriptRoot}/checksums/lpng1647.zip.sha256",
+      "expected_sha256": "883340209fccd5353e406a79e22a2d226fc61666b83e700ab1e367bc1a679101",
+      "url": "https://sourceforge.net/projects/libpng/files/libpng16/1.6.47/lpng1647.zip",
+      "file": "libpng-1.6.47-source.zip",
+      "status": "acquired",
+      "sha256": "883340209fccd5353e406a79e22a2d226fc61666b83e700ab1e367bc1a679101",
+      "bytes": 1854163
+    },
+    {
+      "component": "opus",
+      "version": "1.5.2",
+      "recipe": "deps.ffmpeg/20-opus.ps1",
+      "pin": "ddbe48383984d56acd9e1ab6a090c54ca6b735a6",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/xiph/opus/tar.gz/ddbe48383984d56acd9e1ab6a090c54ca6b735a6",
+      "file": "opus-1.5.2-source.tar.gz",
+      "sha256": "18e9d9e26565e279753aafb6823a482ef85ea9fddbfdcdbff8fd095b12dd96b6",
+      "bytes": 4184347,
+      "status": "acquired"
+    },
+    {
+      "component": "libogg",
+      "version": "1.3.5",
+      "recipe": "deps.ffmpeg/30-libogg.ps1",
+      "pin": "fa80aae9d50096160f2b56ada35527d7aee3f746",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/xiph/ogg/tar.gz/fa80aae9d50096160f2b56ada35527d7aee3f746",
+      "file": "libogg-1.3.5-source.tar.gz",
+      "sha256": "e6a3581e2e09679ae3bce702dcc1f310207bad69600abce3e741214bb749e370",
+      "bytes": 254224,
+      "status": "acquired"
+    },
+    {
+      "component": "libvorbis",
+      "version": "1.3.7",
+      "recipe": "deps.ffmpeg/30-libvorbis.ps1",
+      "pin": "2eac96b03ff67953354cb0a649c08aa3a23267ef",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/xiph/vorbis/tar.gz/2eac96b03ff67953354cb0a649c08aa3a23267ef",
+      "file": "libvorbis-1.3.7-source.tar.gz",
+      "sha256": "a9323a23ef91e087504152764e3e50a845daf2b469713455689ff6bdc60d3514",
+      "bytes": 1238194,
+      "status": "acquired"
+    },
+    {
+      "component": "libvpx",
+      "version": "1.14.1",
+      "recipe": "deps.ffmpeg/30-libvpx.ps1",
+      "pin": "${PSScriptRoot}/checksums/v1.14.1.zip.sha256",
+      "expected_sha256": "f40e4c7e7b4025d18be17a8225f8be2f26b349715399cd36c2de573fe976dfd7",
+      "url": "https://github.com/webmproject/libvpx/archive/refs/tags/v1.14.1.zip",
+      "file": "libvpx-1.14.1-source.zip",
+      "status": "acquired",
+      "sha256": "f40e4c7e7b4025d18be17a8225f8be2f26b349715399cd36c2de573fe976dfd7",
+      "bytes": 6335358
+    },
+    {
+      "component": "svt-av1",
+      "version": "2.3.0",
+      "recipe": "deps.ffmpeg/30-svt-av1.ps1",
+      "pin": "6e69def4ec283fe0b71195671245c3b768bebdef",
+      "expected_sha256": null,
+      "url": "https://gitlab.com/AOMediaCodec/SVT-AV1/-/archive/6e69def4ec283fe0b71195671245c3b768bebdef/SVT-AV1-6e69def4ec283fe0b71195671245c3b768bebdef.tar.gz",
+      "file": "svt-av1-2.3.0-source.tar.gz",
+      "sha256": "8c7921e9f44f1dc18d51351fe353e6c86de306cc9e7e159a4d479dfc01456d6d",
+      "bytes": 10844802,
+      "status": "acquired"
+    },
+    {
+      "component": "aom",
+      "version": "3.13.1",
+      "recipe": "deps.ffmpeg/40-aom.ps1",
+      "pin": "d772e334cc724105040382a977ebb10dfd393293",
+      "expected_sha256": null,
+      "url": "https://aomedia.googlesource.com/aom/+archive/d772e334cc724105040382a977ebb10dfd393293.tar.gz",
+      "file": "aom-3.13.1-source.tar.gz",
+      "sha256": "6a1ec9c1b5a57aee0b544536aacb900b5b4a28155cc6f4d038eaacc45e1918e5",
+      "bytes": 6323945,
+      "status": "acquired"
+    },
+    {
+      "component": "x264",
+      "version": "r3106",
+      "recipe": "deps.ffmpeg/40-x264.ps1",
+      "pin": "eaa68fad9e5d201d42fde51665f2d137ae96baf0",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/mirror/x264/tar.gz/eaa68fad9e5d201d42fde51665f2d137ae96baf0",
+      "file": "x264-r3106-source.tar.gz",
+      "sha256": "580f07f08af23768074e5346bdf32c77b68b4d4e614f4998ea869b02fc29714d",
+      "bytes": 943274,
+      "status": "acquired"
+    },
+    {
+      "component": "libtheora",
+      "version": "1.1.1",
+      "recipe": "deps.ffmpeg/50-libtheora.ps1",
+      "pin": "${PSScriptRoot}/checksums/libtheora-1.1.1.zip.sha256",
+      "expected_sha256": "f644fef154f7a80e7258c8baec5c510f594d720835855cddce322b924934ba36",
+      "url": "https://ftp.osuosl.org/pub/xiph/releases/theora/libtheora-1.1.1.zip",
+      "file": "libtheora-1.1.1-source.zip",
+      "status": "acquired",
+      "sha256": "f644fef154f7a80e7258c8baec5c510f594d720835855cddce322b924934ba36",
+      "bytes": 2275495
+    },
+    {
+      "component": "lame",
+      "version": "3.100",
+      "recipe": "deps.ffmpeg/60-lame.ps1",
+      "pin": "${PSScriptRoot}/checksums/lame-3.100.tar.gz.win.sha256",
+      "expected_sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
+      "url": "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz",
+      "file": "lame-3.100-source.tar.gz",
+      "status": "acquired",
+      "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
+      "bytes": 1524133
+    },
+    {
+      "component": "mbedtls",
+      "version": "3.6.4",
+      "recipe": "deps.ffmpeg/60-mbedtls.ps1",
+      "pin": "c765c831e5c2a0971410692f92f7a81d6ec65ec2",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/Mbed-TLS/mbedtls/tar.gz/c765c831e5c2a0971410692f92f7a81d6ec65ec2",
+      "file": "mbedtls-3.6.4-source.tar.gz",
+      "sha256": "0f050462eabf814c7e3b37825efc4d8dd1caf6a3b3eeb350705ad818d6ca770a",
+      "bytes": 5614554,
+      "status": "acquired"
+    },
+    {
+      "component": "srt",
+      "version": "1.5.2",
+      "recipe": "deps.ffmpeg/60-srt.ps1",
+      "pin": "${PSScriptRoot}/checksums/v1.5.2.zip.sha256",
+      "expected_sha256": "2686f75533bd53ec917dab6129186b124b4d105eadaa6a84e83719ac3b5ae6bd",
+      "url": "https://github.com/Haivision/srt/archive/refs/tags/v1.5.2.zip",
+      "file": "srt-1.5.2-source.zip",
+      "status": "acquired",
+      "sha256": "2686f75533bd53ec917dab6129186b124b4d105eadaa6a84e83719ac3b5ae6bd",
+      "bytes": 1874895
+    },
+    {
+      "component": "librist",
+      "version": "0.2.7",
+      "recipe": "deps.ffmpeg/70-librist.ps1",
+      "pin": "809390b3b75a259a704079d0fb4d8f1b5f7fa956",
+      "expected_sha256": null,
+      "url": "https://code.videolan.org/rist/librist/-/archive/809390b3b75a259a704079d0fb4d8f1b5f7fa956/librist-809390b3b75a259a704079d0fb4d8f1b5f7fa956.tar.gz",
+      "file": "librist-0.2.7-source.tar.gz",
+      "sha256": "fd725c491e4a72d7d2620adc1127355536bf01e1c8ffc874d32be42a822f8117",
+      "bytes": 2887291,
+      "status": "acquired"
+    },
+    {
+      "component": "nv-codec-headers",
+      "version": "13.0.19.0",
+      "recipe": "deps.ffmpeg/70-nv-codec.ps1",
+      "pin": "e844e5b26f46bb77479f063029595293aa8f812d",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/FFmpeg/nv-codec-headers/tar.gz/e844e5b26f46bb77479f063029595293aa8f812d",
+      "file": "nv-codec-headers-13.0.19.0-source.tar.gz",
+      "sha256": "42d72fbcca46e05a1c05a79f1cda1fedd68ba686b21adf917e05d908153645d9",
+      "bytes": 83409,
+      "status": "acquired"
+    },
+    {
+      "component": "amf",
+      "version": "1.5.0",
+      "recipe": "deps.ffmpeg/80-amf.ps1",
+      "pin": "afed28d37aca1938da2eedc50599bb3535a987ec",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/GPUOpen-LibrariesAndSDKs/AMF/tar.gz/afed28d37aca1938da2eedc50599bb3535a987ec",
+      "file": "amf-1.5.0-source.tar.gz",
+      "sha256": "79ca6faacc982a49a23be0b3a58c4e57e8dc5c8f87b59605831ee77412e8a5b4",
+      "bytes": 178689557,
+      "status": "acquired"
+    },
+    {
+      "component": "FFmpeg",
+      "version": "8.1.2",
+      "recipe": "deps.ffmpeg/99-ffmpeg.ps1",
+      "pin": "38b88335f99e76ed89ff3c93f877fdefce736c13",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/38b88335f99e76ed89ff3c93f877fdefce736c13",
+      "file": "FFmpeg-8.1.2-source.tar.gz",
+      "sha256": "2ae7e42343cfffb811d15cfe98b6d005f082595fcdf034d30a4ff90cfed9f9c6",
+      "bytes": 16894057,
+      "status": "acquired"
+    },
+    {
+      "component": "curl",
+      "version": "8.12.1",
+      "recipe": "deps.windows/30-curl.ps1",
+      "pin": "57495c64871d18905a0941db9196ef90bafe9a29",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/curl/curl/tar.gz/57495c64871d18905a0941db9196ef90bafe9a29",
+      "file": "curl-8.12.1-source.tar.gz",
+      "sha256": "0c7df3d2730de54d3e8eaa557c04ba60c5b68dab7a3904afd45b8de2bb72dc47",
+      "bytes": 3464188,
+      "status": "acquired"
+    },
+    {
+      "component": "jansson",
+      "version": "2.14.1",
+      "recipe": "deps.windows/30-jansson.ps1",
+      "pin": "96d160df90016066d04d493d1d69639474ba4f20",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/akheron/jansson/tar.gz/96d160df90016066d04d493d1d69639474ba4f20",
+      "file": "jansson-2.14.1-source.tar.gz",
+      "sha256": "71efbc7a252f538f0910df551ed87ab5c25f1246d556c38e20feac6a9a20e1d5",
+      "bytes": 193408,
+      "status": "acquired"
+    },
+    {
+      "component": "rnnoise",
+      "version": "2020-07-28",
+      "recipe": "deps.windows/30-rnnoise.ps1",
+      "pin": "2938bcf94a2fe3f850df542f5de3996905059c97",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/xiph/rnnoise/tar.gz/2938bcf94a2fe3f850df542f5de3996905059c97",
+      "file": "rnnoise-2020-07-28-source.tar.gz",
+      "sha256": "c0e77e0f5b351a78e2b7d1edcd70c960d0db19c48ed707febf3d131e07828910",
+      "bytes": 174103,
+      "status": "acquired"
+    },
+    {
+      "component": "speexdsp",
+      "version": "1.2.1",
+      "recipe": "deps.windows/30-speexdsp.ps1",
+      "pin": "1b28a0f61bc31162979e1f26f3981fc3637095c8",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/xiph/speexdsp/tar.gz/1b28a0f61bc31162979e1f26f3981fc3637095c8",
+      "file": "speexdsp-1.2.1-source.tar.gz",
+      "sha256": "59a53188f6d6ca2b48752f533523986a0604d2526eb50789b8fb09aa6b12645f",
+      "bytes": 894641,
+      "status": "acquired"
+    },
+    {
+      "component": "simde",
+      "version": "0.8.2",
+      "recipe": "deps.windows/60-simde.ps1",
+      "pin": "71fd833d9666141edcd1d3c109a80e228303d8d7",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/simd-everywhere/simde/tar.gz/71fd833d9666141edcd1d3c109a80e228303d8d7",
+      "file": "simde-0.8.2-source.tar.gz",
+      "sha256": "72b2c14a487560b7eb203795f2c2fead5c7499662e639944cca2a9bb19f09029",
+      "bytes": 7481259,
+      "status": "acquired"
+    },
+    {
+      "component": "uthash",
+      "version": "2.3.0",
+      "recipe": "deps.windows/60-uthash.ps1",
+      "pin": "e493aa90a2833b4655927598f169c31cfcdf7861",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/troydhanson/uthash/tar.gz/e493aa90a2833b4655927598f169c31cfcdf7861",
+      "file": "uthash-2.3.0-source.tar.gz",
+      "sha256": "2ddb6665e82ffd7e87a27b97081bddf8f09520b7a2cfd6ab011541e7cde991fa",
+      "bytes": 191431,
+      "status": "acquired"
+    },
+    {
+      "component": "vpl",
+      "version": "v2.14.0",
+      "recipe": "deps.windows/70-vpl.ps1",
+      "pin": "025d43d086a3e663184cb49febe86152bf05409f",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/intel/libvpl/tar.gz/025d43d086a3e663184cb49febe86152bf05409f",
+      "file": "vpl-v2.14.0-source.tar.gz",
+      "sha256": "5314d04c5894fe0b464d1afe1c356d34a4685e9e8e08fa30ddff3392d0e7de41",
+      "bytes": 12957889,
+      "status": "acquired"
+    },
+    {
+      "component": "wil",
+      "version": "v1.0.240803.1",
+      "recipe": "deps.windows/80-wil.ps1",
+      "pin": "f0c6a81c0c9a4b23b6801f40554b8bec425a83b4",
+      "expected_sha256": null,
+      "url": "https://codeload.github.com/microsoft/wil/tar.gz/f0c6a81c0c9a4b23b6801f40554b8bec425a83b4",
+      "file": "wil-v1.0.240803.1-source.tar.gz",
+      "sha256": "07b1bbfddb508b9aa732b37636fb187c8dcd31f5e4d185844f46887c94e8b2e0",
+      "bytes": 516610,
+      "status": "acquired"
+    },
+    {
+      "component": "mbedtls-framework",
+      "pin": "2a3e2c5ea053c14b745dbdf41f609b1edc6a72fa",
+      "url": "https://codeload.github.com/Mbed-TLS/mbedtls-framework/tar.gz/2a3e2c5ea053c14b745dbdf41f609b1edc6a72fa",
+      "file": "mbedtls-framework-2a3e2c5ea053c14b745dbdf41f609b1edc6a72fa-source.tar.gz",
+      "sha256": "f5934ffcad4c32a95f9281f0f95908eb471ee34df721fb9d6ad4adb9567f6b61",
+      "bytes": 788082,
+      "status": "acquired",
+      "recipe": "mbedtls framework gitlink"
+    },
+    {
+      "component": "munit",
+      "pin": "da8f73412998e4f1adf1100dc187533a51af77fd",
+      "url": "https://codeload.github.com/nemequ/munit/tar.gz/da8f73412998e4f1adf1100dc187533a51af77fd",
+      "file": "munit-da8f73412998e4f1adf1100dc187533a51af77fd-source.tar.gz",
+      "sha256": "835a9ee03e3b9560af5a2e4465394e00337398f5baba9d686083b8e1d93f0c30",
+      "bytes": 27727,
+      "status": "acquired",
+      "recipe": "simde test/munit gitlink"
+    }
+  ],
+  "verified_patches": [
+    {
+      "path": "deps.ffmpeg/patches/zlib/0001-fix-unistd-detection.patch",
+      "sha256": "2114ff9ebfc79765019353b06915a09f4dc4802ce722d2df6e640a59666dd875",
+      "recipe": "deps.ffmpeg/10-zlib.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/libpng/0001-fix-cmake-architecture-handling-windows.patch",
+      "sha256": "56370373d490dd71ee641ca5b4b54b7cc5bb147ef07f21300a1172162fe8c468",
+      "recipe": "deps.ffmpeg/20-libpng.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/svt-av1/0001-cpuinfo-MSVC-detection.patch",
+      "sha256": "27c0de86f8a8e9a3ae87f7c3cc3c8677551ffea2e62e28dcbf2b40ac5bc7a38b",
+      "recipe": "deps.ffmpeg/30-svt-av1.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/aom/0002-windows-fix-cmake-nasm-detection.patch",
+      "sha256": "9455ba4f016ac8ec8e9604b38af8c89238bed1a4b74c04bd4d250b95c96531fe",
+      "recipe": "deps.ffmpeg/40-aom.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/aom/0001-windows-pkg-config-fix.patch",
+      "sha256": "22f38b49d6307c2ee860b08df7495b5f8894658b451c020f8a13162fd7dd29f4",
+      "recipe": "deps.ffmpeg/40-aom.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/libtheora/0001-add-windows-cmake.patch",
+      "sha256": "9f7554581aabc81f360d040e95c1cbf935e9cd80019526b1a6951a1179524d50",
+      "recipe": "deps.ffmpeg/50-libtheora.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/lame/0001-fix-nmake-64-bit-builds.patch",
+      "sha256": "0772e07d3d0c484d281e3bfdb4f93e81adf303623fe57d955b98196795725f39",
+      "recipe": "deps.ffmpeg/60-lame.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/mbedtls/0001-enable-dtls-srtp-support-windows.patch",
+      "sha256": "38dbaff859242c5a4f8196a08e35f0251d2966b22e1d9547ecaaea2aec4aae1b",
+      "recipe": "deps.ffmpeg/60-mbedtls.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/srt/0002-update-mbedtls-discovery-windows.patch",
+      "sha256": "c6b236a15e36767cc516c626c410be42b9ff05bd42338c194e1cf6247e4cbdc5",
+      "recipe": "deps.ffmpeg/60-srt.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/srt/0003-fix-mbedtls-v3.5.0-plus-build-error-on-windows.patch",
+      "sha256": "7253ecfc1a36b1ff88dcb995ab8779107a5c7f979fd1f74390354a91fdf9f00b",
+      "recipe": "deps.ffmpeg/60-srt.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/srt/0004-fix-link-bcrypt-on-windows-when-mbedtls-v3.5.0-plus.patch",
+      "sha256": "04a3c5be7402995328da91c2313aa0489c3d9501410361e406db8fff679d4054",
+      "recipe": "deps.ffmpeg/60-srt.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/librist/0001-generate-cross-compile-files-windows-native.patch",
+      "sha256": "278bec80c575cbd6ac1c93b6770de97b25befce99fc2893bfe2d86f4a679569d",
+      "recipe": "deps.ffmpeg/70-librist.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/FFmpeg/0001-flvdec-handle-unknown-Windows.patch",
+      "sha256": "72f41d25f709b1566aecaff0204e94af79d91b7845165deb5bf234440962b2fc",
+      "recipe": "deps.ffmpeg/99-ffmpeg.ps1"
+    },
+    {
+      "path": "deps.ffmpeg/patches/FFmpeg/0002-libaomenc-presets-Windows.patch",
+      "sha256": "cec898b957fc289512094fc2c4e6a61d6872f716e4a643fb970c599a453a33f4",
+      "recipe": "deps.ffmpeg/99-ffmpeg.ps1"
+    },
+    {
+      "path": "deps.windows/patches/simde/0001-generate-cross-compile-files-windows-native.patch",
+      "sha256": "af937409d5965654ca254b7af8c3d9ef59fb42759f8f1bf36f26797fbee16193",
+      "recipe": "deps.windows/60-simde.ps1"
+    }
+  ],
+  "portable_runtime_mapping": [
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/avcodec-62.dll",
+      "sha256": "fc92fdfab7b36d35adbe2670238e03da2fb640b4f84fb575baa3e5440168c1ff",
+      "official_archive_matches": [
+        "bin/64bit/avcodec-62.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/avdevice-62.dll",
+      "sha256": "824ed5cdcd7512f3edab94d28f7fa072353b4e0afebb14e4e08a6793686890ac",
+      "official_archive_matches": [
+        "bin/64bit/avdevice-62.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/avfilter-11.dll",
+      "sha256": "e9c3951157a47ac2fc692d8b4b346ad1a460d05ecc379fe35f615079a6edb35e",
+      "official_archive_matches": [
+        "bin/64bit/avfilter-11.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/avformat-62.dll",
+      "sha256": "49735ce444ab91202f5e18fea57b182c8cbf6d68e5b2474a3d866fd9cf5b6e51",
+      "official_archive_matches": [
+        "bin/64bit/avformat-62.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/avutil-60.dll",
+      "sha256": "91a0ccadff6431b58efd02cca64b36bef547d634d79566b9b019232d441b06ee",
+      "official_archive_matches": [
+        "bin/64bit/avutil-60.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/libcurl.dll",
+      "sha256": "b229ecb3e7ba91d65e2bf0be28c3bb41bdb944b41eb38ea426777065e62d9225",
+      "official_archive_matches": [
+        "bin/64bit/libcurl.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/libobs-d3d11.dll",
+      "sha256": "a2a065786f146eee219031bc9a28845cff78abf570296e88dd5ad051abb8188f",
+      "official_archive_matches": [
+        "bin/64bit/libobs-d3d11.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/libobs-winrt.dll",
+      "sha256": "a77ae0ec5c2c23685d3c6da15b6cb3339ce3eb7b528e52e969252b8c3f2639f1",
+      "official_archive_matches": [
+        "bin/64bit/libobs-winrt.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/librist.dll",
+      "sha256": "96463308ff07c31f1bd768cb842b05c4965191cbf080eeadd3b34738d1816059",
+      "official_archive_matches": [
+        "bin/64bit/librist.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/libx264-164.dll",
+      "sha256": "87bf8a8331691b32cf6c8e9b282c9c2a825ed0b83eba0f24e539f667c042684e",
+      "official_archive_matches": [
+        "bin/64bit/libx264-164.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-amf-test.exe",
+      "sha256": "178369e3c40aad4e2af5c5da9faf66e327e60297a4c4627887f5de2bc904b71d",
+      "official_archive_matches": [
+        "bin/64bit/obs-amf-test.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-ffmpeg-mux.exe",
+      "sha256": "1f282cd939a209821879e136f2fd36ae556452f637d9fa06cad71c9550c6f8d8",
+      "official_archive_matches": [
+        "bin/64bit/obs-ffmpeg-mux.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-nvenc-test.exe",
+      "sha256": "8aeb65065da88d9c3919189871ee5508d8252aebe01cec8bcd82518d292fd3d4",
+      "official_archive_matches": [
+        "bin/64bit/obs-nvenc-test.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-qsv-test.exe",
+      "sha256": "894aeebd244459f700c03f17371ebe1ccd9b8f90533910cfd713a01cfd6a4d39",
+      "official_archive_matches": [
+        "bin/64bit/obs-qsv-test.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs.dll",
+      "sha256": "9b9a76f64a1d27262209f1cfbeaf6d57a175cc4e823c71882bb7d5b5ab99bdcf",
+      "official_archive_matches": [
+        "bin/64bit/obs.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/srt.dll",
+      "sha256": "4bc716719b6f142d60621d992b695e9d83aeacd8019c2c491ae8a7e6aca00737",
+      "official_archive_matches": [
+        "bin/64bit/srt.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/swresample-6.dll",
+      "sha256": "786bdb932eed3feb588ba6957d277273a19367cc678e79c628ea7b31cade49d9",
+      "official_archive_matches": [
+        "bin/64bit/swresample-6.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/swscale-9.dll",
+      "sha256": "e254f3cb131035214e152146016abd08cca3dc12c8d810e2809f27e363654c1c",
+      "official_archive_matches": [
+        "bin/64bit/swscale-9.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/w32-pthreads.dll",
+      "sha256": "c9a86555a0bc49a57e4fabb4d2ae384ce585bf744e41809df851b5395727a674",
+      "official_archive_matches": [
+        "bin/64bit/w32-pthreads.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/zlib.dll",
+      "sha256": "2ad224c19800e03b741de2bd1364de9a2a7165b79bc03fb7125d66f7edd3d0d5",
+      "official_archive_matches": [
+        "bin/64bit/zlib.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/data/obs-plugins/win-capture/get-graphics-offsets32.exe",
+      "sha256": "4627f12b8295b1ebafd9909dfd0eaa46583e68e8976c8fef76e64122fd2149b6",
+      "official_archive_matches": [
+        "data/obs-plugins/win-capture/get-graphics-offsets32.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/data/obs-plugins/win-capture/get-graphics-offsets64.exe",
+      "sha256": "79ed6d2a983cc93a7ad6b96eb9d0fae21871988a2823cce11d4060ace35753fb",
+      "official_archive_matches": [
+        "data/obs-plugins/win-capture/get-graphics-offsets64.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/data/obs-plugins/win-capture/graphics-hook32.dll",
+      "sha256": "566b095dd1de495a3f0233cb08d75ab3e7d7b184c80e2fc23f23f22ca8558632",
+      "official_archive_matches": [
+        "data/obs-plugins/win-capture/graphics-hook32.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/data/obs-plugins/win-capture/graphics-hook64.dll",
+      "sha256": "49c0ddeac72b130d4f8ae90510219949022c1f992adb48d81a4972f2cd6c2585",
+      "official_archive_matches": [
+        "data/obs-plugins/win-capture/graphics-hook64.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/data/obs-plugins/win-capture/inject-helper32.exe",
+      "sha256": "226da6b414470d17a4b4d368bb55916ab3922b1ae10bb2325ea627f63b1aea71",
+      "official_archive_matches": [
+        "data/obs-plugins/win-capture/inject-helper32.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/data/obs-plugins/win-capture/inject-helper64.exe",
+      "sha256": "a785ae14b5debae83404942d5ef7a51c83a53c603d6f5a23162d7f52ff96d9ff",
+      "official_archive_matches": [
+        "data/obs-plugins/win-capture/inject-helper64.exe"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/image-source.dll",
+      "sha256": "d8ea2ef1f808eb8b96b9584ed7bea3692e1cd983238cc3009f6747e06cdf348f",
+      "official_archive_matches": [
+        "obs-plugins/64bit/image-source.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/obs-ffmpeg.dll",
+      "sha256": "a47be5e81294bf594905696dd3d1372f7e79f2bb9daba9900dd166fdf62bfa12",
+      "official_archive_matches": [
+        "obs-plugins/64bit/obs-ffmpeg.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/obs-filters.dll",
+      "sha256": "67eefb3ea5c2f1640d7371e1084bf6b6b838ad005c9084edaccadc3de13ea082",
+      "official_archive_matches": [
+        "obs-plugins/64bit/obs-filters.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/obs-nvenc.dll",
+      "sha256": "6187771511c43960016f79c760249c08e43a9835caa0f58c9e41b98cc92032cc",
+      "official_archive_matches": [
+        "obs-plugins/64bit/obs-nvenc.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/obs-qsv11.dll",
+      "sha256": "7182838d8cd59d624665a905879b5d8ab328a41fd8e91664ddb490e9d37cc2ad",
+      "official_archive_matches": [
+        "obs-plugins/64bit/obs-qsv11.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/obs-x264.dll",
+      "sha256": "0610dae11937263e4520fc2562845d50ef4b27a7ef3abdb6997dfde0cea80efc",
+      "official_archive_matches": [
+        "obs-plugins/64bit/obs-x264.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/shadowless-process-audio.dll",
+      "sha256": "5e309cbd070eaa2145110e6408523cb5cc4878726ae254e9c4006033d82bbd7f",
+      "official_archive_matches": []
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/win-capture.dll",
+      "sha256": "d251f79daa9179f50a43c10fecb277acac3aee7489a961bfdbb9c629e1a4dee0",
+      "official_archive_matches": [
+        "obs-plugins/64bit/win-capture.dll"
+      ]
+    },
+    {
+      "portable_path": "Shadowless-0.3.0/runtime/obs-plugins/64bit/win-wasapi.dll",
+      "sha256": "876ef593d3faeb62f8422b9f1dcbd62ae1a94147b9586590e39307cb3fba102d",
+      "official_archive_matches": [
+        "obs-plugins/64bit/win-wasapi.dll"
+      ]
+    }
+  ],
+  "portable_prebuilt_dependency_mapping": [
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/avcodec-62.dll",
+      "sha256": "fc92fdfab7b36d35adbe2670238e03da2fb640b4f84fb575baa3e5440168c1ff",
+      "dependency_matches": [
+        {
+          "path": "bin/avcodec-62.dll",
+          "equal": false,
+          "sha256": "da12863ac22e8bef3501eb7c0eb295519ccbacd26e838ea6dca0304a33461fc1",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 37976576,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "da12863ac22e8bef3501eb7c0eb295519ccbacd26e838ea6dca0304a33461fc1"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/avdevice-62.dll",
+      "sha256": "824ed5cdcd7512f3edab94d28f7fa072353b4e0afebb14e4e08a6793686890ac",
+      "dependency_matches": [
+        {
+          "path": "bin/avdevice-62.dll",
+          "equal": false,
+          "sha256": "fc5d09a6a3fc12b50c2dcf663078155c0042ad503a1031cb68aa9774978ae6cc",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 75776,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "fc5d09a6a3fc12b50c2dcf663078155c0042ad503a1031cb68aa9774978ae6cc"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/avfilter-11.dll",
+      "sha256": "e9c3951157a47ac2fc692d8b4b346ad1a460d05ecc379fe35f615079a6edb35e",
+      "dependency_matches": [
+        {
+          "path": "bin/avfilter-11.dll",
+          "equal": false,
+          "sha256": "9a75810b93ab65662d62c486ee99fd26c56fdbc22ac055512dad2c80321d5dc2",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 4274176,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "9a75810b93ab65662d62c486ee99fd26c56fdbc22ac055512dad2c80321d5dc2"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/avformat-62.dll",
+      "sha256": "49735ce444ab91202f5e18fea57b182c8cbf6d68e5b2474a3d866fd9cf5b6e51",
+      "dependency_matches": [
+        {
+          "path": "bin/avformat-62.dll",
+          "equal": false,
+          "sha256": "b4f8baa89cd2b3e2e5b5366b6b512aa74af7f3770d81d9593070e0b48e7e6dd6",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 2545152,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "b4f8baa89cd2b3e2e5b5366b6b512aa74af7f3770d81d9593070e0b48e7e6dd6"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/avutil-60.dll",
+      "sha256": "91a0ccadff6431b58efd02cca64b36bef547d634d79566b9b019232d441b06ee",
+      "dependency_matches": [
+        {
+          "path": "bin/avutil-60.dll",
+          "equal": false,
+          "sha256": "c505649aacba350808ab507ed98e8fa57da24783f72290804aed86fdb87e712d",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 898560,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "c505649aacba350808ab507ed98e8fa57da24783f72290804aed86fdb87e712d"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/libcurl.dll",
+      "sha256": "b229ecb3e7ba91d65e2bf0be28c3bb41bdb944b41eb38ea426777065e62d9225",
+      "dependency_matches": [
+        {
+          "path": "bin/libcurl.dll",
+          "equal": false,
+          "sha256": "3b003f2210bacf0a9b0da3849b315f907123f79e2972ba1050fccd3eafa2ea9f",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 610304,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "3b003f2210bacf0a9b0da3849b315f907123f79e2972ba1050fccd3eafa2ea9f"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/libmpv-2.dll",
+      "sha256": "88504ee5560942a955405e99dfb5971368e4cf851321f36565bf2a667271db1b",
+      "dependency_matches": []
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/libobs-d3d11.dll",
+      "sha256": "a2a065786f146eee219031bc9a28845cff78abf570296e88dd5ad051abb8188f",
+      "dependency_matches": []
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/libobs-winrt.dll",
+      "sha256": "a77ae0ec5c2c23685d3c6da15b6cb3339ce3eb7b528e52e969252b8c3f2639f1",
+      "dependency_matches": []
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/librist.dll",
+      "sha256": "96463308ff07c31f1bd768cb842b05c4965191cbf080eeadd3b34738d1816059",
+      "dependency_matches": [
+        {
+          "path": "bin/librist.dll",
+          "equal": false,
+          "sha256": "e1c751b79ec5704a87758fbadfd2ccf223f96e7fd6e4818bde9002da02afcd75",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 211456,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "304fb9fb929b3277a2235bfb603e2eb1aa6d314e447149aa25fb22fff2497955"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/libx264-164.dll",
+      "sha256": "87bf8a8331691b32cf6c8e9b282c9c2a825ed0b83eba0f24e539f667c042684e",
+      "dependency_matches": [
+        {
+          "path": "bin/libx264-164.dll",
+          "equal": false,
+          "sha256": "83473ef062ccb12679b614b19ba37d0eb8f437352d4b42776f841a67a8f3a549",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 2221056,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "83473ef062ccb12679b614b19ba37d0eb8f437352d4b42776f841a67a8f3a549"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/obs.dll",
+      "sha256": "9b9a76f64a1d27262209f1cfbeaf6d57a175cc4e823c71882bb7d5b5ab99bdcf",
+      "dependency_matches": []
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/ShadowlessObsBridge.dll",
+      "sha256": "72b441e6cd593d44f5375b1db71ae3004e02adaf31b6bac3f5193b255465a251",
+      "dependency_matches": []
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/srt.dll",
+      "sha256": "4bc716719b6f142d60621d992b695e9d83aeacd8019c2c491ae8a7e6aca00737",
+      "dependency_matches": [
+        {
+          "path": "bin/srt.dll",
+          "equal": false,
+          "sha256": "cd28bc7c79c45613cb8d3b707f910c592584823b49ecec5cf3867d253d8cbd57",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 738816,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "cd28bc7c79c45613cb8d3b707f910c592584823b49ecec5cf3867d253d8cbd57"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/swresample-6.dll",
+      "sha256": "786bdb932eed3feb588ba6957d277273a19367cc678e79c628ea7b31cade49d9",
+      "dependency_matches": [
+        {
+          "path": "bin/swresample-6.dll",
+          "equal": false,
+          "sha256": "ee48662c8f5bddddf3198b00a405c5c2d020b170cb5fc86ca5032bedbb76857a",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 123904,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "ee48662c8f5bddddf3198b00a405c5c2d020b170cb5fc86ca5032bedbb76857a"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/swscale-9.dll",
+      "sha256": "e254f3cb131035214e152146016abd08cca3dc12c8d810e2809f27e363654c1c",
+      "dependency_matches": [
+        {
+          "path": "bin/swscale-9.dll",
+          "equal": false,
+          "sha256": "2da2e686648e5e9bddaee0e94ff3aeff3f57cd6e3b143a7d85935820b875043a",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 1001984,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "2da2e686648e5e9bddaee0e94ff3aeff3f57cd6e3b143a7d85935820b875043a"
+        }
+      ]
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/w32-pthreads.dll",
+      "sha256": "c9a86555a0bc49a57e4fabb4d2ae384ce585bf744e41809df851b5395727a674",
+      "dependency_matches": []
+    },
+    {
+      "shadowless": "Shadowless-0.3.0/runtime/zlib.dll",
+      "sha256": "2ad224c19800e03b741de2bd1364de9a2a7165b79bc03fb7125d66f7edd3d0d5",
+      "dependency_matches": [
+        {
+          "path": "bin/zlib.dll",
+          "equal": false,
+          "sha256": "0582ccf29d374553239ff14a8f77c91c8566a37ae5a3db00af205d654f0421b3",
+          "normalized_pe_equal": true,
+          "normalization": "Zero only PE CheckSum and IMAGE_DIRECTORY_ENTRY_SECURITY, omit appended certificate table; preserve all remaining bytes including padding",
+          "candidate_certificate_offset": 84480,
+          "candidate_certificate_size": 8464,
+          "dependency_certificate_offset": 0,
+          "dependency_certificate_size": 0,
+          "normalized_sha256": "0582ccf29d374553239ff14a8f77c91c8566a37ae5a3db00af205d654f0421b3"
+        }
+      ]
+    }
+  ]
+}

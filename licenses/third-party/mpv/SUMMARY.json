@@ -1,0 +1,8 @@
+{
+  "components": 88,
+  "pdb_source_packages": 69,
+  "pdb_references": 5853,
+  "matched_pdb_references": 5853,
+  "unmatched": [],
+  "evidence_scope": "mpv.pdb is the standalone mpv executable PDB from the same upstream workflow, not a GUID-matching PDB for libmpv-2.dll. Its source checksums corroborate shared dependency source snapshots; direct binary provenance for mpv and FFmpeg is separately embedded in the actual DLL."
+}

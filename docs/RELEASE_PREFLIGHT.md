@@ -37,9 +37,9 @@ The ignored local directory `artifacts/release/0.3.0-verified/evidence/` holds:
 - [The mpv builder's exact workflow logs](https://github.com/shinchiro/mpv-winbuild-cmake/actions/runs/42927840447)
   and [build recipes](https://github.com/shinchiro/mpv-winbuild-cmake/tree/bda10a2816ce9908d419b3f4b564227330457e76),
   including `mpv.cmake`, `ffmpeg.cmake` and `mpv_clang.yml`. The release's sibling
-  FFmpeg archive identifies revision `cd4e96eb3`; its full source commit
-  `cd4e96eb314630788b7ff2f9820c395788c023e2` is collected too, but that sibling
-  archive alone does not prove the precise FFmpeg revision inside libmpv.
+  FFmpeg archive identifies revision `cd4e96eb3`; the actual libmpv DLL also
+  embeds `N-128766-gcd4e96eb3`, confirming the revision directly. Its full source
+  commit `cd4e96eb314630788b7ff2f9820c395788c023e2` is collected too.
 - Binary configuration strings from the actual Portable FFmpeg executable,
   OBS `avcodec-62.dll` and libmpv, and embedded .NET version evidence.
 - Exact package nuspec metadata and available notices for locked NuGet packages.

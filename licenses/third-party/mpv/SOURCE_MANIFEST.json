@@ -1,0 +1,2211 @@
+{
+  "summary": {
+    "components": 88,
+    "pdb_source_packages": 69,
+    "pdb_references": 5853,
+    "matched_pdb_references": 5853,
+    "unmatched": [],
+    "evidence_scope": "mpv.pdb is the standalone mpv executable PDB from the same upstream workflow, not a GUID-matching PDB for libmpv-2.dll. Its source checksums corroborate shared dependency source snapshots; direct binary provenance for mpv and FFmpeg is separately embedded in the actual DLL."
+  },
+  "components": [
+    {
+      "name": "amf-headers",
+      "repository": "https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git",
+      "commit": "57ee0cfb0e1a08d9041f77435653794c1b012be0",
+      "commit_date": "2026-10-16T19:22:05Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "amf-headers-57ee0cfb0e1a08d9041f77435653794c1b012be0-recipe-source.tar.gz",
+      "url": "https://codeload.github.com/GPUOpen-LibrariesAndSDKs/AMF/tar.gz/57ee0cfb0e1a08d9041f77435653794c1b012be0",
+      "sha256": "ab5615ec087c0f393d77b7b37e17fe32a60e4251949ba062305d7065588df04c",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "original_archive": "amf-headers-57ee0cfb0e1a08d9041f77435653794c1b012be0.tar.gz",
+      "original_sha256": "4255b6cbf2637c778da77ce77ccbb89e92870b3047af5fd56bb680b043ea60b5",
+      "source_preparation": "Exactly the amf/public/include sparse source subtree used by the upstream recipe, plus top-level license. Vendor binaries and samples excluded.",
+      "notice_files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "name": "angle-headers",
+      "repository": "https://github.com/google/angle.git",
+      "commit": "1cb41ff20fd9e3ddb7efce1f09710a1f00774df9",
+      "commit_date": "2026-11-11T00:00:01Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "angle-headers-1cb41ff20fd9e3ddb7efce1f09710a1f00774df9.tar.gz",
+      "url": "https://codeload.github.com/google/angle/tar.gz/1cb41ff20fd9e3ddb7efce1f09710a1f00774df9",
+      "sha256": "786620464f8300bb92d601654eed27a6dae7b66e884d1f63e4160b8fab431ea0",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "src/common/third_party/xxhash/src/LICENSE",
+        "src/libANGLE/renderer/vulkan/shaders/src/third_party/etc_decoder/LICENSE",
+        "src/libANGLE/renderer/vulkan/shaders/src/third_party/ffx_spd/src/LICENSE",
+        "src/tests/test_utils/third_party/LICENSE",
+        "src/third_party/ceval/LICENSE",
+        "src/third_party/libxnvctrl/LICENSE",
+        "src/third_party/volk/src/LICENSE.md",
+        "third_party/android_system_sdk/LICENSE",
+        "third_party/colorama/LICENSE",
+        "third_party/flatbuffers/LICENSE",
+        "third_party/glslang/LICENSE",
+        "third_party/proguard/LICENSE",
+        "third_party/r8/LICENSE",
+        "third_party/re2/LICENSE",
+        "third_party/spirv-headers/LICENSE",
+        "third_party/spirv-tools/LICENSE",
+        "third_party/turbine/LICENSE",
+        "third_party/vulkan-headers/LICENSE.txt",
+        "third_party/wayland-protocols/LICENSE",
+        "third_party/wayland/LICENSE",
+        "tools/flex-bison/third_party/m4sugar/LICENSE",
+        "tools/flex-bison/third_party/skeletons/LICENSE",
+        "util/android/third_party/LICENSE",
+        "util/windows/third_party/StackWalker/LICENSE"
+      ]
+    },
+    {
+      "name": "aom",
+      "repository": "https://aomedia.googlesource.com/aom",
+      "commit": "e72b85589b0117347dcf52915646209a4d1dc418",
+      "archive": "aom-e72b85589b0117347dcf52915646209a4d1dc418.tar.gz",
+      "sha256": "73b105f791e40bf887141053af5d3a4f9f3be27f7607204a0c69a0fde193ea7f",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 400,
+        "total": 400,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "third_party/fastfeat/LICENSE",
+        "third_party/googletest/src/LICENSE",
+        "third_party/highway/LICENSE-BSD3",
+        "third_party/libwebm/LICENSE.TXT",
+        "third_party/libyuv/LICENSE",
+        "third_party/x86inc/LICENSE"
+      ]
+    },
+    {
+      "name": "avisynth-headers",
+      "repository": "https://github.com/AviSynth/AviSynthPlus.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "21fdc997f9724b994896ba5520ddf64d677976b3",
+      "archive": "avisynth-headers-21fdc997f9724b994896ba5520ddf64d677976b3.tar.gz",
+      "url": "https://codeload.github.com/AviSynth/AviSynthPlus/tar.gz/21fdc997f9724b994896ba5520ddf64d677976b3",
+      "sha256": "b68782a4cd3d137f432309c4193bf9581cecf7d10f468bb2b348a8833cd65e1b",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "distrib/FilterSDK/SDKLicense.htm",
+        "distrib/docs/english/source/avisynthdoc/FilterSDK/SDKLicense.rst",
+        "distrib/docs/english/source/avisynthdoc/license.rst",
+        "distrib/gpl-cs.txt",
+        "distrib/gpl-de.txt",
+        "distrib/gpl-el.txt",
+        "distrib/gpl-fr.txt",
+        "distrib/gpl-it.txt",
+        "distrib/gpl-ja.txt",
+        "distrib/gpl-pl.txt",
+        "distrib/gpl-pt.txt",
+        "distrib/gpl-pt_br.txt",
+        "distrib/gpl-ru.txt",
+        "distrib/gpl.txt",
+        "distrib/lgpl_for_used_libs.txt"
+      ]
+    },
+    {
+      "name": "brotli",
+      "repository": "https://github.com/google/brotli.git",
+      "commit": "d89c4b1c52e25ddafe047bc78bbee5c1e24b1809",
+      "commit_date": "2026-10-28T09:52:17Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "brotli-d89c4b1c52e25ddafe047bc78bbee5c1e24b1809.tar.gz",
+      "url": "https://codeload.github.com/google/brotli/tar.gz/d89c4b1c52e25ddafe047bc78bbee5c1e24b1809",
+      "sha256": "4117be20f96bc907a9c773a0b7353c3ec92b922639020064f475c8a699377e6f",
+      "validation": {
+        "matched": 65,
+        "total": 65,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "bzip2",
+      "repository": "https://gitlab.com/bzip2/bzip2.git",
+      "commit": "66c46b8c9436613fd81bc5d03f63a61933a4dcc3",
+      "archive": "bzip2-66c46b8c9436613fd81bc5d03f63a61933a4dcc3.tar.gz",
+      "sha256": "8af6c8c070d7fa6e9ff7005f7abc9be759ac087fbacbb3b507caf68273b7625e",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 3,
+        "total": 3,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "c-ares",
+      "repository": "https://github.com/c-ares/c-ares.git",
+      "commit": "46266f4ae2d309ce52009d85fc6198b5f0db6225",
+      "commit_date": "2026-11-01T04:27:51Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "c-ares-46266f4ae2d309ce52009d85fc6198b5f0db6225.tar.gz",
+      "url": "https://codeload.github.com/c-ares/c-ares/tar.gz/46266f4ae2d309ce52009d85fc6198b5f0db6225",
+      "sha256": "10b0576c8643db3e5f55f0c8a075e642eb5abd99c5070e8f5f0e9216b85b1941",
+      "validation": {
+        "matched": 53,
+        "total": 53,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.md",
+        "LICENSES/GPL-3.0-or-later.txt",
+        "LICENSES/LGPL-2.1-or-later.txt"
+      ]
+    },
+    {
+      "name": "curl",
+      "repository": "https://github.com/curl/curl.git",
+      "commit": "24ff74fa8db2dd84b2acd190a1bcc04b7d69e1e7",
+      "selection": "Historical Git tree maximizing compiled source MD5 matches",
+      "archive": "curl-24ff74fa8db2dd84b2acd190a1bcc04b7d69e1e7.tar.gz",
+      "sha256": "26c6c063574c3aeb5ab165a8009153289b30909a5676b32da43a19dc46e4eb57",
+      "validation": {
+        "matched": 157,
+        "total": 157,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "dav1d",
+      "repository": "https://code.videolan.org/videolan/dav1d.git",
+      "commit": "662868772f73be8c055a6aa7e30f222be13a5f65",
+      "archive": "dav1d-662868772f73be8c055a6aa7e30f222be13a5f65.tar.gz",
+      "sha256": "cbf959d8539c08da55ee6392d3b7570c08e24445e67f63a33c3688bed9b25f4b",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 62,
+        "total": 62,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "davs2",
+      "repository": "https://github.com/saindriches/davs2.git",
+      "commit": "f50435051b72c168c2b566c544e27fcff71ba61a",
+      "commit_date": "2023-09-28T04:17:15Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "davs2-f50435051b72c168c2b566c544e27fcff71ba61a.tar.gz",
+      "url": "https://codeload.github.com/saindriches/davs2/tar.gz/f50435051b72c168c2b566c544e27fcff71ba61a",
+      "sha256": "1e1d6a9035cec25edc4c55bab25653a49068d2909b4c5067d48eb54528014a8a",
+      "validation": {
+        "matched": 38,
+        "total": 38,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "expat",
+      "repository": "https://github.com/libexpat/libexpat.git",
+      "commit": "477c766b6f708c1dfe3d12377092e53c232ded3b",
+      "commit_date": "2026-11-10T15:29:59Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "expat-477c766b6f708c1dfe3d12377092e53c232ded3b.tar.gz",
+      "url": "https://codeload.github.com/libexpat/libexpat/tar.gz/477c766b6f708c1dfe3d12377092e53c232ded3b",
+      "sha256": "8061a2ede43e965bb6c28f274528f850f5ba4ddb4882ed335ff24d525704c183",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "expat/COPYING"
+      ]
+    },
+    {
+      "name": "fast_float",
+      "repository": "https://github.com/fastfloat/fast_float.git",
+      "commit": "8ec59686a1430867ba609c2777ca15143dd81003",
+      "commit_date": "2026-11-09T17:35:25Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "fast_float-8ec59686a1430867ba609c2777ca15143dd81003.tar.gz",
+      "url": "https://codeload.github.com/fastfloat/fast_float/tar.gz/8ec59686a1430867ba609c2777ca15143dd81003",
+      "sha256": "35317908c86586994e636eb150ed209bc9e237038b1adab890b6beb24e0917e9",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE-APACHE",
+        "LICENSE-BOOST",
+        "LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "ffmpeg",
+      "commit": "cd4e96eb314630788b7ff2f9820c395788c023e2",
+      "repository": "https://github.com/FFmpeg/FFmpeg.git",
+      "archive": "libmpv-ffmpeg-cd4e96eb314630788b7ff2f9820c395788c023e2.tar.gz",
+      "sha256": "e3976ef0636e9c12d68c193abc4898ab50f05be3a4996026abc60c18be7447d4",
+      "selection": "Revision directly embedded in distributed DLL",
+      "notice_files": [
+        "COPYING.GPLv2",
+        "COPYING.GPLv3",
+        "COPYING.LGPLv2.1",
+        "COPYING.LGPLv3",
+        "LICENSE.md",
+        "tests/checkasm/ext/LICENSE",
+        "tests/checkasm/ext/src/html_data/LICENSE"
+      ]
+    },
+    {
+      "name": "fontconfig",
+      "repository": "https://gitlab.freedesktop.org/fontconfig/fontconfig.git",
+      "commit": "548591665a8e0dcf5c49cc34fb59ad34c503fa1a",
+      "archive": "fontconfig-548591665a8e0dcf5c49cc34fb59ad34c503fa1a-recipe-patched.tar.gz",
+      "sha256": "b62d4dad7bdccdf8c5c7379f74d81d0fa8f75a89ae87a939ae34941da1859e42",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 33,
+        "total": 33,
+        "mismatched": [],
+        "missing": []
+      },
+      "recipe_patches": [
+        "fontconfig-0001-Custom-changes-for-mpv-builds.patch",
+        "fontconfig-0002-Do-not-use-dirent.h.patch"
+      ],
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "freetype2",
+      "repository": "https://github.com/freetype/freetype.git",
+      "commit": "6065d6a40effdef3d5756642378c2b683dfc51d5",
+      "commit_date": "2026-11-10T10:23:08Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "freetype2-6065d6a40effdef3d5756642378c2b683dfc51d5.tar.gz",
+      "url": "https://codeload.github.com/freetype/freetype/tar.gz/6065d6a40effdef3d5756642378c2b683dfc51d5",
+      "sha256": "7a25b91df43134c8da80a604260f1a09001479b3d65573cad8295d710841569c",
+      "validation": {
+        "matched": 127,
+        "total": 127,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.TXT"
+      ]
+    },
+    {
+      "name": "fribidi",
+      "repository": "https://github.com/fribidi/fribidi.git",
+      "commit": "15393e4937aa95bcf865d92143735746aeb654fa",
+      "commit_date": "2026-10-29T22:18:10Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "fribidi-15393e4937aa95bcf865d92143735746aeb654fa.tar.gz",
+      "url": "https://codeload.github.com/fribidi/fribidi/tar.gz/15393e4937aa95bcf865d92143735746aeb654fa",
+      "sha256": "3e8c03cf8182ff3570a3696c7efd3c456f1fcf288a509b588abe67fc2ff4f630",
+      "validation": {
+        "matched": 17,
+        "total": 17,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "glad",
+      "repository": "https://github.com/Dav1dde/glad.git",
+      "commit": "0a7cf1af9e25e02821587bd4095807fc90b6426a",
+      "commit_date": "2026-09-28T08:07:03Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "glad-0a7cf1af9e25e02821587bd4095807fc90b6426a.tar.gz",
+      "url": "https://codeload.github.com/Dav1dde/glad/tar.gz/0a7cf1af9e25e02821587bd4095807fc90b6426a",
+      "sha256": "4ba9160a405097528b6d308ecf57d4d69126624cadda3ea5f1778e431ce4a273",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "glslang",
+      "repository": "https://github.com/KhronosGroup/glslang.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "b2e081c8eb3ee90415908b7637c1ae429994bddc",
+      "archive": "glslang-b2e081c8eb3ee90415908b7637c1ae429994bddc.tar.gz",
+      "url": "https://codeload.github.com/KhronosGroup/glslang/tar.gz/b2e081c8eb3ee90415908b7637c1ae429994bddc",
+      "sha256": "40f9a8f1ea90369eb4bf44c5b0def8a972921245aeab8632e4b677aa6acd38a7",
+      "validation": {
+        "matched": 75,
+        "total": 75,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.txt",
+        "LICENSES/GPL-3.0-or-later.txt",
+        "license-checker.cfg"
+      ]
+    },
+    {
+      "name": "graphengine",
+      "repository": "https://github.com/sekrit-twc/graphengine.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "91c6af4c795c5396d8b974f24b4d2e2ecca04e2d",
+      "archive": "graphengine-91c6af4c795c5396d8b974f24b4d2e2ecca04e2d.tar.gz",
+      "url": "https://codeload.github.com/sekrit-twc/graphengine/tar.gz/91c6af4c795c5396d8b974f24b4d2e2ecca04e2d",
+      "sha256": "412030b824b82ea623d19f8cce0364288e2bf7d6fba0a906473671c249a08730",
+      "validation": {
+        "matched": 9,
+        "total": 9,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "harfbuzz",
+      "repository": "https://github.com/harfbuzz/harfbuzz.git",
+      "commit": "edca03eadb7aca72b847d80220d7c4466a66508c",
+      "commit_date": "2026-11-10T23:12:12Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "harfbuzz-edca03eadb7aca72b847d80220d7c4466a66508c.tar.gz",
+      "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/edca03eadb7aca72b847d80220d7c4466a66508c",
+      "sha256": "8e54b7ca9fe7e282b27dc3df34959a59e7eff898d2ea8b7a3204e0d53b908481",
+      "validation": {
+        "matched": 244,
+        "total": 244,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "perf/texts/COPYING",
+        "src/ms-use/COPYING",
+        "test/COPYING",
+        "test/shape/data/aots/COPYING",
+        "test/shape/data/text-rendering-tests/COPYING"
+      ]
+    },
+    {
+      "name": "highway",
+      "repository": "https://github.com/google/highway.git",
+      "commit": "10bdaeeb2043a038f4e3fc773ac32f286e5d47a5",
+      "commit_date": "2026-11-10T12:40:46Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "highway-10bdaeeb2043a038f4e3fc773ac32f286e5d47a5.tar.gz",
+      "url": "https://codeload.github.com/google/highway/tar.gz/10bdaeeb2043a038f4e3fc773ac32f286e5d47a5",
+      "sha256": "de35fea937bebe87166661f42af19366b11123ab77f303d311d3c85a7c5772c8",
+      "validation": {
+        "matched": 4,
+        "total": 4,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "debian/copyright"
+      ]
+    },
+    {
+      "name": "lame",
+      "repository": "https://gitlab.com/shinchiro/lame.git",
+      "commit": "9a5b35c430a2e6d150d65a96c7d7acdd64962a8f",
+      "archive": "lame-9a5b35c430a2e6d150d65a96c7d7acdd64962a8f.tar.gz",
+      "sha256": "f728a802f059ccfeb403cb8f785df51af6483b098bd50e2333b820687ba02a6b",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 28,
+        "total": 28,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "LICENSE",
+        "debian/copyright"
+      ]
+    },
+    {
+      "name": "lcms2",
+      "repository": "https://github.com/mm2/Little-CMS.git",
+      "commit": "780da288c125aab1550619b82d8f869e5b48ecfb",
+      "commit_date": "2026-11-10T09:08:18Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "lcms2-780da288c125aab1550619b82d8f869e5b48ecfb.tar.gz",
+      "url": "https://codeload.github.com/mm2/Little-CMS/tar.gz/780da288c125aab1550619b82d8f869e5b48ecfb",
+      "sha256": "148a170bc936519185ea483c4fe96fc389d21486caed4996dc4c965a04d23267",
+      "validation": {
+        "matched": 22,
+        "total": 22,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "plugins/fast_float/COPYING.GPL3",
+        "plugins/threaded/COPYING.GPL3",
+        "utils/jpgicc/LICENSE_iccjpeg"
+      ]
+    },
+    {
+      "name": "libarchive",
+      "repository": "https://github.com/libarchive/libarchive.git",
+      "commit": "d0bf2da07ebaa3964090ee936edea538d1602449",
+      "commit_date": "2026-11-10T00:19:23Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libarchive-d0bf2da07ebaa3964090ee936edea538d1602449.tar.gz",
+      "url": "https://codeload.github.com/libarchive/libarchive/tar.gz/d0bf2da07ebaa3964090ee936edea538d1602449",
+      "sha256": "3b0be8a30f5b140c9deeb5b982818c1e42280ebe8414de1625c32dc450527e49",
+      "validation": {
+        "matched": 32,
+        "total": 32,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libaribcaption",
+      "repository": "https://github.com/xqq/libaribcaption.git",
+      "commit": "c4a0fd12bc37278073478ca14aabe45fc5a1296b",
+      "commit_date": "2026-11-08T14:39:50Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libaribcaption-c4a0fd12bc37278073478ca14aabe45fc5a1296b.tar.gz",
+      "url": "https://codeload.github.com/xqq/libaribcaption/tar.gz/c4a0fd12bc37278073478ca14aabe45fc5a1296b",
+      "sha256": "1526bd1fcf1240e526720f85460e970016acc0d34c337ca816e0fabe069cf405",
+      "validation": {
+        "matched": 51,
+        "total": 51,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "libass",
+      "repository": "https://github.com/libass/libass.git",
+      "commit": "21b5a54fceff49c126c201d4b51c6445287a5072",
+      "commit_date": "2026-11-10T00:13:30Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libass-21b5a54fceff49c126c201d4b51c6445287a5072.tar.gz",
+      "url": "https://codeload.github.com/libass/libass/tar.gz/21b5a54fceff49c126c201d4b51c6445287a5072",
+      "sha256": "cc971ba7cb615f2276ef51ba8206e7eee8cd567d565255e923879bb7bab49032",
+      "validation": {
+        "matched": 33,
+        "total": 33,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libbluray",
+      "repository": "https://code.videolan.org/videolan/libbluray.git",
+      "commit": "f33a738fd7bb8b5e1148b0a5424778db7342450b",
+      "archive": "libbluray-f33a738fd7bb8b5e1148b0a5424778db7342450b.tar.gz",
+      "sha256": "212bed57e46e6672879d113f8acaa6bf7507a5e504f7836d6f9af2682b6b4c0c",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 58,
+        "total": 58,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "contrib/asm/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "libbs2b",
+      "repository": "https://github.com/alexmarsev/libbs2b.git",
+      "commit": "5ca2d59888df047f1e4b028e3a2fd5be8b5a7277",
+      "commit_date": "2014-10-17T08:09:04Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libbs2b-5ca2d59888df047f1e4b028e3a2fd5be8b5a7277.tar.gz",
+      "url": "https://codeload.github.com/alexmarsev/libbs2b/tar.gz/5ca2d59888df047f1e4b028e3a2fd5be8b5a7277",
+      "sha256": "f1f7b9cc46bd8953b27e46c58578b1f68df8b99b2d499dcc4072e15e0f94b869",
+      "validation": {
+        "matched": 1,
+        "total": 1,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libdvdcss",
+      "repository": "https://code.videolan.org/videolan/libdvdcss.git",
+      "commit": "811ce97a1d4d1c9d936f4b2707f533a9ef768251",
+      "archive": "libdvdcss-811ce97a1d4d1c9d936f4b2707f533a9ef768251.tar.gz",
+      "sha256": "5a76f329b710189b5618f062d3eee0d80f1fb1fcf2962edc174a27c1d2865796",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 7,
+        "total": 7,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libdvdnav",
+      "repository": "https://code.videolan.org/videolan/libdvdnav.git",
+      "commit": "8147ccd35e5aae4afdd21171cf7b6b4d8f179d28",
+      "archive": "libdvdnav-8147ccd35e5aae4afdd21171cf7b6b4d8f179d28.tar.gz",
+      "sha256": "d5eb870c5b0bc1023d85c626acb5238fdaf97ee13dba81b3d7174e98e2aa94ad",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 12,
+        "total": 12,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libdvdread",
+      "repository": "https://code.videolan.org/videolan/libdvdread.git",
+      "commit": "0f30df53125b564ef45903714403ce0a1e6c5e9e",
+      "archive": "libdvdread-0f30df53125b564ef45903714403ce0a1e6c5e9e.tar.gz",
+      "sha256": "38d95678f32ac3bf1455975344203c146e918276dbc5e1ddd2ac5bc465502e38",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 9,
+        "total": 9,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libiconv",
+      "archive": "libiconv-1.18.tar.gz",
+      "url": "https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.18.tar.gz",
+      "sha256": "3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8",
+      "selection": "Exact archive and SHA-256 pinned in upstream build recipe",
+      "notice_files": [
+        "COPYING.LIB",
+        "libcharset/COPYING.LIB",
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libjpeg",
+      "repository": "https://github.com/libjpeg-turbo/libjpeg-turbo.git",
+      "commit": "3ef3367eb68aabbc25ce91bf2136c87ed4ec7218",
+      "commit_date": "2026-11-09T20:58:30Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libjpeg-3ef3367eb68aabbc25ce91bf2136c87ed4ec7218.tar.gz",
+      "url": "https://codeload.github.com/libjpeg-turbo/libjpeg-turbo/tar.gz/3ef3367eb68aabbc25ce91bf2136c87ed4ec7218",
+      "sha256": "a2faffd5fb6f3d9c5db1c649875ba3b227af9cd894b5b50f72f53fbe6479e69c",
+      "validation": {
+        "matched": 32,
+        "total": 32,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.md",
+        "release/License.rtf",
+        "src/spng/LICENSE",
+        "src/spng/zlib/LICENSE",
+        "testimages/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "libjxl",
+      "repository": "https://github.com/libjxl/libjxl.git",
+      "commit": "153aa4adf1f25a3373aa9324885c777aca8f0904",
+      "commit_date": "2026-11-10T16:32:33Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libjxl-153aa4adf1f25a3373aa9324885c777aca8f0904.tar.gz",
+      "url": "https://codeload.github.com/libjxl/libjxl/tar.gz/153aa4adf1f25a3373aa9324885c777aca8f0904",
+      "sha256": "cd25571ba43fbbce4f945e8618e75f85307fd77dc36ebb8f9f4cf0ca4bf27503",
+      "validation": {
+        "matched": 239,
+        "total": 239,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "debian/copyright",
+        "lib/extras/LICENSE.apngdis",
+        "third_party/HEVCSoftware/cfg/LICENSE"
+      ]
+    },
+    {
+      "name": "libmodplug",
+      "repository": "https://github.com/Konstanty/libmodplug.git",
+      "commit": "6b3937da975eff2627fa8f73fa093b7769c1bff5",
+      "commit_date": "2026-11-02T13:03:59Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libmodplug-6b3937da975eff2627fa8f73fa093b7769c1bff5.tar.gz",
+      "url": "https://codeload.github.com/Konstanty/libmodplug/tar.gz/6b3937da975eff2627fa8f73fa093b7769c1bff5",
+      "sha256": "71b67c0e7344681f9e70dacaeadc010644d4b69e235c5de61e000b66323eca06",
+      "validation": {
+        "matched": 34,
+        "total": 34,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libmysofa",
+      "repository": "https://github.com/hoene/libmysofa.git",
+      "commit": "648eed03472e6720a1ea45d1a1f86c4efb569ff9",
+      "commit_date": "2026-09-08T07:19:38Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libmysofa-648eed03472e6720a1ea45d1a1f86c4efb569ff9.tar.gz",
+      "url": "https://codeload.github.com/hoene/libmysofa/tar.gz/648eed03472e6720a1ea45d1a1f86c4efb569ff9",
+      "sha256": "7e0e7462732363b50cf35f93bca701abba7da7ae4e91366cdd924ca56db9f8e3",
+      "validation": {
+        "matched": 16,
+        "total": 16,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "tests/LICENSE.CIPIC_subject_003_hrir_final",
+        "tests/LICENSE.D1_48K_24bit_0.3s_FIR_SOFA",
+        "tests/LICENSE.FHK_HRIR_L2354",
+        "tests/LICENSE.H20_44K_16bit_256tap_FIR_SOFA",
+        "tests/LICENSE.LISTEN_1002_IRC_1002_C_HRIR",
+        "tests/LICENSE.MIT_KEMAR_pinnae",
+        "tests/LICENSE.TU-Berlin_QU_KEMAR_anechoic",
+        "tests/LICENSE.pulse",
+        "windows/third-party/sys/LICENSE",
+        "windows/third-party/zlib-1.3.1/LICENSE"
+      ]
+    },
+    {
+      "name": "libopenmpt",
+      "archive": "libopenmpt-0.7.12+release.autotools.tar.gz",
+      "url": "https://lib.openmpt.org/files/libopenmpt/src/libopenmpt-0.7.12+release.autotools.tar.gz",
+      "sha256": "79ab3ce3672601e525b5cc944f026c80c03032f37d39caa84c8ca3fdd75e0c98",
+      "selection": "Exact archive and SHA-256 pinned in upstream build recipe",
+      "notice_files": [
+        "src/mpt/LICENSE.BSL-1.0.txt",
+        "src/mpt/LICENSE.BSD-3-Clause.txt",
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "libplacebo",
+      "repository": "https://github.com/haasn/libplacebo.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "c2cf6e72daee00cbb8ef089059a5d12c06018cbd",
+      "archive": "libplacebo-c2cf6e72daee00cbb8ef089059a5d12c06018cbd.tar.gz",
+      "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/c2cf6e72daee00cbb8ef089059a5d12c06018cbd",
+      "sha256": "9c498bbae489e7bc294bd4d6b6c0c06be4ff02ede39ae4335e03a0cbfc535b8f",
+      "validation": {
+        "matched": 93,
+        "total": 93,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "demos/LICENSE"
+      ]
+    },
+    {
+      "name": "libpng",
+      "repository": "https://github.com/glennrp/libpng.git",
+      "commit": "6d08e02e74541212af280c997dfeac49c7fd8fdb",
+      "commit_date": "2026-11-09T15:13:09Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libpng-6d08e02e74541212af280c997dfeac49c7fd8fdb.tar.gz",
+      "url": "https://codeload.github.com/glennrp/libpng/tar.gz/6d08e02e74541212af280c997dfeac49c7fd8fdb",
+      "sha256": "6577cbbf7964419ca7ba2c094dada8519e5b608ae4fa4541802b50149a1b968c",
+      "validation": {
+        "matched": 12,
+        "total": 12,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "contrib/gregbook/COPYING",
+        "contrib/gregbook/LICENSE",
+        "contrib/pngexif/LICENSE_MIT.txt",
+        "contrib/pngminus/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "libpsl",
+      "repository": "https://github.com/rockdaboot/libpsl.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "aa3a80e18f25caf3916636c8668dcc0fff7c016d",
+      "archive": "libpsl-aa3a80e18f25caf3916636c8668dcc0fff7c016d.tar.gz",
+      "url": "https://codeload.github.com/rockdaboot/libpsl/tar.gz/aa3a80e18f25caf3916636c8668dcc0fff7c016d",
+      "sha256": "e06fde66487f69bb84831118f9c36adb3d040908ac0ceff3fdc609eb62a1ffb2",
+      "validation": {
+        "matched": 2,
+        "total": 2,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "src/LICENSE.chromium"
+      ]
+    },
+    {
+      "name": "libsamplerate",
+      "repository": "https://github.com/libsndfile/libsamplerate.git",
+      "commit": "0844c208f683527c08ea8a80acc13b398aa9c8bf",
+      "commit_date": "2026-08-13T02:47:19Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libsamplerate-0844c208f683527c08ea8a80acc13b398aa9c8bf.tar.gz",
+      "url": "https://codeload.github.com/libsndfile/libsamplerate/tar.gz/0844c208f683527c08ea8a80acc13b398aa9c8bf",
+      "sha256": "c5b976c99196df8247dd429fcaa05f44e281ec15b48f185c9b60c979c468d4c6",
+      "validation": {
+        "matched": 5,
+        "total": 5,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "docs/license.md"
+      ]
+    },
+    {
+      "name": "libsdl2",
+      "repository": "https://github.com/libsdl-org/SDL.git",
+      "commit": "cee83f2d9a916e9de30c5712e798541fdc134b06",
+      "commit_date": "2026-10-31T14:11:10Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libsdl2-cee83f2d9a916e9de30c5712e798541fdc134b06.tar.gz",
+      "url": "https://codeload.github.com/libsdl-org/SDL/tar.gz/cee83f2d9a916e9de30c5712e798541fdc134b06",
+      "sha256": "089e12dd1f27bd7c6db0ef96dcb83f11c321d11b1ee02b739fb8e69c29b0943f",
+      "validation": {
+        "matched": 172,
+        "total": 172,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.txt",
+        "Xcode-iOS/Demos/data/bitmapfont/license.txt",
+        "Xcode/SDL/pkg-support/resources/License.txt",
+        "src/hidapi/LICENSE-bsd.txt",
+        "src/hidapi/LICENSE-gpl3.txt",
+        "src/hidapi/LICENSE-orig.txt",
+        "src/hidapi/LICENSE.txt",
+        "src/video/yuv2rgb/LICENSE",
+        "test/COPYING",
+        "visualtest/COPYING.txt"
+      ]
+    },
+    {
+      "name": "libsixel",
+      "repository": "https://github.com/saitoha/libsixel.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "af12e5bc6f3f69ad83479da85ddb371420da9b17",
+      "archive": "libsixel-af12e5bc6f3f69ad83479da85ddb371420da9b17.tar.gz",
+      "url": "https://codeload.github.com/saitoha/libsixel/tar.gz/af12e5bc6f3f69ad83479da85ddb371420da9b17",
+      "sha256": "5b590e1189304a233fd683f6deb0124d643658e9a2a52ad4aba00404c01eaded",
+      "validation": {
+        "matched": 7,
+        "total": 7,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "LICENSE.images",
+        "LICENSE.mesa",
+        "LICENSE.pngsuite",
+        "LICENSE.pnmcolormap",
+        "LICENSE.sdump",
+        "LICENSE.sixel",
+        "LICENSE.stb",
+        "php/LICENSE",
+        "python/LICENSE",
+        "ruby/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "libsoxr",
+      "repository": "https://gitlab.com/shinchiro/soxr.git",
+      "commit": "945b592b70470e29f917f4de89b4281fbbd540c0",
+      "archive": "libsoxr-945b592b70470e29f917f4de89b4281fbbd540c0.tar.gz",
+      "sha256": "3d1f66171cb3e552ad17c09691d9ffa8a1a6d64ca49d583cbcafb80704648aa5",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 25,
+        "total": 25,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING.LGPL",
+        "LICENCE",
+        "lsr-tests/COPYING"
+      ]
+    },
+    {
+      "name": "libsrt",
+      "repository": "https://github.com/Haivision/srt.git",
+      "commit": "80e0bc48adb8dbc0d4d4635a65a08f31ebd20022",
+      "commit_date": "2026-11-10T14:22:48Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libsrt-80e0bc48adb8dbc0d4d4635a65a08f31ebd20022.tar.gz",
+      "url": "https://codeload.github.com/Haivision/srt/tar.gz/80e0bc48adb8dbc0d4d4635a65a08f31ebd20022",
+      "sha256": "04dee94d169e2aa7849a57316e1c463f1c3e3d7fac341fc55d76ba37e1b8f467",
+      "validation": {
+        "matched": 70,
+        "total": 70,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "libssh",
+      "repository": "https://gitlab.com/libssh/libssh-mirror.git",
+      "commit": "904cbd21a53928f8f687092c77de59f45410dcce",
+      "archive": "libssh-904cbd21a53928f8f687092c77de59f45410dcce.tar.gz",
+      "sha256": "cab8567347f26d6deacd2871c266bab557d107548339cf142dbfd5accd01e42f",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 64,
+        "total": 64,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "cmake/Modules/COPYING-CMAKE-SCRIPTS"
+      ]
+    },
+    {
+      "name": "libudfread",
+      "repository": "https://code.videolan.org/videolan/libudfread.git",
+      "commit": "b0bc6957e7e07d5f35391f210596d9eb71cffdd9",
+      "archive": "libudfread-b0bc6957e7e07d5f35391f210596d9eb71cffdd9.tar.gz",
+      "sha256": "2878d4ee73ac80b369e4bf83d4c070a1fd8c88b61b90fc3a7a76335e449d7878",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 6,
+        "total": 6,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libunibreak",
+      "repository": "https://github.com/adah1972/libunibreak.git",
+      "commit": "32555542453f59101356ecbb8686f5e198f92b62",
+      "commit_date": "2026-11-04T16:46:47Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libunibreak-32555542453f59101356ecbb8686f5e198f92b62.tar.gz",
+      "url": "https://codeload.github.com/adah1972/libunibreak/tar.gz/32555542453f59101356ecbb8686f5e198f92b62",
+      "sha256": "296ee3570596aba4f24b5abf42a3be139f7f8a61f4cc953c2602e26bda7305cb",
+      "validation": {
+        "matched": 5,
+        "total": 5,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENCE"
+      ]
+    },
+    {
+      "name": "libva",
+      "repository": "https://github.com/intel/libva.git",
+      "commit": "f052e984e0c8bf10784198cc311b23c567b1367f",
+      "commit_date": "2026-10-23T07:56:11Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libva-f052e984e0c8bf10784198cc311b23c567b1367f.tar.gz",
+      "url": "https://codeload.github.com/intel/libva/tar.gz/f052e984e0c8bf10784198cc311b23c567b1367f",
+      "sha256": "549d8b3984e7221572db3d4a9d45561d88197e553e067e09bc37352629278682",
+      "validation": {
+        "matched": 5,
+        "total": 5,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libvpl",
+      "repository": "https://github.com/intel/libvpl.git",
+      "commit": "412c5cffe3022d5ebb8a955c3b30afe7bd2e3929",
+      "commit_date": "2026-11-04T21:47:07Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libvpl-412c5cffe3022d5ebb8a955c3b30afe7bd2e3929.tar.gz",
+      "url": "https://codeload.github.com/intel/libvpl/tar.gz/412c5cffe3022d5ebb8a955c3b30afe7bd2e3929",
+      "sha256": "deb2641c23f4350f8dbe965be6e424e59fa6696c7b5528ceb9d77a29244cccc4",
+      "validation": {
+        "matched": 22,
+        "total": 22,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "examples/api1x_core/legacy-decode/License.txt",
+        "examples/api1x_core/legacy-encode/License.txt",
+        "examples/api1x_core/legacy-vpp/License.txt",
+        "examples/api2x/hello-decode/License.txt",
+        "examples/api2x/hello-decvpp/License.txt",
+        "examples/api2x/hello-encode-jpeg/License.txt",
+        "examples/api2x/hello-encode/License.txt",
+        "examples/api2x/hello-sharing-dx11/License.txt",
+        "examples/api2x/hello-sharing-ocl/License.txt",
+        "examples/api2x/hello-sharing-vaapi/License.txt",
+        "examples/api2x/hello-transcode/License.txt",
+        "examples/api2x/hello-vpp/License.txt",
+        "examples/interop/vpl-infer/License.txt",
+        "examples/tutorials/01_transition/License.txt",
+        "libvpl/test/ext/googletest/LICENSE"
+      ]
+    },
+    {
+      "name": "libvpx",
+      "repository": "https://chromium.googlesource.com/webm/libvpx.git",
+      "commit": "d3335af9e8ec27395f66206be08e786e3de05e60",
+      "archive": "libvpx-d3335af9e8ec27395f66206be08e786e3de05e60.tar.gz",
+      "sha256": "83a31e7f8f5b036c9a3df11ce3b36daf13de4ca99ac1ae5332840f9ab1f0cf7f",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 334,
+        "total": 334,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "third_party/googletest/src/LICENSE",
+        "third_party/libwebm/LICENSE.TXT",
+        "third_party/libyuv/LICENSE",
+        "third_party/nalloc/LICENSE",
+        "third_party/x86inc/LICENSE"
+      ]
+    },
+    {
+      "name": "libwebp",
+      "repository": "https://chromium.googlesource.com/webm/libwebp.git",
+      "commit": "e2299572fc50dfbb705ba376cdcdc019871568b6",
+      "archive": "libwebp-e2299572fc50dfbb705ba376cdcdc019871568b6.tar.gz",
+      "sha256": "57f2e067ba46c17e5a5ea109909ec7b1e80d8f4b92edbedc84fd10721d6074d5",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 113,
+        "total": 113,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "libxml2",
+      "repository": "https://github.com/GNOME/libxml2.git",
+      "commit": "febeb5c91fffeca92b84162d57a1832fe5a60b09",
+      "commit_date": "2026-11-03T10:55:18Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libxml2-febeb5c91fffeca92b84162d57a1832fe5a60b09.tar.gz",
+      "url": "https://codeload.github.com/GNOME/libxml2/tar.gz/febeb5c91fffeca92b84162d57a1832fe5a60b09",
+      "sha256": "92e7d1125274f888a5103164c20839ab49bc1db3b01174e73bff7a86c3c9e83c",
+      "validation": {
+        "matched": 31,
+        "total": 31,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "Copyright",
+        "result/html-tokenizer/NOTICE",
+        "test/html-tokenizer/NOTICE"
+      ]
+    },
+    {
+      "name": "libzimg",
+      "repository": "https://github.com/sekrit-twc/zimg.git",
+      "commit": "67e0603271c080e22c8429856dd4a8a56587e61e",
+      "commit_date": "2026-09-04T03:27:08Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libzimg-67e0603271c080e22c8429856dd4a8a56587e61e.tar.gz",
+      "url": "https://codeload.github.com/sekrit-twc/zimg/tar.gz/67e0603271c080e22c8429856dd4a8a56587e61e",
+      "sha256": "539495d51fcd8c7ef9b89a611454e0c1173d18e8d4e743efdef67c4aa7e40d4f",
+      "validation": {
+        "matched": 77,
+        "total": 86,
+        "mismatched": [],
+        "missing": [
+          "./graphengine/include/graphengine/graph.h",
+          "./graphengine/include/graphengine/types.h",
+          "graphengine/graphengine/graph.cpp",
+          "graphengine/graphengine/node.cpp",
+          "graphengine/graphengine/state.h",
+          "graphengine/graphengine/node.h",
+          "./graphengine/include/graphengine/filter.h",
+          "graphengine/graphengine/cpuinfo.cpp",
+          "graphengine/graphengine/x86/cpuinfo_x86.cpp"
+        ]
+      },
+      "notice_files": [
+        "COPYING",
+        "test/extra/musl-libm/COPYRIGHT"
+      ]
+    },
+    {
+      "name": "libzvbi",
+      "repository": "https://github.com/zapping-vbi/zvbi.git",
+      "commit": "34bb6f660c5c1bacd4a66cc7b22311e4ca3c1ab5",
+      "commit_date": "2026-10-22T16:52:14Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "libzvbi-34bb6f660c5c1bacd4a66cc7b22311e4ca3c1ab5.tar.gz",
+      "url": "https://codeload.github.com/zapping-vbi/zvbi/tar.gz/34bb6f660c5c1bacd4a66cc7b22311e4ca3c1ab5",
+      "sha256": "5c671a9f052e41cf770372a263ee6258cb41f6c97ce884080f68b341ab81db1a",
+      "validation": {
+        "matched": 20,
+        "total": 20,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING.md"
+      ]
+    },
+    {
+      "name": "llvm",
+      "repository": "https://github.com/llvm/llvm-project.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "ca7933e47d3a3451d81e72ac174dcb5aa28b59d1",
+      "archive": "llvm-ca7933e47d3a3451d81e72ac174dcb5aa28b59d1.tar.gz",
+      "url": "https://codeload.github.com/llvm/llvm-project/tar.gz/ca7933e47d3a3451d81e72ac174dcb5aa28b59d1",
+      "sha256": "9dd0aba32a0c2b9e8e808e9b67502cc977f22220f67268bbfd937fa07e5ee6ce",
+      "validation": {
+        "matched": 92,
+        "total": 92,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.TXT",
+        "bolt/LICENSE.TXT",
+        "clang-tools-extra/LICENSE.TXT",
+        "clang-tools-extra/clang-tidy/cert/LICENSE.TXT",
+        "clang-tools-extra/clang-tidy/hicpp/LICENSE.TXT",
+        "clang/LICENSE.TXT",
+        "compiler-rt/LICENSE.TXT",
+        "cross-project-tests/debuginfo-tests/dexter/LICENSE.txt",
+        "flang-rt/LICENSE.TXT",
+        "flang/LICENSE.TXT",
+        "flang/test/Semantics/OpenMP/copying.f90",
+        "libc/LICENSE.TXT",
+        "libclc/LICENSE.TXT",
+        "libcxx/LICENSE.TXT",
+        "libcxxabi/LICENSE.TXT",
+        "libsycl/LICENSE.txt",
+        "libunwind/LICENSE.TXT",
+        "lld/LICENSE.TXT",
+        "lldb/LICENSE.TXT",
+        "lldb/tools/lldb-dap/extension/LICENSE.TXT",
+        "llvm/LICENSE.TXT",
+        "llvm/include/llvm/Support/LICENSE.TXT",
+        "llvm/lib/Support/BLAKE3/LICENSE",
+        "llvm/lib/Support/COPYRIGHT.regex",
+        "llvm/test/YAMLParser/LICENSE.txt",
+        "llvm/utils/lit/LICENSE.TXT",
+        "mlir/LICENSE.TXT",
+        "openmp/LICENSE.TXT",
+        "openmp/runtime/src/thirdparty/ittnotify/LICENSE.txt",
+        "orc-rt/LICENSE.TXT",
+        "polly/LICENSE.TXT",
+        "polly/lib/External/isl/LICENSE",
+        "polly/lib/External/isl/imath/LICENSE",
+        "third-party/benchmark/LICENSE",
+        "third-party/boost-math/LICENSE",
+        "third-party/unittest/googlemock/LICENSE.txt",
+        "third-party/unittest/googletest/LICENSE.TXT"
+      ]
+    },
+    {
+      "name": "luajit",
+      "repository": "https://github.com/openresty/luajit2.git",
+      "commit": "a9381a0912c2423a51fb1986d2d6f19ca9e8daed",
+      "commit_date": "2026-11-06T09:00:06Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "luajit-a9381a0912c2423a51fb1986d2d6f19ca9e8daed-recipe-patched.tar.gz",
+      "url": "https://codeload.github.com/openresty/luajit2/tar.gz/a9381a0912c2423a51fb1986d2d6f19ca9e8daed",
+      "sha256": "03d047db5431b3acf892edf87bc1e458a9500cc28f279fa4e857e9e48b29d758",
+      "validation": {
+        "matched": 85,
+        "total": 85,
+        "mismatched": [],
+        "missing": []
+      },
+      "recipe_patches": [
+        "luajit-0001-add-win32-utf-8-filesystem-functions.patch"
+      ],
+      "notice_files": [
+        "COPYRIGHT"
+      ]
+    },
+    {
+      "name": "mingw-w64",
+      "repository": "https://github.com/mingw-w64/mingw-w64.git",
+      "commit": "5ea8e9facd013b815f5f29f20ef26a566319a3de",
+      "selection": "Historical Git tree maximizing compiled source MD5 matches",
+      "archive": "mingw-w64-5ea8e9facd013b815f5f29f20ef26a566319a3de.tar.gz",
+      "sha256": "09d58c2ce1b652b0e226f46822e90104ac48f8076b47a6f03679ae134b4ee09a",
+      "validation": {
+        "matched": 120,
+        "total": 120,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt",
+        "COPYING.MinGW-w64/COPYING.MinGW-w64.txt",
+        "mingw-w64-crt/profile/COPYING",
+        "mingw-w64-libraries/libmangle/COPYING",
+        "mingw-w64-libraries/pseh/COPYING",
+        "mingw-w64-libraries/winpthreads/COPYING",
+        "mingw-w64-libraries/winstorecompat/COPYING",
+        "mingw-w64-tools/gendef/COPYING",
+        "mingw-w64-tools/genidl/COPYING",
+        "mingw-w64-tools/genpeimg/COPYING"
+      ]
+    },
+    {
+      "name": "mpv",
+      "commit": "bcde6b93cca4d128d84e1a60d1a6db2cd81c889e",
+      "repository": "https://github.com/mpv-player/mpv.git",
+      "archive": "mpv-bcde6b93cca4d128d84e1a60d1a6db2cd81c889e.tar.gz",
+      "sha256": "d87d17a4a6fde0c963db1425cae6d4b413788bb935353d3cfedb376acd15cd5f",
+      "selection": "Revision directly embedded in distributed DLL",
+      "notice_files": [
+        "Copyright",
+        "LICENSE.GPL",
+        "LICENSE.LGPL"
+      ]
+    },
+    {
+      "name": "mujs",
+      "repository": "https://codeberg.org/ccxvii/mujs.git",
+      "commit": "21768ba7c0b7d82633c987a3f02c7e97eeec7919",
+      "archive": "mujs-21768ba7c0b7d82633c987a3f02c7e97eeec7919.tar.gz",
+      "sha256": "21206fbd25e8fc0ad4d016a00a52c3de49b2edbd759f427f52392f9779a14cb8",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 24,
+        "total": 24,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "docs/license.html"
+      ]
+    },
+    {
+      "name": "nghttp2",
+      "repository": "https://github.com/nghttp2/nghttp2.git",
+      "commit": "cb663121831ed294d91b73c9d4219ef03ac492dd",
+      "commit_date": "2026-11-10T14:20:51Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "nghttp2-cb663121831ed294d91b73c9d4219ef03ac492dd.tar.gz",
+      "url": "https://codeload.github.com/nghttp2/nghttp2/tar.gz/cb663121831ed294d91b73c9d4219ef03ac492dd",
+      "sha256": "56a4f3442199b4c70c082e2a246194e1a3ea81e9e858a213a583cb93aaa27884",
+      "validation": {
+        "matched": 24,
+        "total": 24,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "doc/_exts/rubydomain/LICENSE.rubydomain",
+        "third-party/llhttp/LICENSE"
+      ]
+    },
+    {
+      "name": "nghttp3",
+      "repository": "https://github.com/ngtcp2/nghttp3.git",
+      "commit": "a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1",
+      "commit_date": "2026-11-08T12:44:43Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "nghttp3-a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1.tar.gz",
+      "url": "https://codeload.github.com/ngtcp2/nghttp3/tar.gz/a1a435bf85dc1cf1f18d799ca81d1e75ac27b7a1",
+      "sha256": "4228f33859f2d42443b9c5b1c57d3194d61b3dac41f544be28ba60ee6c253752",
+      "validation": {
+        "matched": 35,
+        "total": 35,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "ngtcp2",
+      "repository": "https://github.com/ngtcp2/ngtcp2.git",
+      "commit": "e82176c8105490eeedb1ee1c805578d9ea867672",
+      "commit_date": "2026-11-03T07:55:30Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "ngtcp2-e82176c8105490eeedb1ee1c805578d9ea867672.tar.gz",
+      "url": "https://codeload.github.com/ngtcp2/ngtcp2/tar.gz/e82176c8105490eeedb1ee1c805578d9ea867672",
+      "sha256": "9886207ce1014b5de4b5f617dde9130c06fe578c1a48bc81848d9d0e999c108e",
+      "validation": {
+        "matched": 60,
+        "total": 60,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "third-party/http-parser/LICENSE-MIT"
+      ]
+    },
+    {
+      "name": "nvcodec-headers",
+      "repository": "https://github.com/FFmpeg/nv-codec-headers.git",
+      "commit": "f2053071ea93137255b6dcf42e9b4c9e0965a44e",
+      "commit_date": "2026-10-24T16:26:16Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "nvcodec-headers-f2053071ea93137255b6dcf42e9b4c9e0965a44e.tar.gz",
+      "url": "https://codeload.github.com/FFmpeg/nv-codec-headers/tar.gz/f2053071ea93137255b6dcf42e9b4c9e0965a44e",
+      "sha256": "84cefa55265740888a269625474eda5bd018955c2302b72cfe7473ddc82f741f",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "dynlink_cuda.h-NOTICE.txt",
+        "dynlink_cuviddec.h-NOTICE.txt",
+        "dynlink_loader.h-NOTICE.txt",
+        "dynlink_nvcuvid.h-NOTICE.txt",
+        "dynlink_nvml.h-NOTICE.txt",
+        "nvEncodeAPI.h-NOTICE.txt"
+      ]
+    },
+    {
+      "name": "ogg",
+      "repository": "https://github.com/xiph/ogg.git",
+      "commit": "be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
+      "commit_date": "2025-06-16T15:55:41Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "ogg-be05b13e98b048f0b5a0f5fa8ce514d56db5f822.tar.gz",
+      "url": "https://codeload.github.com/xiph/ogg/tar.gz/be05b13e98b048f0b5a0f5fa8ce514d56db5f822",
+      "sha256": "b2ff5c003e5697507169f7d614d64dc4e8bf030c85ad081bec75c164566f8246",
+      "validation": {
+        "matched": 2,
+        "total": 2,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "openal-soft",
+      "repository": "https://github.com/kcat/openal-soft.git",
+      "commit": "20b56ce9f5a1cc6ed8c41547e960e37e9f47bdd2",
+      "commit_date": "2026-11-10T19:56:18Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "openal-soft-20b56ce9f5a1cc6ed8c41547e960e37e9f47bdd2.tar.gz",
+      "url": "https://codeload.github.com/kcat/openal-soft/tar.gz/20b56ce9f5a1cc6ed8c41547e960e37e9f47bdd2",
+      "sha256": "83e63441b111b5b22a7a4e78ae18935bfa6d85381d3c89ec5d51dfaddc52aaa9",
+      "validation": {
+        "matched": 190,
+        "total": 190,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "LICENSE-pffft",
+        "LICENSE.Apache-2.0.txt",
+        "LICENSE.BSD-3-Clause.txt",
+        "fmt-11.2.0/LICENSE",
+        "gsl/LICENSE"
+      ]
+    },
+    {
+      "name": "openssl",
+      "repository": "https://github.com/openssl/openssl.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "d8bf6cdd4849925c30e4f1911c7acb49cb34b702",
+      "archive": "openssl-d8bf6cdd4849925c30e4f1911c7acb49cb34b702.tar.gz",
+      "url": "https://codeload.github.com/openssl/openssl/tar.gz/d8bf6cdd4849925c30e4f1911c7acb49cb34b702",
+      "sha256": "8009a601f3dcfb1ac974b03cd43dd9862b8db088e5d971293c7ba49abeb9775a",
+      "validation": {
+        "matched": 764,
+        "total": 764,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.txt",
+        "external/perl/Text-Template-1.56/LICENSE",
+        "util/perl/OpenSSL/copyright.pm"
+      ]
+    },
+    {
+      "name": "opus",
+      "repository": "https://github.com/xiph/opus.git",
+      "commit": "0145a6248c2171bb6c4e03fb54fe016b5123e37e",
+      "commit_date": "2026-11-06T21:29:26Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "opus-0145a6248c2171bb6c4e03fb54fe016b5123e37e.tar.gz",
+      "url": "https://codeload.github.com/xiph/opus/tar.gz/0145a6248c2171bb6c4e03fb54fe016b5123e37e",
+      "sha256": "e96e540a9fcb49273d6b92b8d3bad73fc4c171e5f196bdc494fac4566830b2fd",
+      "validation": {
+        "matched": 142,
+        "total": 142,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "LICENSE_PLEASE_READ.txt"
+      ]
+    },
+    {
+      "name": "rubberband",
+      "repository": "https://github.com/breakfastquay/rubberband.git",
+      "commit": "e4296ac80b1170018a110bc326fd0d45a0eb27d6",
+      "commit_date": "2025-02-27T11:04:40Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "rubberband-e4296ac80b1170018a110bc326fd0d45a0eb27d6.tar.gz",
+      "url": "https://codeload.github.com/breakfastquay/rubberband/tar.gz/e4296ac80b1170018a110bc326fd0d45a0eb27d6",
+      "sha256": "32770ab6a395badb6a5ee3443bf5a0cfd5cac07f332af8e03fd6dcd61f5b3759",
+      "validation": {
+        "matched": 57,
+        "total": 57,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "src/ext/kissfft/COPYING",
+        "src/ext/speex/COPYING"
+      ]
+    },
+    {
+      "name": "shaderc",
+      "repository": "https://github.com/google/shaderc.git",
+      "commit": "4f0683ab2419ecbb9e18c9edfd4ffd70c2ba8cc6",
+      "commit_date": "2026-10-28T22:15:32Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "shaderc-4f0683ab2419ecbb9e18c9edfd4ffd70c2ba8cc6.tar.gz",
+      "url": "https://codeload.github.com/google/shaderc/tar.gz/4f0683ab2419ecbb9e18c9edfd4ffd70c2ba8cc6",
+      "sha256": "8ef64ac8c7a15e9270997f0275f3a3763f5cbbcd78dd1d13a23b553e62e57141",
+      "validation": {
+        "matched": 13,
+        "total": 376,
+        "mismatched": [],
+        "missing": [
+          "third_party/glslang/glslang/MachineIndependent/ShaderLang.cpp",
+          "third_party/glslang/glslang/Public/ShaderLang.h",
+          "third_party/glslang/glslang/MachineIndependent/PoolAlloc.cpp",
+          "third_party/glslang/glslang/MachineIndependent/localintermediate.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/InfoSink.h",
+          "third_party/glslang/SPIRV/GlslangToSpv.h",
+          "third_party/glslang/SPIRV/GlslangToSpv.cpp",
+          "third_party/glslang/SPIRV/Logger.h",
+          "third_party/spirv-tools/source/spirv_optimizer_options.cpp",
+          "third_party/spirv-tools/include/spirv-tools/libspirv.hpp",
+          "third_party/spirv-tools/source/spirv_optimizer_options.h",
+          "third_party/spirv-tools/source/spirv_validator_options.h",
+          "third_party/spirv-tools/source/libspirv.cpp",
+          "third_party/spirv-tools/source/table.cpp",
+          "third_party/spirv-tools/source/table.h",
+          "third_party/spirv-tools/source/spirv_validator_options.cpp",
+          "third_party/spirv-tools/source/opt/optimizer.cpp",
+          "third_party/spirv-tools/source/opt/pass_manager.h",
+          "third_party/spirv-tools/source/util/make_unique.h",
+          "third_party/spirv-tools/source/opt/strip_debug_info_pass.h",
+          "third_party/spirv-tools/source/opt/compact_ids_pass.h",
+          "third_party/spirv-tools/source/binary.cpp",
+          "third_party/spirv-tools/source/spirv_endian.cpp",
+          "third_party/spirv-tools/source/util/string_utils.h",
+          "third_party/spirv-tools/source/diagnostic.cpp",
+          "third_party/spirv-tools/source/assembly_grammar.h",
+          "third_party/spirv-tools/source/diagnostic.h",
+          "third_party/spirv-tools/source/opcode.cpp",
+          "third_party/spirv-tools/source/table2.cpp",
+          "third_party/spirv-tools/source/util/index_range.h",
+          "third_party/spirv-tools/source/util/span.h",
+          "third_party/spirv-tools/source/operand.cpp",
+          "third_party/spirv-tools/source/opt/const_folding_rules.cpp",
+          "third_party/spirv-tools/source/opt/const_folding_rules.h",
+          "third_party/spirv-tools/source/opt/ir_context.h",
+          "third_party/spirv-tools/source/opt/feature_manager.h",
+          "third_party/spirv-tools/source/enum_set.h",
+          "third_party/spirv-tools/source/opt/feature_manager.cpp",
+          "third_party/spirv-tools/source/util/ilist.h",
+          "third_party/spirv-tools/source/opt/module.h",
+          "third_party/spirv-tools/source/opt/instruction_list.h",
+          "third_party/spirv-tools/source/opt/instruction.h",
+          "third_party/spirv-tools/source/opt/instruction.cpp",
+          "third_party/spirv-tools/source/util/small_vector.h",
+          "third_party/spirv-tools/source/opt/constants.h",
+          "third_party/spirv-tools/source/opt/constants.cpp",
+          "third_party/spirv-tools/source/opt/types.h",
+          "third_party/spirv-tools/source/util/bitutils.h",
+          "third_party/spirv-tools/source/opt/type_manager.cpp",
+          "third_party/spirv-tools/source/util/hex_float.h",
+          "third_party/spirv-tools/source/opt/def_use_manager.cpp",
+          "third_party/spirv-tools/source/opt/def_use_manager.h",
+          "third_party/spirv-tools/source/opt/type_manager.h",
+          "third_party/glslang/glslang/MachineIndependent/SymbolTable.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/../Public/../MachineIndependent/Versions.h",
+          "third_party/glslang/glslang/MachineIndependent/Scan.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/Common.h",
+          "third_party/glslang/glslang/MachineIndependent/SymbolTable.cpp",
+          "third_party/glslang/glslang/MachineIndependent/ScanContext.h",
+          "third_party/glslang/glslang/MachineIndependent/ParseHelper.h",
+          "third_party/glslang/glslang/MachineIndependent/parseVersions.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/../Public/ShaderLang.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/ShHandle.h",
+          "third_party/glslang/glslang/MachineIndependent/Intermediate.cpp",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/PpContext.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/PoolAlloc.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/intermediate.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/SpirvIntrinsics.h",
+          "third_party/glslang/glslang/MachineIndependent/Versions.cpp",
+          "third_party/glslang/glslang/MachineIndependent/linkValidate.cpp",
+          "third_party/glslang/glslang/MachineIndependent/../HLSL/../MachineIndependent/Initialize.h",
+          "third_party/glslang/glslang/MachineIndependent/Initialize.cpp",
+          "third_party/glslang/glslang/MachineIndependent/../HLSL/hlslParseables.h",
+          "third_party/glslang/glslang/HLSL/hlslParseables.cpp",
+          "third_party/glslang/glslang/MachineIndependent/../Include/Types.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/arrays.h",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/localintermediate.h",
+          "third_party/glslang/SPIRV/SpvPostProcess.cpp",
+          "third_party/glslang/SPIRV/spvIR.h",
+          "third_party/glslang/SPIRV/SpvBuilder.h",
+          "third_party/glslang/SPIRV/SpvTools.cpp",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/intermediate.h",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/Common.h",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/PoolAlloc.h",
+          "third_party/glslang/SPIRV/SpvBuilder.cpp",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/SpirvIntrinsics.h",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/Types.h",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/ConstantUnion.h",
+          "third_party/glslang/SPIRV/spirv.hpp11",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/arrays.h",
+          "third_party/glslang/SPIRV/spvUtil.h",
+          "third_party/glslang/SPIRV/../glslang/MachineIndependent/../Include/../Include/BaseTypes.h",
+          "third_party/spirv-tools/source/text.cpp",
+          "third_party/spirv-tools/source/opt/pass.h",
+          "third_party/spirv-tools/source/opt/wrap_opkill.h",
+          "third_party/spirv-tools/source/opt/pass.cpp",
+          "third_party/spirv-tools/source/opt/dead_branch_elim_pass.h",
+          "third_party/spirv-tools/source/opt/mem_pass.cpp",
+          "third_party/spirv-tools/source/opt/merge_return_pass.h",
+          "third_party/spirv-tools/source/opt/inline_exhaustive_pass.cpp",
+          "third_party/spirv-tools/source/opt/inline_pass.cpp",
+          "third_party/spirv-tools/source/opt/eliminate_dead_functions_pass.h",
+          "third_party/spirv-tools/source/opt/private_to_local_pass.h",
+          "third_party/spirv-tools/source/opt/fix_storage_class.h",
+          "third_party/spirv-tools/source/opt/local_single_block_elim_pass.cpp",
+          "third_party/spirv-tools/source/opt/local_single_store_elim_pass.cpp",
+          "third_party/spirv-tools/source/opt/aggressive_dead_code_elim_pass.h",
+          "third_party/spirv-tools/source/util/bit_vector.h",
+          "third_party/spirv-tools/source/opt/scalar_replacement_pass.h",
+          "third_party/spirv-tools/source/opt/ssa_rewrite_pass.h",
+          "third_party/spirv-tools/source/opt/combine_access_chains.h",
+          "third_party/spirv-tools/source/opt/legalize_multidim_array_pass.h",
+          "third_party/spirv-tools/source/opt/ccp_pass.h",
+          "third_party/spirv-tools/source/opt/loop_unroller.h",
+          "third_party/spirv-tools/source/opt/simplification_pass.h",
+          "third_party/spirv-tools/source/opt/copy_prop_arrays.h",
+          "third_party/spirv-tools/source/opt/vector_dce.h",
+          "third_party/spirv-tools/source/opt/dead_insert_elim_pass.h",
+          "third_party/spirv-tools/source/opt/reduce_load_size.h",
+          "third_party/spirv-tools/source/opt/remove_unused_interface_variables_pass.h",
+          "third_party/spirv-tools/source/opt/interp_fixup_pass.h",
+          "third_party/spirv-tools/source/opt/invocation_interlock_placement_pass.h",
+          "third_party/spirv-tools/source/opt/opextinst_forward_ref_fixup_pass.h",
+          "third_party/spirv-tools/source/opt/local_access_chain_convert_pass.cpp",
+          "third_party/spirv-tools/source/opt/redundancy_elimination.h",
+          "third_party/spirv-tools/source/opt/if_conversion.h",
+          "third_party/spirv-tools/source/opt/block_merge_pass.cpp",
+          "third_party/spirv-tools/source/opt/eliminate_dead_members_pass.h",
+          "third_party/spirv-tools/source/opt/cfg_cleanup_pass.h",
+          "third_party/spirv-tools/source/opt/build_module.cpp",
+          "third_party/spirv-tools/source/opt/struct_cfg_analysis.h",
+          "third_party/spirv-tools/source/opt/fold.h",
+          "third_party/spirv-tools/source/opt/register_pressure.h",
+          "third_party/spirv-tools/source/opt/decoration_manager.h",
+          "third_party/spirv-tools/source/opt/liveness.h",
+          "third_party/spirv-tools/source/opt/value_number_table.h",
+          "third_party/spirv-tools/source/util/ilist_node.h",
+          "third_party/spirv-tools/source/opt/scalar_analysis.h",
+          "third_party/spirv-tools/source/opt/debug_info_manager.h",
+          "third_party/spirv-tools/source/opt/dominator_analysis.h",
+          "third_party/spirv-tools/source/opt/dominator_tree.h",
+          "third_party/spirv-tools/source/opt/cfg.h",
+          "third_party/spirv-tools/source/opt/basic_block.h",
+          "third_party/spirv-tools/source/opt/graph.h",
+          "third_party/spirv-tools/source/opt/function.h",
+          "third_party/spirv-tools/source/spirv_target_env.cpp",
+          "third_party/spirv-tools/source/ext_inst.cpp",
+          "third_party/spirv-tools/source/assembly_grammar.cpp",
+          "third_party/spirv-tools/source/opt/module.cpp",
+          "third_party/spirv-tools/source/opt/reflect.h",
+          "third_party/spirv-tools/source/opt/types.cpp",
+          "third_party/spirv-tools/source/opt/decoration_manager.cpp",
+          "third_party/spirv-tools/source/opt/instruction_list.cpp",
+          "third_party/spirv-tools/source/opt/fold.cpp",
+          "third_party/spirv-tools/source/opt/folding_rules.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/ConstantUnion.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/../Include/BaseTypes.h",
+          "third_party/glslang/glslang/MachineIndependent/iomapper.cpp",
+          "third_party/glslang/glslang/MachineIndependent/LiveTraverser.h",
+          "third_party/glslang/glslang/MachineIndependent/iomapper.h",
+          "third_party/glslang/glslang/MachineIndependent/intermOut.cpp",
+          "third_party/glslang/glslang/MachineIndependent/../Include/../Include/PoolAlloc.h",
+          "third_party/glslang/glslang/MachineIndependent/../Public/../MachineIndependent/Versions.h",
+          "third_party/glslang/glslang/MachineIndependent/../Include/../Include/Common.h",
+          "third_party/glslang/glslang/MachineIndependent/Scan.cpp",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/PpContext.cpp",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/../../Include/../Include/Common.h",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/../../Include/../Include/PoolAlloc.h",
+          "third_party/glslang/glslang/MachineIndependent/InfoSink.cpp",
+          "third_party/glslang/glslang/MachineIndependent/span.h",
+          "third_party/glslang/glslang/MachineIndependent/Initialize.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/PoolAlloc.h",
+          "third_party/glslang/glslang/HLSL/hlslParseables.h",
+          "third_party/glslang/glslang/MachineIndependent/ParseHelper.cpp",
+          "third_party/glslang/glslang/MachineIndependent/ParseContextBase.cpp",
+          "third_party/glslang/glslang/MachineIndependent/limits.cpp",
+          "third_party/glslang/glslang/HLSL/hlslParseHelper.cpp",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/../Include/PoolAlloc.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/../Include/Common.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/Types.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/localintermediate.h",
+          "third_party/glslang/glslang/HLSL/hlslScanContext.h",
+          "third_party/glslang/glslang/HLSL/hlslGrammar.h",
+          "third_party/glslang/glslang/HLSL/hlslTokenStream.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/Scan.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/InfoSink.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/intermediate.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/ConstantUnion.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/SpirvIntrinsics.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/SymbolTable.h",
+          "third_party/glslang/glslang/HLSL/hlslParseHelper.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/arrays.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/ParseHelper.h",
+          "third_party/glslang/glslang/MachineIndependent/attribute.cpp",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/parseVersions.h",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/../Include/../Include/BaseTypes.h",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/PpScanner.cpp",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/../localintermediate.h",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/../parseVersions.h",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/../Scan.h",
+          "third_party/glslang/glslang/../glslang/MachineIndependent/localintermediate.h",
+          "third_party/glslang/SPIRV/hex_float.h",
+          "third_party/glslang/SPIRV/Logger.cpp",
+          "third_party/glslang/glslang/../SPIRV/spvIR.h",
+          "third_party/spirv-tools/source/disassemble.cpp",
+          "third_party/spirv-tools/source/print.cpp",
+          "third_party/spirv-tools/source/name_mapper.cpp",
+          "third_party/spirv-tools/source/name_mapper.h",
+          "third_party/spirv-tools/source/print.h",
+          "third_party/spirv-tools/source/disassemble.h",
+          "third_party/spirv-tools/source/val/validate.cpp",
+          "third_party/spirv-tools/source/val/validation_state.h",
+          "third_party/spirv-tools/source/val/instruction.h",
+          "third_party/spirv-tools/source/val/validation_state.cpp",
+          "third_party/spirv-tools/source/val/function.cpp",
+          "third_party/spirv-tools/source/val/basic_block.h",
+          "third_party/spirv-tools/source/extensions.cpp",
+          "third_party/spirv-tools/source/val/function.h",
+          "third_party/spirv-tools/source/val/decoration.h",
+          "third_party/spirv-tools/source/val/construct.h",
+          "third_party/spirv-tools/source/util/string_utils.cpp",
+          "third_party/spirv-tools/source/opt/ir_builder.h",
+          "third_party/spirv-tools/source/opt/iterator.h",
+          "third_party/spirv-tools/source/opt/ir_loader.cpp",
+          "third_party/spirv-tools/source/opt/ir_loader.h",
+          "third_party/spirv-tools/source/opt/pass_manager.cpp",
+          "third_party/spirv-tools/source/opt/ir_context.cpp",
+          "third_party/spirv-tools/source/util/hash_combine.h",
+          "third_party/spirv-tools/source/opt/loop_descriptor.cpp",
+          "third_party/spirv-tools/source/opt/loop_descriptor.h",
+          "third_party/spirv-tools/source/opt/basic_block.cpp",
+          "third_party/spirv-tools/source/opt/tree_iterator.h",
+          "third_party/spirv-tools/source/opt/dominator_tree.cpp",
+          "third_party/spirv-tools/source/opt/mem_pass.h",
+          "third_party/spirv-tools/source/opt/block_merge_pass.h",
+          "third_party/spirv-tools/source/opt/inline_exhaustive_pass.h",
+          "third_party/spirv-tools/source/opt/inline_pass.h",
+          "third_party/spirv-tools/source/opt/debug_info_manager.cpp",
+          "third_party/spirv-tools/source/opt/local_access_chain_convert_pass.h",
+          "third_party/spirv-tools/source/opt/local_single_block_elim_pass.h",
+          "third_party/spirv-tools/source/opt/local_single_store_elim_pass.h",
+          "third_party/spirv-tools/source/opt/strip_debug_info_pass.cpp",
+          "third_party/spirv-tools/source/opt/eliminate_dead_functions_pass.cpp",
+          "third_party/spirv-tools/source/opt/eliminate_dead_members_pass.cpp",
+          "third_party/spirv-tools/source/opt/function.cpp",
+          "third_party/spirv-tools/source/opt/simplification_pass.cpp",
+          "third_party/spirv-tools/source/opt/dead_insert_elim_pass.cpp",
+          "third_party/spirv-tools/source/opt/composite.cpp",
+          "third_party/spirv-tools/source/opt/dead_branch_elim_pass.cpp",
+          "third_party/spirv-tools/source/opt/ssa_rewrite_pass.cpp",
+          "third_party/spirv-tools/source/opt/aggressive_dead_code_elim_pass.cpp",
+          "third_party/spirv-tools/source/opt/cfg.cpp",
+          "third_party/spirv-tools/source/opt/remove_unused_interface_variables_pass.cpp",
+          "third_party/spirv-tools/source/opt/compact_ids_pass.cpp",
+          "third_party/spirv-tools/source/opt/merge_return_pass.cpp",
+          "third_party/spirv-tools/source/opt/struct_cfg_analysis.cpp",
+          "third_party/spirv-tools/source/opt/cfg_cleanup_pass.cpp",
+          "third_party/spirv-tools/source/opt/local_redundancy_elimination.cpp",
+          "third_party/spirv-tools/source/opt/local_redundancy_elimination.h",
+          "third_party/spirv-tools/source/opt/legalize_multidim_array_pass.cpp",
+          "third_party/spirv-tools/source/opt/desc_sroa_util.cpp",
+          "third_party/spirv-tools/source/opt/redundancy_elimination.cpp",
+          "third_party/spirv-tools/source/opt/scalar_replacement_pass.cpp",
+          "third_party/spirv-tools/source/opt/private_to_local_pass.cpp",
+          "third_party/spirv-tools/source/opt/ccp_pass.cpp",
+          "third_party/spirv-tools/source/opt/propagator.h",
+          "third_party/spirv-tools/source/opt/if_conversion.cpp",
+          "third_party/spirv-tools/source/opt/loop_unroller.cpp",
+          "third_party/spirv-tools/source/opt/loop_utils.h",
+          "third_party/spirv-tools/source/opt/copy_prop_arrays.cpp",
+          "third_party/spirv-tools/source/opt/vector_dce.cpp",
+          "third_party/spirv-tools/source/util/bit_vector.cpp",
+          "third_party/spirv-tools/source/opt/reduce_load_size.cpp",
+          "third_party/spirv-tools/source/opt/combine_access_chains.cpp",
+          "third_party/spirv-tools/source/opt/fix_storage_class.cpp",
+          "third_party/spirv-tools/source/opt/wrap_opkill.cpp",
+          "third_party/spirv-tools/source/opt/interp_fixup_pass.cpp",
+          "third_party/spirv-tools/source/opt/invocation_interlock_placement_pass.cpp",
+          "third_party/spirv-tools/source/opt/opextinst_forward_ref_fixup_pass.cpp",
+          "third_party/spirv-tools/source/opt/scalar_analysis.cpp",
+          "third_party/spirv-tools/source/opt/scalar_analysis_nodes.h",
+          "third_party/spirv-tools/source/opt/liveness.cpp",
+          "third_party/spirv-tools/source/opt/folding_rules.cpp",
+          "third_party/glslang/glslang/MachineIndependent/Constant.cpp",
+          "third_party/glslang/glslang/MachineIndependent/parseConst.cpp",
+          "third_party/glslang/glslang/MachineIndependent/propagateNoContraction.cpp",
+          "third_party/glslang/glslang/MachineIndependent/IntermTraverse.cpp",
+          "third_party/glslang/glslang/MachineIndependent/SpirvIntrinsics.cpp",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/PpAtom.cpp",
+          "third_party/glslang/glslang/HLSL/hlslGrammar.cpp",
+          "third_party/glslang/glslang/HLSL/hlslTokenStream.cpp",
+          "third_party/glslang/glslang/HLSL/hlslScanContext.cpp",
+          "third_party/glslang/glslang/HLSL/hlslAttributes.h",
+          "third_party/glslang/glslang/HLSL/hlslOpMap.cpp",
+          "third_party/glslang/glslang/HLSL/../Include/defer.h",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/Pp.cpp",
+          "third_party/glslang/glslang/MachineIndependent/preprocessor/PpTokens.cpp",
+          "third_party/glslang/SPIRV/InReadableOrder.cpp",
+          "third_party/spirv-tools/source/parsed_operand.cpp",
+          "third_party/spirv-tools/source/to_string.cpp",
+          "third_party/spirv-tools/source/val/basic_block.cpp",
+          "third_party/spirv-tools/source/val/instruction.cpp",
+          "third_party/spirv-tools/source/val/construct.cpp",
+          "third_party/spirv-tools/source/cfa.h",
+          "third_party/spirv-tools/source/val/validate_id.cpp",
+          "third_party/spirv-tools/source/val/validate_capability.cpp",
+          "third_party/spirv-tools/source/val/validate_layout.cpp",
+          "third_party/spirv-tools/source/val/validate_cfg.cpp",
+          "third_party/spirv-tools/source/val/validate_instruction.cpp",
+          "third_party/spirv-tools/source/val/validate_misc.cpp",
+          "third_party/spirv-tools/source/val/validate_debug.cpp",
+          "third_party/spirv-tools/source/val/validate_annotation.cpp",
+          "third_party/spirv-tools/source/val/validate_extensions.cpp",
+          "third_party/spirv-tools/source/val/validate_mode_setting.cpp",
+          "third_party/spirv-headers/include/spirv/unified1/spirv.hpp11",
+          "third_party/spirv-tools/source/val/validate_type.cpp",
+          "third_party/spirv-tools/source/val/validate_constants.cpp",
+          "third_party/spirv-tools/source/val/validate_memory.cpp",
+          "third_party/spirv-tools/source/val/validate_function.cpp",
+          "third_party/spirv-tools/source/val/validate_image.cpp",
+          "third_party/spirv-tools/source/val/validate_conversion.cpp",
+          "third_party/spirv-tools/source/val/validate_composites.cpp",
+          "third_party/spirv-tools/source/val/validate_arithmetics.cpp",
+          "third_party/spirv-tools/source/val/validate_bitwise.cpp",
+          "third_party/spirv-tools/source/val/validate_logicals.cpp",
+          "third_party/spirv-tools/source/val/validate_derivatives.cpp",
+          "third_party/spirv-tools/source/val/validate_atomics.cpp",
+          "third_party/spirv-tools/source/val/validate_primitives.cpp",
+          "third_party/spirv-tools/source/val/validate_barriers.cpp",
+          "third_party/spirv-tools/source/val/validate_dot_product.cpp",
+          "third_party/spirv-tools/source/val/validate_group.cpp",
+          "third_party/spirv-tools/source/val/validate_pipe.cpp",
+          "third_party/spirv-tools/source/val/validate_non_uniform.cpp",
+          "third_party/spirv-tools/source/val/validate_literals.cpp",
+          "third_party/spirv-tools/source/val/validate_ray_query.cpp",
+          "third_party/spirv-tools/source/val/validate_ray_tracing.cpp",
+          "third_party/spirv-tools/source/val/validate_ray_tracing_reorder.cpp",
+          "third_party/spirv-tools/source/val/validate_mesh_shading.cpp",
+          "third_party/spirv-tools/source/val/validate_tensor_layout.cpp",
+          "third_party/spirv-tools/source/val/validate_tensor.cpp",
+          "third_party/spirv-tools/source/val/validate_graph.cpp",
+          "third_party/spirv-tools/source/val/validate_invalid_type.cpp",
+          "third_party/spirv-tools/source/val/validate_adjacency.cpp",
+          "third_party/spirv-tools/source/val/validate_decorations.cpp",
+          "third_party/spirv-tools/source/val/validate_explicit_layout.cpp",
+          "third_party/spirv-tools/source/val/validate_interfaces.cpp",
+          "third_party/spirv-tools/source/val/validate_builtins.cpp",
+          "third_party/spirv-tools/source/val/validate_execution_limitations.cpp",
+          "third_party/spirv-tools/source/val/validate_small_type_uses.cpp",
+          "third_party/spirv-tools/source/val/validate_logical_pointers.cpp",
+          "third_party/spirv-tools/source/opt/log.h",
+          "third_party/spirv-tools/source/opt/graph.cpp",
+          "third_party/spirv-tools/source/opt/block_merge_util.cpp",
+          "third_party/spirv-tools/source/opt/dominator_analysis.cpp",
+          "third_party/spirv-tools/source/opt/eliminate_dead_functions_util.cpp",
+          "third_party/spirv-tools/source/opt/value_number_table.cpp",
+          "third_party/spirv-tools/source/opt/propagator.cpp",
+          "third_party/glslang/glslang/HLSL/hlslAttributes.cpp",
+          "third_party/glslang/glslang/HLSL/../MachineIndependent/preprocessor/PpContext.h",
+          "third_party/glslang/glslang/HLSL/../Include/../Include/Common.h",
+          "third_party/glslang/glslang/HLSL/../Include/../Include/PoolAlloc.h",
+          "third_party/spirv-tools/source/val/validate_scopes.cpp",
+          "third_party/spirv-tools/source/val/validate_memory_semantics.cpp"
+        ]
+      },
+      "notice_files": [
+        "LICENSE",
+        "license-checker.cfg",
+        "third_party/LICENSE.glslang",
+        "third_party/LICENSE.spirv-tools"
+      ]
+    },
+    {
+      "name": "speex",
+      "repository": "https://github.com/xiph/speex.git",
+      "commit": "05895229896dc942d453446eba6f9f5ddcf95422",
+      "commit_date": "2025-06-25T15:14:19Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "speex-05895229896dc942d453446eba6f9f5ddcf95422.tar.gz",
+      "url": "https://codeload.github.com/xiph/speex/tar.gz/05895229896dc942d453446eba6f9f5ddcf95422",
+      "sha256": "adcf98e09a59a5f07baefb5007e4619b6da7692c1fd563db6d617198f6e9e021",
+      "validation": {
+        "matched": 23,
+        "total": 23,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "spirv-cross",
+      "repository": "https://github.com/KhronosGroup/SPIRV-Cross.git",
+      "commit": "57e4efcc84112abcd426dc5ec248b5339bee04f2",
+      "commit_date": "2026-10-28T16:28:49Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "spirv-cross-57e4efcc84112abcd426dc5ec248b5339bee04f2.tar.gz",
+      "url": "https://codeload.github.com/KhronosGroup/SPIRV-Cross/tar.gz/57e4efcc84112abcd426dc5ec248b5339bee04f2",
+      "sha256": "59f15a74725f96a1e15f0fa708d54a217ab659eeef894c4d7e44cc67837d3e3a",
+      "validation": {
+        "matched": 23,
+        "total": 23,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "spirv-headers",
+      "repository": "https://github.com/KhronosGroup/SPIRV-Headers.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "6efe5ae6b7c6ad29da3f2cc3f164b9c3d72b78b1",
+      "archive": "spirv-headers-6efe5ae6b7c6ad29da3f2cc3f164b9c3d72b78b1.tar.gz",
+      "url": "https://codeload.github.com/KhronosGroup/SPIRV-Headers/tar.gz/6efe5ae6b7c6ad29da3f2cc3f164b9c3d72b78b1",
+      "sha256": "d035de73b4085301bf921dc66997ce993fbf7c0d78f3308e67b6be2513a8b88c",
+      "validation": {
+        "matched": 1,
+        "total": 1,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "spirv-tools",
+      "repository": "https://github.com/KhronosGroup/SPIRV-Tools.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "251c437ef506157c139f77f5525c02223bc78868",
+      "archive": "spirv-tools-251c437ef506157c139f77f5525c02223bc78868.tar.gz",
+      "url": "https://codeload.github.com/KhronosGroup/SPIRV-Tools/tar.gz/251c437ef506157c139f77f5525c02223bc78868",
+      "sha256": "55dd049324087234deecf2a1e8e0eeebec8910c81545fe769a64bd7172d46805",
+      "validation": {
+        "matched": 247,
+        "total": 247,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "utils/vscode/src/lsp/LICENSE"
+      ]
+    },
+    {
+      "name": "subrandr",
+      "repository": "https://github.com/afishhh/subrandr.git",
+      "commit": "2f68c85e941e6ed906cbca73cee485bf7deba52e",
+      "commit_date": "2026-11-10T18:39:25Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "subrandr-2f68c85e941e6ed906cbca73cee485bf7deba52e.tar.gz",
+      "url": "https://codeload.github.com/afishhh/subrandr/tar.gz/2f68c85e941e6ed906cbca73cee485bf7deba52e",
+      "sha256": "504324a9fb94642134fa6555f4456ac64071844096d6cd4bff9b865d29132231",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "svtav1",
+      "repository": "https://gitlab.com/AOMediaCodec/SVT-AV1.git",
+      "commit": "e3d63405f9ba8219913a7276c2c47d10e5d022fe",
+      "archive": "svtav1-e3d63405f9ba8219913a7276c2c47d10e5d022fe.tar.gz",
+      "sha256": "f4758642722b2b0629c6dc8ac3a7f9e134d051967f571361b019aaf5602c5d39",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 311,
+        "total": 311,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE-BSD2.md",
+        "LICENSE.md",
+        "third_party/fastfeat/LICENSE",
+        "third_party/safestringlib/LICENSE"
+      ]
+    },
+    {
+      "name": "uavs3d",
+      "repository": "https://github.com/uavs3/uavs3d.git",
+      "commit": "0e20d2c291853f196c68922a264bcd8471d75b68",
+      "commit_date": "2025-12-13T07:23:04Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "uavs3d-0e20d2c291853f196c68922a264bcd8471d75b68.tar.gz",
+      "url": "https://codeload.github.com/uavs3/uavs3d/tar.gz/0e20d2c291853f196c68922a264bcd8471d75b68",
+      "sha256": "1c1eb778b6080bc01493180ea7ae671c6444ce3aa760b5d021ba882eb0f9e3a0",
+      "validation": {
+        "matched": 33,
+        "total": 33,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "uchardet",
+      "repository": "https://gitlab.freedesktop.org/uchardet/uchardet.git",
+      "commit": "06029ec3340cdf6bf9a6a537dafb3f39eda0560e",
+      "archive": "uchardet-06029ec3340cdf6bf9a6a537dafb3f39eda0560e.tar.gz",
+      "sha256": "66d583dd2188c036233d450b9282aedd32aeeba45bc0442f03f71b6a08b7ff90",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 40,
+        "total": 40,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "vapoursynth",
+      "repository": "https://github.com/vapoursynth/vapoursynth.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "e46204429041e95a881b61eedddd46c08f9a307c",
+      "archive": "vapoursynth-e46204429041e95a881b61eedddd46c08f9a307c.tar.gz",
+      "url": "https://codeload.github.com/vapoursynth/vapoursynth/tar.gz/e46204429041e95a881b61eedddd46c08f9a307c",
+      "sha256": "8ee237704a6eb1c78d18aa011129916043b6fdf6784ea28efd344b555b623622",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING.LESSER"
+      ]
+    },
+    {
+      "name": "vorbis",
+      "repository": "https://github.com/xiph/vorbis.git",
+      "commit": "c2aa86b05e981c96bf381fc6aa11cdd03eccc2fb",
+      "commit_date": "2025-12-05T20:59:06Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "vorbis-c2aa86b05e981c96bf381fc6aa11cdd03eccc2fb.tar.gz",
+      "url": "https://codeload.github.com/xiph/vorbis/tar.gz/c2aa86b05e981c96bf381fc6aa11cdd03eccc2fb",
+      "sha256": "95e908e8c3595ae017b07a376da83ed38a3edeeab9ad458451669f7076bee8b0",
+      "validation": {
+        "matched": 21,
+        "total": 21,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "debian/copyright"
+      ]
+    },
+    {
+      "name": "vulkan",
+      "repository": "https://github.com/KhronosGroup/Vulkan-Loader.git",
+      "commit": "41fb81bcf0e98a74100be22dbdcf1ca6063a3ec1",
+      "commit_date": "2026-11-10T22:07:06Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "vulkan-41fb81bcf0e98a74100be22dbdcf1ca6063a3ec1.tar.gz",
+      "url": "https://codeload.github.com/KhronosGroup/Vulkan-Loader/tar.gz/41fb81bcf0e98a74100be22dbdcf1ca6063a3ec1",
+      "sha256": "37f339de9f934d9d734a3491e9bbed9a7f4300334f28a45b1f4f964cfb465c9f",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "name": "vulkan-header",
+      "repository": "https://github.com/KhronosGroup/Vulkan-Headers.git",
+      "commit": "88487f687f3100ebe1d3559a8a34d971ee85b977",
+      "commit_date": "2026-11-06T01:46:02Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "vulkan-header-88487f687f3100ebe1d3559a8a34d971ee85b977.tar.gz",
+      "url": "https://codeload.github.com/KhronosGroup/Vulkan-Headers/tar.gz/88487f687f3100ebe1d3559a8a34d971ee85b977",
+      "sha256": "997cd7754f272f46a477f783b7a5c16613604cecde52233eede07e26dfc5655f",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "name": "x264",
+      "repository": "https://code.videolan.org/videolan/x264.git",
+      "commit": "0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee",
+      "archive": "x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.gz",
+      "sha256": "ce91fb1ca27fb45f8531ee4a7ebd31e4e6328a14b73f875a0a4cc81170f7870d",
+      "selection": "Historical repository revision before workflow update; corroborate with compiled-source MD5",
+      "validation": {
+        "matched": 45,
+        "total": 45,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING"
+      ]
+    },
+    {
+      "name": "x265",
+      "repository": "https://github.com/Multicorewareinc/x265.git",
+      "commit": "9bb47b765b438f136364848fd4592fc692a8cf77",
+      "commit_date": "2026-11-10T12:12:34Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "x265-9bb47b765b438f136364848fd4592fc692a8cf77.tar.gz",
+      "url": "https://codeload.github.com/Multicorewareinc/x265/tar.gz/9bb47b765b438f136364848fd4592fc692a8cf77",
+      "sha256": "67b2f7c31d4e62dd09c10bfe1cb542a97c7791c7e05910cb20a00c500fd49ada",
+      "validation": {
+        "matched": 96,
+        "total": 96,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "source/compat/getopt/LGPL.txt",
+        "source/dynamicHDR10/LICENSE.txt",
+        "source/dynamicHDR10/json11/LICENSE.txt"
+      ]
+    },
+    {
+      "name": "xxhash",
+      "repository": "https://github.com/Cyan4973/xxHash.git",
+      "commit": "2ec67caeb18ec15ae60c0853174331089acddfc0",
+      "commit_date": "2026-10-29T05:45:27Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "xxhash-2ec67caeb18ec15ae60c0853174331089acddfc0.tar.gz",
+      "url": "https://codeload.github.com/Cyan4973/xxHash/tar.gz/2ec67caeb18ec15ae60c0853174331089acddfc0",
+      "sha256": "3af288291460ab006ed582312d3fd8e140fadc08a538c97bc1917c49a46bb935",
+      "validation": {
+        "matched": 0,
+        "total": 0,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE",
+        "cli/COPYING",
+        "tests/bench/LICENSE",
+        "tests/collisions/LICENSE"
+      ]
+    },
+    {
+      "name": "xz",
+      "repository": "https://github.com/tukaani-project/xz.git",
+      "selection": "Explicit recipe reset or source-content corroboration",
+      "commit": "3d078b52adbff566ccfc51067dfbf742ecf3ef86",
+      "archive": "xz-3d078b52adbff566ccfc51067dfbf742ecf3ef86.tar.gz",
+      "url": "https://codeload.github.com/tukaani-project/xz/tar.gz/3d078b52adbff566ccfc51067dfbf742ecf3ef86",
+      "sha256": "1e34cffb6450e69d030f449dbba557d0ac66a6b06e436bdd391c5393a3d484fd",
+      "validation": {
+        "matched": 40,
+        "total": 40,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "COPYING.0BSD",
+        "COPYING.GPLv2",
+        "COPYING.GPLv3",
+        "COPYING.LGPLv2.1",
+        "build-aux/license-check.sh"
+      ]
+    },
+    {
+      "name": "zlib",
+      "repository": "https://github.com/zlib-ng/zlib-ng.git",
+      "commit": "50e8935e9b85acbb394d8b33bae3b9ae5ea09535",
+      "commit_date": "2026-11-09T23:35:23Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "zlib-50e8935e9b85acbb394d8b33bae3b9ae5ea09535.tar.gz",
+      "url": "https://codeload.github.com/zlib-ng/zlib-ng/tar.gz/50e8935e9b85acbb394d8b33bae3b9ae5ea09535",
+      "sha256": "d39a99dd4395d5cd591aca2733a81fd8b66a374a565a1e04dca4e1d2739bdc55",
+      "validation": {
+        "matched": 62,
+        "total": 62,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "name": "zstd",
+      "repository": "https://github.com/facebook/zstd.git",
+      "commit": "4dde8bf8c4461ca8fbfb734992b09fac8da43139",
+      "commit_date": "2026-11-10T23:42:20Z",
+      "selection": "Latest committer timestamp before workflow update; corroborate with compiled-source MD5",
+      "archive": "zstd-4dde8bf8c4461ca8fbfb734992b09fac8da43139.tar.gz",
+      "url": "https://codeload.github.com/facebook/zstd/tar.gz/4dde8bf8c4461ca8fbfb734992b09fac8da43139",
+      "sha256": "3270e8699e368936a049fb016d30446d2bec88fee071397b5d9631b719a47868",
+      "validation": {
+        "matched": 49,
+        "total": 49,
+        "mismatched": [],
+        "missing": []
+      },
+      "notice_files": [
+        "COPYING",
+        "LICENSE"
+      ]
+    }
+  ]
+}
