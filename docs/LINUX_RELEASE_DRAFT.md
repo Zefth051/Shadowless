@@ -2,10 +2,10 @@
 
 Native replay recording for Hyprland on Wayland, with the maintained GSR engine
 included and public updates enabled. This is a validation draft: the workflow
-uploads the AppImage, checksums and build inventory, but not the matching
-dependency source-materials archive. Keep it unpublished until that archive is
-matched to the exact build inventory and uploaded. The application-source archive
-matches the build commit.
+uploads the AppImage, checksums and build inventory. The attached dependency
+source-materials archive reuses the verified 0.3.2 archive because the 0.3.3
+`BUILD_PACKAGES.txt` has the same SHA-256. Its archive hash is recorded in
+`SOURCE_SHA256SUMS.txt`; the application-source archive matches the release tag.
 
 Native Qt/Wayland edition: replay and continuous recording through GPU Screen
 Recorder engine maintained in this branch, PipeWire application/microphone tracks, recent clips and game folders,
