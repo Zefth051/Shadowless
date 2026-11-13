@@ -71,7 +71,8 @@ async function resolveLatestDownloads() {
     if (!response.ok) throw new Error(`GitHub API returned ${response.status}`);
 
     const releases = await response.json();
-    const release = releases.find((item) => !item.draft);
+    const release = releases.find((item) =>
+      !item.draft && !item.prerelease && /^v\d+\.\d+\.\d+$/.test(item.tag_name));
     const setupAsset = release?.assets?.find((asset) => /Setup-win-x64\.exe$/i.test(asset.name));
     const portableAsset = release?.assets?.find((asset) => /Portable-win-x64\.zip$/i.test(asset.name));
     if (!release || !setupAsset || !portableAsset) throw new Error('Release assets are incomplete');
@@ -80,7 +81,7 @@ async function resolveLatestDownloads() {
     portableDownload.href = portableAsset.browser_download_url;
     releaseLink.href = release.html_url;
     const version = release.tag_name.toUpperCase();
-    downloadStatus.textContent = `Latest GitHub preview · ${version}`;
+    downloadStatus.textContent = `Latest Windows release · ${version}`;
     document.querySelectorAll('[data-current-version]').forEach((item) => {
       item.textContent = item.textContent === item.textContent.toUpperCase()
         ? version
