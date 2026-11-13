@@ -17,4 +17,4 @@
 *.dll binary
 
 # Preserve upstream notice bytes for their recorded source hashes.
-licenses/third-party/windows/* -text
+licenses/third-party/** -text

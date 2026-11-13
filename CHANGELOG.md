@@ -4,6 +4,21 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-12
+
+### Improved
+
+- **Distribution materials:** Include component copyright/license notices in the AppImage and provide dependency sources, build recipes, patches and provenance as a separate release download.
+
+### Upgrade notes
+
+- Includes the HTTPS updater and playback lifecycle fixes from 0.3.1. Public updates are enabled in this release.
+- Older builds with updates disabled require one manual installation. Subsequent updates download and replace the AppImage from inside Shadowless; quit and reopen when recording has finished.
+
+### Known limitations
+
+- Hyprland/Wayland and compatible drivers, glibc, PipeWire/pipewire-pulse and FFmpeg host tools remain required. Direct KMS capture may request Polkit authorization. Clean-host GPU coverage and interactive authorization still need broader testing.
+
 ## [0.3.1] - 2026-11-12
 
 ### Fixed

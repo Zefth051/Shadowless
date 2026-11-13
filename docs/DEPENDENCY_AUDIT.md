@@ -1,7 +1,9 @@
 # Dependency and redistribution audit
 
-Status: technical review in progress, **not cleared for public binary distribution**.
-Source/notice duties also apply when binaries are shared with private testers.
+Status: Linux dependency source and notice materials recovered and verified for
+the selected runtime baseline; final release candidates must match the recorded
+package/build identities. Windows component evidence is tracked separately.
+This records technical evidence, not legal certification or hardware coverage.
 
 Shadowless derives from [Captail by FaulMit](https://github.com/FaulMit/captail).
 Upstream history is retained (local upstream baseline `5f633f5`). Preserve the
@@ -40,7 +42,8 @@ Before sharing binaries:
 
 The AppImage's `BUNDLE_MANIFEST.txt` records file hashes and the glibc baseline.
 It does not yet provide all third-party sources or certify license completeness;
-these remain release blockers. This is a technical audit, not legal certification.
+the attached source-materials supplement supplies that material for the reviewed
+baseline. New package versions require matching source/notice updates.
 
 See [the artifact-specific release preflight](RELEASE_PREFLIGHT.md) for verified
 Windows/Linux candidate identities, recovered materials and remaining blockers.
@@ -49,3 +52,17 @@ References: [GNU GPL FAQ](https://www.gnu.org/licenses/gpl-faq.en.html),
 [Qt licensing](https://doc.qt.io/qt-6/licensing.html),
 [FFmpeg legal checklist](https://ffmpeg.org/legal.html),
 [AppImage deployment](https://docs.appimage.org/reference/best-practices.html).
+
+## Recovered Linux baseline
+
+The source supplement includes 145 exact Arch source packages and recipes,
+146 package BUILDINFO/PKGINFO records, 830 locked Rust crate versions and the
+complete source/build closure for the pinned AppImage runtime. Every package
+recipe hash matches the official binary BUILDINFO. All 218 third-party ELF
+paths in the 0.3.1 baseline match official package build IDs; the final 0.3.2
+image must pass the same mapping check before publication. Its component notices
+are embedded under `licenses/third-party/linux/` and recorded by SHA-256.
+
+Dependency source materials are provided as a separate release download; exact
+Shadowless/GSR application source is provided from the final build commit. The
+source supplement is not the application installer and is not an update payload.

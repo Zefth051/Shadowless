@@ -1,8 +1,9 @@
-# Linux / Hyprland AppImage validation draft
+# Shadowless Linux 0.3.2
 
-This draft is not cleared for distribution. Complete the exact bundled dependency
-notices, corresponding source/build inputs and asset provenance in
-`docs/DEPENDENCY_AUDIT.md` before sharing or publishing its binaries.
+Native replay recording for Hyprland on Wayland, with the maintained GSR engine
+included and public updates enabled. Component notices are inside the AppImage;
+the separate source-materials download provides dependency sources, recipes,
+patches and provenance. The application-source archive matches the build commit.
 
 Native Qt/Wayland edition: replay and continuous recording through GPU Screen
 Recorder engine maintained in this branch, PipeWire application/microphone tracks, recent clips and game folders,
@@ -24,10 +25,15 @@ and do not validate this candidate's new engine or packaging.
 
 Public-enabled AppImages implement checksum-verified updates after confirmation
 and apply them on the next launch. A real in-app update between released versions
-is still untested. Builds with public updates disabled update manually. The 0.3.1 candidate is
-prepared with public updates enabled and includes Qt's TLS backend and OpenSSL
-runtime for HTTPS; publication is still gated by the dependency/source preflight.
+is still untested. Builds with public updates disabled update manually. This release includes Qt's TLS backend and OpenSSL runtime for HTTPS and uses
+the required pipewire-pulse endpoint for playback to avoid the libmpv native
+PipeWire initialization deadlock. Older update-disabled builds need one manual
+upgrade; subsequent updates are downloaded and installed inside Shadowless.
 
 Developed with AI assistance, including OpenAI Codex. Derived from Captail by
 FaulMit; GPL-2.0-or-later attribution is retained. The combined Linux runtime
 includes dependencies with GPLv3 requirements; see the dependency audit.
+
+Windows releases use their own tags and installer; this Linux release does not
+replace the repository's latest Windows release. Native Windows GPU capture and
+full cross-platform hardware coverage are not established by these package tests.
