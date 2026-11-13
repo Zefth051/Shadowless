@@ -1,11 +1,11 @@
 # Shadowless Linux 0.3.3
 
 Native replay recording for Hyprland on Wayland, with the maintained GSR engine
-included and public updates enabled. This is a validation draft: the workflow
-uploads the AppImage, checksums and build inventory. The attached dependency
-source-materials archive reuses the verified 0.3.2 archive because the 0.3.3
-`BUILD_PACKAGES.txt` has the same SHA-256. Its archive hash is recorded in
-`SOURCE_SHA256SUMS.txt`; the application-source archive matches the release tag.
+included and public updates enabled. The release includes the AppImage, checksums,
+build inventory and dependency source materials. The dependency archive reuses
+the verified 0.3.2 archive because the 0.3.3 `BUILD_PACKAGES.txt` has the same
+SHA-256. Its archive hash is recorded in `SOURCE_SHA256SUMS.txt`; the
+application-source archive matches the release tag.
 
 Native Qt/Wayland edition: replay and continuous recording through GPU Screen
 Recorder engine maintained in this branch, PipeWire application/microphone tracks, recent clips and game folders,
@@ -24,10 +24,9 @@ host tools are required. Direct KMS capture may request administrator authorizat
 through Polkit; the Shadowless interface stays unprivileged.
 This is not a generic Linux desktop package; clean-host capture validation remains pending.
 
-The earlier 0.2.4 draft AppImage checksum and native Hyprland UI startup were verified on
-2026-11-12. See [six real screenshots and exact artifact provenance](https://github.com/Zefth051/Shadowless/blob/linux/docs/screenshots/linux/README.md).
+The Linux screenshot gallery shows an earlier 0.2.4 draft, not this release.
 Library/player/editor images use synthetic demo media; they are not capture benchmarks
-and do not validate this candidate's new engine or packaging.
+and do not validate this release's engine or packaging.
 
 Public-enabled AppImages implement checksum-verified updates after confirmation
 and apply them on the next launch. A real in-app update between released versions
