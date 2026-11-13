@@ -4,6 +4,13 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-11-13
+
+### Improved
+
+- **Startup settings:** Add a direct link to the login-launch and Instant Clip startup options in Settings.
+- **Application audio list:** Show Linux theme icons beside application names, with a generic fallback when no matching icon is installed.
+
 ## [0.3.2] - 2026-11-12
 
 ### Improved

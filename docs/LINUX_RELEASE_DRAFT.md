@@ -1,14 +1,20 @@
-# Shadowless Linux 0.3.2
+# Shadowless Linux 0.3.3
 
 Native replay recording for Hyprland on Wayland, with the maintained GSR engine
-included and public updates enabled. Component notices are inside the AppImage;
-the separate source-materials download provides dependency sources, recipes,
-patches and provenance. The application-source archive matches the build commit.
+included and public updates enabled. This is a validation draft: the workflow
+uploads the AppImage, checksums and build inventory, but not the matching
+dependency source-materials archive. Keep it unpublished until that archive is
+matched to the exact build inventory and uploaded. The application-source archive
+matches the build commit.
 
 Native Qt/Wayland edition: replay and continuous recording through GPU Screen
 Recorder engine maintained in this branch, PipeWire application/microphone tracks, recent clips and game folders,
 embedded playback, trimming/audio-track selection, media overlays and shortcuts.
 See [platform features](https://github.com/Zefth051/Shadowless/blob/linux/docs/FEATURES.md).
+
+Settings now provide a direct link to the independent login-launch and Instant
+Clip-on-launch options. The application-audio list also displays icons from the
+Linux icon theme when available.
 
 Download the AppImage and `SHA256SUMS.txt`, verify with `sha256sum -c SHA256SUMS.txt`,
 make the AppImage executable and keep it in a permanent writable location.

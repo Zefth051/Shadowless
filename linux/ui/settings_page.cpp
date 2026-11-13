@@ -19,6 +19,7 @@
 #include <QSet>
 #include <QTableWidget>
 #include <QHeaderView>
+#include <QIcon>
 #include <QtConcurrentRun>
 
 namespace Shadowless {
@@ -304,6 +305,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     addSectionLink("Video", m_source);
     addSectionLink("Audio", m_audioMode);
     addSectionLink("Appearance", m_accent);
+    addSectionLink("Startup", m_launchAtLogin);
     sections->addStretch();
     settingsLayout->addLayout(sections);
     settingsLayout->addWidget(scroll, 1);
@@ -434,7 +436,12 @@ void SettingsPage::populateAudio(const QString &output, const QString &input, co
             if (it.key().compare(name, Qt::CaseInsensitive) == 0) track = it.value();
         const auto row = m_applications->rowCount();
         m_applications->insertRow(row);
-        m_applications->setItem(row, 0, new QTableWidgetItem(name));
+        QString iconName = name.trimmed().toLower();
+        iconName.replace(' ', '-');
+        QIcon icon = QIcon::fromTheme(iconName);
+        if (icon.isNull()) icon = QIcon::fromTheme("application-x-executable");
+        auto *application = new QTableWidgetItem(icon, name);
+        m_applications->setItem(row, 0, application);
         auto *choice = new ClickToAdjust<QComboBox>;
         choice->setAccessibleName("Audio track for " + name);
         choice->addItem("Unassigned / PC");
