@@ -78,3 +78,11 @@ Updated upstream attribution is also embedded in the AppImage.
 This clears the source/notice material gate for this exact Linux artifact; it does
 not clear Windows gaps or establish untested desktop/GPU/upgrade behavior.
 See RELEASE_STATUS.md and the release verification receipt for hashes and limits.
+
+## Linux 0.3.5 — artifact-specific verification
+
+The public [Linux 0.3.5 release](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.5) uses source commit `bd7361e0ab38e8993f400a85c7a793a5127b8704` and [workflow 43810228248](https://github.com/Zefth051/Shadowless/actions/runs/43810228248). AppImage SHA-256: `a4e89aec276af29d584cd87854c4dc656eb0f540f5dfa9ff0188de0a6776c478`. All 140 native test cases and 19 packaging tests pass, with opt-in/live checks recorded separately.
+
+All 217 third-party ELF paths match the recovered official package build IDs, the package inventory is unchanged from the verified 0.3.4 cloud build, and all 2,627 embedded dependency notice files match. The release links the existing complete 0.3.4 dependency source archive and supplies its checksum together with new 0.3.5 binary/source receipts and the exact application source archive. Reusing this unchanged baseline avoids duplicating the same 1.2 GB of corresponding sources.
+
+This clears the material gate for this specific cloud artifact. The earlier local CachyOS candidate is not the published image. Live Plasma/Polkit interaction, laptop black recordings, capture/editor audio parity and a real installed-app upgrade remain desktop validation tasks.
