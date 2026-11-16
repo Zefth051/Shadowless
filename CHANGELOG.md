@@ -17,6 +17,7 @@ All notable user-facing changes are documented here.
 
 - Keep folder pickers, menus and update dialogs readable when the desktop uses a light palette.
 - Release the exclusive overlay while Plasma asks for shortcut approval, then restore its prior visibility. Re-register global shortcuts after the desktop portal restarts.
+- Keep D-Bus subscription cleanup intact when closing the shortcut service, preventing a crash on application exit.
 
 ### Upgrade notes
 
@@ -24,7 +25,7 @@ All notable user-facing changes are documented here.
 
 ### Known limitations
 
-- Live Plasma shortcut approval and capture remain unverified. The sandbox prevents complete audio and D-Bus integration tests.
+- Live Plasma shortcut approval and capture remain unverified. Automated portal and audio fixtures do not replace validation on a real desktop.
 - Laptop black recordings and Linux multitrack capture/editor parity remain open roadmap items.
 
 ## [0.3.4] - 2026-11-15

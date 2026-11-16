@@ -64,7 +64,8 @@ Shortcuts::Shortcuts(QObject *parent) : QObject(parent), m_bus(QDBusConnection::
     if (m_hyprland && !signature.isEmpty()) m_events.connectToServer(QDir(runtime).filePath("hypr/" + signature + "/.socket2.sock"));
 }
 Shortcuts::~Shortcuts() {
-    disconnect(this, nullptr, nullptr, nullptr);
+    // D-Bus still needs QObject::destroyed to remove its subscriptions.
+    blockSignals(true);
     removeBindings();
     closeSession();
 }
