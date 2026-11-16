@@ -42,6 +42,7 @@ private:
     QString m_clipGame, m_recordingGame;
     bool m_recordingSave = false;
     bool m_authenticating = false, m_restoreAfterAuthentication = false;
+    bool m_captureAuthentication = false, m_shortcutApproval = false;
     bool m_indicatorEnabled = false, m_saving = false, m_stopping = false, m_quitting = false;
     QString m_plugin, m_accent, m_indicatorPosition;
     QStringList m_shortcutKeys;

@@ -38,7 +38,9 @@ Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::fi
     title->setObjectName("sectionTitle");
     header->addWidget(title);
     header->addStretch();
-    auto *refreshButton = new QPushButton("↻");
+    auto *refreshButton = new QPushButton;
+    refreshButton->setIcon(QIcon(":/shadowless/icons/refresh.svg"));
+    refreshButton->setIconSize(QSize(16, 16));
     refreshButton->setObjectName("refreshClips");
     refreshButton->setToolTip("Refresh recent clips");
     refreshButton->setAccessibleName("Refresh recent clips");

@@ -30,11 +30,19 @@ items are implemented; platform verification limits are recorded separately.
 
 ## Medium changes
 
+- [ ] Fix black recordings on laptops. Reproduce integrated/discrete GPU and
+  hybrid graphics capture on both platforms; validate saved video playback
+  before claiming laptop compatibility.
 - [ ] Refresh the UI and buttons while retaining Shadowless's visual identity.
   Use restrained animations with negligible recording overhead.
 - [ ] Improve overlay performance and settings usability. Reproduce and fix laptop
   behavior issues individually; exact cases still need to be described.
 - [ ] Refresh icons across both branches.
+  Linux now uses a bundled SVG for recent-clip refresh, matching the existing
+  icon stroke and avoiding font-dependent glyph rendering. Other icons and
+  Windows parity remain pending.
+  The editor also uses a film icon for clips without a thumbnail, keeping it
+  distinct from the monitor icon used for capture settings.
 - [ ] Linux: fix the app icons shown in audio source lists. Audio routing works,
   but the icons still render incorrectly in the public AppImage; reproduce and
   validate the icon lookup/rendering before closing this item.
@@ -61,6 +69,9 @@ items are implemented; platform verification limits are recorded separately.
   and microphone. Define PC as the remainder when app sources are separated
   to avoid duplicating game/music audio. Check platform routing support and
   distinguish capture controls from editor playback/export controls.
+- [ ] Linux: bring multitrack audio capture, editor playback and export to Windows
+  parity. Investigate the reported editor showing only two audio tracks; expose
+  every recorded track and preserve independent selection and export.
 
 ## Proposed delivery order
 

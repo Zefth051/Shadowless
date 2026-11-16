@@ -23,9 +23,42 @@
 #include <QIcon>
 #include <QRegularExpressionValidator>
 #include <QtConcurrentRun>
+#include <QPainter>
 
 namespace Shadowless {
+namespace {
+class SettingsSwitch : public QCheckBox {
+public:
+    explicit SettingsSwitch(const QString &text) : QCheckBox(text) {
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        setMinimumHeight(40);
+        setCursor(Qt::PointingHandCursor);
+        setToolTip(text);
+    }
+    QSize sizeHint() const override { return {fontMetrics().horizontalAdvance(text()) + 64, 40}; }
+protected:
+    bool hitButton(const QPoint &point) const override { return rect().contains(point); }
+    void paintEvent(QPaintEvent *) override {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        if (!isEnabled()) painter.setOpacity(.5);
+        const auto accent = window()->palette().color(QPalette::Accent);
+        const QRectF track(width() - 40, (height() - 22) / 2., 38, 22);
+        painter.setPen(hasFocus() ? QPen(accent, 1.5) : QPen(Qt::NoPen));
+        painter.setBrush(isChecked() ? accent : QColor("#363c42"));
+        painter.drawRoundedRect(track, 11, 11);
+        painter.setPen(Qt::NoPen);
+        const auto thumb = isChecked() ? window()->palette().color(QPalette::HighlightedText) : QColor("#f1f5f4");
+        painter.setBrush(isDown() ? thumb.darker(120) : thumb);
+        painter.drawEllipse(QPointF(track.left() + (isChecked() ? 27 : 11), track.center().y()), 8, 8);
+        painter.setPen(palette().color(QPalette::WindowText));
+        painter.drawText(QRect(0, 0, width() - 56, height()), Qt::AlignLeft | Qt::AlignVCenter,
+                         fontMetrics().elidedText(text(), Qt::ElideRight, width() - 56));
+    }
+};
+}
 SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidget(parent), m_caps(caps) {
+    setObjectName("settingsPage");
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     auto *heading = new QLabel("Settings");
@@ -44,19 +77,20 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     auto *body = new QWidget;
     auto *bodyLayout = new QVBoxLayout(body);
-    bodyLayout->setContentsMargins(0, 4, 8, 4);
-    bodyLayout->setSpacing(18);
+    bodyLayout->setContentsMargins(0, 8, 10, 12);
+    bodyLayout->setSpacing(12);
 
     auto section = [](QVBoxLayout *parent, const QString &name) {
         auto *label = new QLabel(name);
         label->setObjectName("sectionTitle");
         parent->addWidget(label);
         auto *card = new QFrame;
-        card->setObjectName("panel");
+        card->setObjectName("settingsSection");
         auto *form = new QFormLayout(card);
-        form->setContentsMargins(16, 14, 16, 14);
-        form->setHorizontalSpacing(18);
-        form->setVerticalSpacing(12);
+        form->setContentsMargins(14, 8, 14, 8);
+        form->setHorizontalSpacing(16);
+        form->setVerticalSpacing(8);
+        form->setLabelAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
         form->setRowWrapPolicy(QFormLayout::WrapLongRows);
         parent->addWidget(card);
@@ -134,14 +168,14 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     m_audioMode = new ClickToAdjust<QComboBox>;
     m_audioMode->addItems({"Desktop audio", "Selected applications"});
     audio->addRow("Audio routing", m_audioMode);
-    m_system = new QCheckBox("Record system audio");
+    m_system = new SettingsSwitch("Record system audio");
     audio->addRow(m_system);
     m_audioOutput = new ClickToAdjust<QComboBox>;
     m_audioOutput->setObjectName("audioOutput");
     m_audioOutput->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
     m_audioOutput->setMinimumContentsLength(16);
     audio->addRow("Output device", m_audioOutput);
-    m_microphone = new QCheckBox("Record microphone");
+    m_microphone = new SettingsSwitch("Record microphone");
     audio->addRow(m_microphone);
     m_audioInput = new ClickToAdjust<QComboBox>;
     m_audioInput->setObjectName("audioInput");
@@ -155,7 +189,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     m_microphoneTrack = new ClickToAdjust<QComboBox>;
     for (int i = 1; i <= 6; ++i) m_microphoneTrack->addItem(QString("Track %1").arg(i));
     audio->addRow("Microphone track", m_microphoneTrack);
-    m_separate = new QCheckBox("Separate system and microphone tracks");
+    m_separate = new SettingsSwitch("Separate system and microphone tracks");
     audio->addRow(m_separate);
     m_pcTrack = new ClickToAdjust<QComboBox>;
     m_pcTrack->setObjectName("pcAudioTrack");
@@ -218,7 +252,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     populateAudio({}, {}, {});
 
     auto *storage = section(capture, "STORAGE");
-    m_organizeByGame = new QCheckBox("Organize clips into folders by game");
+    m_organizeByGame = new SettingsSwitch("Organize clips into folders by game");
     m_organizeByGame->setObjectName("organizeByGame");
     storage->addRow(m_organizeByGame);
     storage->addRow(note("Only new clips are organized. Unidentified games stay in the main save folder."));
@@ -251,10 +285,10 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     m_pages = pages;
 
     auto *startup = section(bodyLayout, "STARTUP");
-    m_launchAtLogin = new QCheckBox("Launch Shadowless at login");
+    m_launchAtLogin = new SettingsSwitch("Launch Shadowless at login");
     m_launchAtLogin->setObjectName("launchAtLogin");
     startup->addRow(m_launchAtLogin);
-    m_startReplayOnLaunch = new QCheckBox("Start Instant Clip when Shadowless launches");
+    m_startReplayOnLaunch = new SettingsSwitch("Start Instant Clip when Shadowless launches");
     m_startReplayOnLaunch->setObjectName("startReplayOnLaunch");
     startup->addRow(m_startReplayOnLaunch);
     startup->addRow(note("Replay starts on any launch, including manual launches. Both options are independent."));
@@ -283,7 +317,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     });
 
     auto *overlay = section(bodyLayout, "OVERLAY");
-    m_indicator = new QCheckBox("Show capture status while playing");
+    m_indicator = new SettingsSwitch("Show capture status while playing");
     overlay->addRow(m_indicator);
     m_indicatorPosition = new ClickToAdjust<QComboBox>;
     m_indicatorPosition->setObjectName("indicatorPosition");
@@ -310,8 +344,15 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     for (auto *form : body->findChildren<QFormLayout *>()) {
         for (int row = 0; row < form->rowCount(); ++row) {
             const auto *item = form->itemAt(row, QFormLayout::LabelRole);
-            if (item && item->widget()) item->widget()->setMinimumWidth(124);
+            if (item && item->widget()) {
+                item->widget()->setFixedWidth(140);
+                if (auto *label = qobject_cast<QLabel *>(item->widget())) label->setWordWrap(true);
+            }
         }
+    }
+    for (auto *box : body->findChildren<QComboBox *>()) {
+        box->setMinimumWidth(0);
+        box->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
     }
 
     scroll->setWidget(body);
@@ -322,11 +363,11 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
         connect(link, &QPushButton::clicked, this, [this, field] { focusSection(field); });
         sections->addWidget(link);
     };
+    addSectionLink("Replay", m_buffer);
     addSectionLink("Video", m_source);
     addSectionLink("Audio", m_audioMode);
-    addSectionLink("Appearance", m_accent);
-    addSectionLink("Startup", m_launchAtLogin);
-    sections->addStretch();
+    addSectionLink("Storage", m_container);
+    addSectionLink("General", m_launchAtLogin);
     settingsLayout->addLayout(sections);
     settingsLayout->addWidget(scroll, 1);
     m_error = new QLabel;

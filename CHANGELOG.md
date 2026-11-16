@@ -4,6 +4,29 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-11-16
+
+### Improved
+
+- **Linux dashboard:** Arrange capture status and overlays above centered replay/recording cards, with consistent accent colors and recent clips alongside.
+- **Linux settings:** Add full-row keyboard-accessible switches, aligned controls, compact sections and direct section navigation.
+- **Linux editor:** Place the video range before audio tracks, center transport controls, remove the duplicate header and keep export actions visible at 768-pixel desktop heights. Preserve existing playback, trim and export behavior.
+- **Icons:** Use bundled SVG icons for refreshing recent clips and for editor clips without thumbnails.
+
+### Fixed
+
+- Keep folder pickers, menus and update dialogs readable when the desktop uses a light palette.
+- Release the exclusive overlay while Plasma asks for shortcut approval, then restore its prior visibility. Re-register global shortcuts after the desktop portal restarts.
+
+### Upgrade notes
+
+- Quit and reopen after updating to load the new build. Capture settings and existing clips are preserved.
+
+### Known limitations
+
+- Live Plasma shortcut approval and capture remain unverified. The sandbox prevents complete audio and D-Bus integration tests.
+- Laptop black recordings and Linux multitrack capture/editor parity remain open roadmap items.
+
 ## [0.3.4] - 2026-11-15
 
 ### Improved

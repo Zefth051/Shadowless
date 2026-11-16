@@ -18,7 +18,7 @@
 
 namespace Shadowless {
 Controller::Controller(const GsrCapabilities &caps, const QString &probeError, bool background)
-    : m_caps(caps), m_options(m_settings.capture(caps)), m_scene(m_settings.scene()), m_engine(this),
+    : m_caps(caps), m_options(m_settings.capture(caps)), m_scene(m_settings.scene()), m_engine(this), m_shortcuts(this),
       m_menu(std::make_unique<QMenu>()), m_dashboard(std::make_unique<Dashboard>(caps)), m_indicator(std::make_unique<StatusIndicator>()),
       m_notification(std::make_unique<ClipNotification>()) {
     m_savedSound.setSource(QUrl("qrc:/shadowless/replay-saved.wav"));
@@ -124,7 +124,8 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         if (action == "toggle-overlay") command("toggle"); else if (action == "save-replay") command("save"); else if (action == "toggle-capture") toggleCapture();
     });
     connect(&m_shortcuts, &Shortcuts::status, m_dashboard.get(), &Dashboard::shortcutStatus);
-    connect(&m_engine, &GsrCapture::authenticationChanged, this, [this](bool pending) {
+    const auto updateDesktopPrompt = [this] {
+        const bool pending = m_captureAuthentication || m_shortcutApproval;
         if (m_authenticating == pending) return;
         m_authenticating = pending;
         if (pending) {
@@ -134,6 +135,12 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
             const bool restore = std::exchange(m_restoreAfterAuthentication, false);
             if (restore) show();
         }
+    };
+    connect(&m_engine, &GsrCapture::authenticationChanged, this, [this, updateDesktopPrompt](bool pending) {
+        m_captureAuthentication = pending; updateDesktopPrompt();
+    });
+    connect(&m_shortcuts, &Shortcuts::approvalChanged, this, [this, updateDesktopPrompt](bool pending) {
+        m_shortcutApproval = pending; updateDesktopPrompt();
     });
     connect(&m_engine, &GsrCapture::started, this, [this] {
         refresh(); const auto scene = m_pending.value_or(m_scene); m_pending.reset(); apply(scene);
@@ -296,6 +303,7 @@ void Controller::setAccent(const QString &name) {
     m_dashboard->setAccent(name);
     m_tray.setIcon(accentIcon(name));
     applyTheme(m_indicator.get(), name);
+    applyTheme(m_menu.get(), name);
     m_notification->setAccent(accentColor(name));
 }
 

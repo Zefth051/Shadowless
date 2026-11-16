@@ -30,5 +30,7 @@
     <file>icons/skip-previous.svg</file>
     <file>icons/fullscreen.svg</file>
     <file>icons/trash.svg</file>
+    <file>icons/refresh.svg</file>
+    <file>icons/film.svg</file>
   </qresource>
 </RCC>

@@ -139,7 +139,10 @@ atomically replacing the destination; failure/cancellation preserves the origina
 
 Shortcuts register through the desktop portal using the configured triggers.
 On Plasma, the desktop approves bindings and Settings reports the assigned
-shortcuts; changing keys creates a fresh portal session. On Hyprland, Shadowless installs temporary
+shortcuts. The control overlay temporarily hides during approval so it cannot cover
+the desktop dialog, then restores its previous visibility. Changing keys creates a
+fresh portal session. Shortcuts reconnect automatically after a portal restart.
+On Hyprland, Shadowless installs temporary
 Hyprland bindings using the current Lua API or the legacy keyword API. Existing
 conflicting bindings are preserved and reported in Settings. Bindings owned by
 Shadowless are removed on clean exit and restored after compositor config reload.

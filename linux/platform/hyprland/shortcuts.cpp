@@ -5,6 +5,7 @@
 #include <QDBusMetaType>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusServiceWatcher>
 #include <QUuid>
 #include <QDebug>
 #include <QJsonDocument>
@@ -24,6 +25,21 @@ const QDBusArgument &operator>>(const QDBusArgument &a, PortalShortcut &s) {
 Shortcuts::Shortcuts(QObject *parent) : QObject(parent), m_bus(QDBusConnection::connectToBus(QDBusConnection::SessionBus, "shadowless-shortcuts")) {
     qDBusRegisterMetaType<PortalShortcut>(); qDBusRegisterMetaType<PortalShortcuts>();
     m_hyprland = isHyprlandDesktop();
+    auto *portal = new QDBusServiceWatcher(service, m_bus, QDBusServiceWatcher::WatchForOwnerChange, this);
+    connect(portal, &QDBusServiceWatcher::serviceOwnerChanged, this, [this](const QString &, const QString &oldOwner, const QString &newOwner) {
+        if (!m_stage || (oldOwner.isEmpty() && !m_portalLost)) return;
+        m_portalLost = newOwner.isEmpty();
+        m_timeout.stop();
+        m_request.clear(); m_session.clear();
+        m_registered = false;
+        emit approvalChanged(false);
+        if (newOwner.isEmpty()) {
+            emit status("Global shortcut service stopped. Waiting for the desktop portal to restart.");
+        } else {
+            m_stage = 0;
+            start();
+        }
+    });
     auto bus = m_bus;
     bus.connect(service, {}, "org.freedesktop.portal.Request", "Response", this, SLOT(response(uint,QVariantMap,QDBusMessage)));
     const bool connected = bus.connect(service, path, interface, "Activated", this, SLOT(triggered(QDBusObjectPath,QString,qulonglong,QVariantMap)));
@@ -32,7 +48,8 @@ Shortcuts::Shortcuts(QObject *parent) : QObject(parent), m_bus(QDBusConnection::
     m_timeout.setSingleShot(true);
     connect(this, &Shortcuts::status, this, [](const QString &message) { qInfo().noquote() << "Shadowless shortcuts:" << message; });
     connect(&m_timeout, &QTimer::timeout, this, [this] {
-        emit status("Global shortcut setup is still pending. Open Shadowless from the tray or use --toggle.");
+        emit status(m_hyprland ? "Global shortcut setup is still pending. Open Shadowless from the tray or use --toggle."
+                               : "Global shortcut setup is still pending. Complete the desktop's shortcut approval dialog.");
     });
     connect(&m_events, &QLocalSocket::readyRead, this, [this] {
         m_eventBuffer += m_events.readAll();
@@ -47,11 +64,13 @@ Shortcuts::Shortcuts(QObject *parent) : QObject(parent), m_bus(QDBusConnection::
     if (m_hyprland && !signature.isEmpty()) m_events.connectToServer(QDir(runtime).filePath("hypr/" + signature + "/.socket2.sock"));
 }
 Shortcuts::~Shortcuts() {
+    disconnect(this, nullptr, nullptr, nullptr);
     removeBindings();
     closeSession();
 }
 void Shortcuts::closeSession() {
     m_timeout.stop();
+    emit approvalChanged(false);
     if (!m_request.isEmpty()) {
         auto request = QDBusMessage::createMethodCall(service, m_request, "org.freedesktop.portal.Request", "Close");
         m_bus.asyncCall(request);
@@ -72,7 +91,7 @@ void Shortcuts::call(const QString &method, const QVariantList &args, const QStr
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, request = m_request] {
         if (request != m_request) { watcher->deleteLater(); return; }
         const QDBusPendingReply<QDBusObjectPath> reply = *watcher;
-        if (reply.isError()) { m_timeout.stop(); emit status("Global shortcuts unavailable: " + reply.error().message() + ". Use the tray or --toggle."); }
+        if (reply.isError()) { m_timeout.stop(); emit approvalChanged(false); emit status("Global shortcuts unavailable: " + reply.error().message() + ". Use the tray or --toggle."); }
         watcher->deleteLater();
     });
     m_timeout.start(30000);
@@ -99,7 +118,7 @@ void Shortcuts::response(uint code, const QVariantMap &results, const QDBusMessa
     if (message.path() != m_request) return;
     m_timeout.stop();
     m_request.clear();
-    if (code != 0) { emit status("Global shortcut setup was cancelled or rejected. Use the tray or --toggle."); return; }
+    if (code != 0) { emit approvalChanged(false); emit status("Global shortcut setup was cancelled or rejected. Use the tray or --toggle."); return; }
     if (m_stage == 1) {
         m_session = results.value("session_handle").toString();
         if (m_session.isEmpty()) { emit status("The shortcut portal returned no session."); return; }
@@ -119,8 +138,11 @@ void Shortcuts::response(uint code, const QVariantMap &results, const QDBusMessa
             }
             shortcuts.append({ids[i], properties});
         }
+        // An exclusive layer surface would cover the desktop's shortcut approval dialog.
+        if (!m_hyprland) emit approvalChanged(true);
         call("BindShortcuts", {QVariant::fromValue(QDBusObjectPath(m_session)), QVariant::fromValue(shortcuts), QString{}, QVariantMap{{"handle_token", token}}}, token);
     } else {
+        emit approvalChanged(false);
         m_stage = 3;
         if (m_hyprland) installBindings();
         else reportBindings(qdbus_cast<PortalShortcuts>(results.value("shortcuts")));

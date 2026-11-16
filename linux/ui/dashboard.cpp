@@ -31,7 +31,7 @@ namespace {
 class CaptureModeTile : public QPushButton {
 public:
     CaptureModeTile(const QString &title, const QString &detail) : QPushButton(title), m_detail(detail) {
-        setFixedHeight(92);
+        setFixedHeight(128);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setAccessibleDescription(detail);
     }
@@ -44,18 +44,21 @@ protected:
         style()->drawControl(QStyle::CE_PushButton, &option, &painter, this);
         painter.setRenderHint(QPainter::Antialiasing);
         if (!isEnabled()) painter.setOpacity(.55);
-        const auto accent = palette().color(QPalette::Accent);
+        const auto accent = window()->palette().color(QPalette::Accent);
         const auto ink = palette().color(QPalette::WindowText);
         QColor badge = isChecked() ? accent : ink; badge.setAlpha(isChecked() ? 28 : 12);
-        painter.setPen(Qt::NoPen); painter.setBrush(badge);
-        painter.drawRoundedRect(QRectF(14, 14, 34, 34), 9, 9);
-        icon().paint(&painter, QRect(21, 21, 20, 20));
+        const QRectF emblem(width() / 2. - 24, 14, 48, 48);
+        painter.setPen(QPen(isChecked() ? accent : QColor("#768089"), 2)); painter.setBrush(badge);
+        if (isChecked()) painter.drawArc(emblem, 95 * 16, 305 * 16);
+        else painter.drawEllipse(emblem);
+        painter.setPen(Qt::NoPen); painter.setBrush(isChecked() ? accent : QColor("#768089"));
+        painter.drawEllipse(emblem.center(), 5, 5);
         auto titleFont = font(); titleFont.setWeight(QFont::DemiBold); painter.setFont(titleFont);
-        painter.setPen(ink);
-        painter.drawText(QRect(58, 14, width() - 72, 34), Qt::AlignVCenter | Qt::AlignLeft, text());
+        painter.setPen(isChecked() ? accent : ink);
+        painter.drawText(QRect(8, 67, width() - 16, 24), Qt::AlignCenter, text());
         titleFont.setWeight(QFont::Normal); titleFont.setPixelSize(11); painter.setFont(titleFont);
         painter.setPen(QColor("#94a0a8"));
-        painter.drawText(QRect(16, 58, width() - 32, 20), Qt::AlignVCenter | Qt::AlignLeft,
+        painter.drawText(QRect(12, 94, width() - 24, 20), Qt::AlignCenter,
                          painter.fontMetrics().elidedText(m_detail, Qt::ElideRight, width() - 32));
     }
 private:
@@ -73,8 +76,8 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
         const QRectF track(2, 4, 42, 22);
-        painter.setPen(hasFocus() ? QPen(palette().color(QPalette::Accent), 1.5) : QPen(Qt::NoPen));
-        painter.setBrush(isChecked() ? palette().color(QPalette::Accent) : QColor("#2a3136"));
+        painter.setPen(hasFocus() ? QPen(window()->palette().color(QPalette::Accent), 1.5) : QPen(Qt::NoPen));
+        painter.setBrush(isChecked() ? window()->palette().color(QPalette::Accent) : QColor("#2a3136"));
         if (!isEnabled()) painter.setOpacity(0.55);
         painter.drawRoundedRect(track, 11, 11);
         painter.setPen(Qt::NoPen);
@@ -98,7 +101,7 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
         const QRectF ring = QRectF(rect()).adjusted(3, 3, -3, -3);
-        const auto accent = m_recording ? QColor("#e0a163") : palette().color(QPalette::Accent);
+        const auto accent = m_recording ? QColor("#e0a163") : window()->palette().color(QPalette::Accent);
         painter.setPen(QPen(QColor("#2b3236"), 3));
         painter.drawEllipse(ring);
         if (m_ready) {
@@ -161,7 +164,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_home = new QWidget;
     m_homeLayout = new QBoxLayout(QBoxLayout::LeftToRight, m_home);
     m_homeLayout->setContentsMargins(0, 0, 0, 0);
-    m_homeLayout->setSpacing(20);
+    m_homeLayout->setSpacing(16);
 
     auto *controls = new QWidget;
     auto *homeLayout = new QVBoxLayout(controls);
@@ -176,7 +179,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     auto *card = new QFrame;
     card->setObjectName("panel");
     auto *statusLayout = new QHBoxLayout(card);
-    statusLayout->setContentsMargins(14, 14, 14, 14);
+    statusLayout->setContentsMargins(14, 10, 14, 10);
     statusLayout->setSpacing(14);
     m_ring = new CaptureRing;
     statusLayout->addWidget(m_ring);
@@ -196,7 +199,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     auto *overlayCard = new QFrame;
     overlayCard->setObjectName("panel");
     auto *overlayRow = new QHBoxLayout(overlayCard);
-    overlayRow->setContentsMargins(14, 14, 14, 14);
+    overlayRow->setContentsMargins(14, 10, 14, 10);
     overlayRow->setSpacing(14);
     auto *overlayMark = new QLabel;
     overlayMark->setPixmap(QIcon(":/shadowless/icons/layers.svg").pixmap(26, 26));
@@ -237,8 +240,8 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
         mode->setCheckable(true);
         modes->addWidget(mode, 1);
     }
-    homeLayout->addWidget(modePanel);
     homeLayout->addWidget(overlayCard);
+    homeLayout->addWidget(modePanel);
     homeLayout->addWidget(m_overlayPreview);
 
     auto *audioCard = new QFrame;
@@ -342,9 +345,10 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     connect(playback, &MpvPlayer::stateChanged, m_library, [this, playback] { m_library->setPreviewActive(!playback->source().isEmpty()); });
     connect(m_player, &ClipPlayer::clipExported, this, [this] { m_library->refresh(m_directory); });
     connect(m_player, &ClipPlayer::fullscreenChanged, this, [this, shell](bool fullscreen) {
-        m_chrome->setVisible(!fullscreen);
-        m_footer->setVisible(!fullscreen);
-        m_divider->setVisible(!fullscreen);
+        const bool chrome = !fullscreen && m_pages->currentWidget() != m_player;
+        m_chrome->setVisible(chrome);
+        m_footer->setVisible(chrome);
+        m_divider->setVisible(chrome);
         shell->setContentsMargins(fullscreen ? 0 : 20, fullscreen ? 0 : 16, fullscreen ? 0 : 20, fullscreen ? 0 : 16);
         positionPanel();
     });
@@ -513,6 +517,10 @@ void Dashboard::refreshLibrary(const QString &directory) { m_library->refresh(di
 
 void Dashboard::showPage(QWidget *page, int width) {
     const bool dashboard = page == m_home;
+    const bool chrome = page != m_player;
+    m_chrome->setVisible(chrome);
+    m_footer->setVisible(chrome);
+    m_divider->setVisible(chrome);
     m_back->setVisible(!dashboard);
     m_settingsButton->setVisible(dashboard);
     m_layers->setVisible(dashboard);

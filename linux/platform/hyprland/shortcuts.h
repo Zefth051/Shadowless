@@ -23,6 +23,7 @@ public:
 signals:
     void activated(const QString &action);
     void status(const QString &message);
+    void approvalChanged(bool pending);
 private slots:
     void response(uint code, const QVariantMap &results, const QDBusMessage &message);
     void triggered(const QDBusObjectPath &session, const QString &id, qulonglong timestamp, const QVariantMap &options);
@@ -37,7 +38,7 @@ private:
     QLocalSocket m_events;
     QByteArray m_eventBuffer;
     bool m_lua = false;
-    bool m_hyprland = false, m_registered = false;
+    bool m_hyprland = false, m_registered = false, m_portalLost = false;
     void call(const QString &method, const QVariantList &args, const QString &token);
     void createSession();
     void installBindings();

@@ -90,7 +90,7 @@ private:
 class ClipTimeline : public QWidget {
 public:
     explicit ClipTimeline(QWidget *parent=nullptr):QWidget(parent) {
-        setObjectName("clipTimeline"); setMinimumHeight(76); setMouseTracking(true); setCursor(Qt::PointingHandCursor);
+        setObjectName("clipTimeline"); setMinimumHeight(64); setMouseTracking(true); setCursor(Qt::PointingHandCursor);
         setAccessibleName("Clip timeline: click to seek, drag trim handles");
         setToolTip("Drag the end handles to trim; click inside to preview. In/Out fields also adjust the range.");
     }
@@ -105,12 +105,12 @@ protected:
         if(duration<=0) return;
         const int left=int(in*width()/duration),right=int(out*width()/duration);
         p.fillRect(QRect(0,0,left,height()),QColor(0,0,0,150)); p.fillRect(QRect(right,0,width()-right,height()),QColor(0,0,0,150));
-        p.setPen(QPen(palette().color(QPalette::Accent),3)); p.drawRect(QRect(left,1,qMax(1,right-left-1),height()-3));
+        p.setPen(QPen(window()->palette().color(QPalette::Accent),3)); p.drawRect(QRect(left,1,qMax(1,right-left-1),height()-3));
         p.setPen(QPen(Qt::white,2)); const int x=int(position*width()/duration); p.drawLine(x,0,x,height());
         for(bool start:{true,false}) {
             const auto handle=handleRect(start);
-            p.setPen(Qt::NoPen); p.setBrush(palette().color(QPalette::Accent)); p.drawRoundedRect(handle,4,4);
-            p.setPen(QPen(palette().color(QPalette::HighlightedText),2));
+            p.setPen(Qt::NoPen); p.setBrush(window()->palette().color(QPalette::Accent)); p.drawRoundedRect(handle,4,4);
+            p.setPen(QPen(window()->palette().color(QPalette::HighlightedText),2));
             p.drawLine(handle.center().x(),height()/2-11,handle.center().x(),height()/2+11);
         }
     }
@@ -163,7 +163,7 @@ protected:
     void paintEvent(QPaintEvent *) override {
         QPainter p(this); p.setRenderHint(QPainter::Antialiasing); p.setPen(Qt::NoPen);
         p.setBrush(palette().color(QPalette::Base)); p.drawRoundedRect(rect(),5,5);
-        p.setPen(isEnabled()?palette().color(QPalette::Accent):palette().color(QPalette::Mid));
+        p.setPen(isEnabled()?window()->palette().color(QPalette::Accent):palette().color(QPalette::Mid));
         p.drawLine(0,height()/2,width(),height()/2);
         for(int i=0;i<peaks.size();++i) { int x=i*width()/peaks.size(),h=qRound(qBound(0.f,peaks[i]*3.f,1.f)*(height()/2.-1)); p.drawLine(x,height()/2-h,x,height()/2+h); }
     }
@@ -189,38 +189,50 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     auto *heading=new QLabel("Replay player"); heading->setObjectName("brand"); header->addWidget(heading);
     m_title=new QLabel; m_title->setTextFormat(Qt::PlainText); m_title->setProperty("muted",true); m_title->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred); header->addWidget(m_title,1);
     layout->addWidget(m_header);
-    auto *body=new QHBoxLayout; body->setSpacing(20); auto *playback=new QVBoxLayout; playback->setSpacing(8); body->addLayout(playback,1);
+    auto *body=new QHBoxLayout; body->setSpacing(16); auto *playback=new QVBoxLayout; playback->setSpacing(10); body->addLayout(playback,1);
     auto *video=new QWidget; m_videoLayout=new QGridLayout(video); m_videoLayout->setContentsMargins(0,0,0,0); m_videoLayout->setSpacing(8);
     m_videoLayout->setRowStretch(0,1); m_videoLayout->addWidget(m_player,0,0); playback->addWidget(video,1);
-    m_recentPanel=new QWidget; m_recentPanel->setObjectName("clipSidebar"); m_recentPanel->setFixedWidth(240); auto *recentLayout=new QVBoxLayout(m_recentPanel); recentLayout->setContentsMargins(12,12,12,12);
+    m_recentPanel=new QWidget; m_recentPanel->setObjectName("clipSidebar"); m_recentPanel->setFixedWidth(220); auto *recentLayout=new QVBoxLayout(m_recentPanel); recentLayout->setContentsMargins(12,12,12,12);
     auto *recentTitle=new QLabel("All clips"); recentTitle->setObjectName("sectionTitle"); recentLayout->addWidget(recentTitle);
     m_recent=new QListWidget; m_recent->setObjectName("clipRecent"); m_recent->setTextElideMode(Qt::ElideRight); m_recent->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); m_recent->setIconSize(QSize(48,28)); recentLayout->addWidget(m_recent,1); body->addWidget(m_recentPanel); layout->addLayout(body,1);
     m_controls=new QWidget; auto *transport=new QVBoxLayout(m_controls); transport->setContentsMargins(0,0,0,0);
     m_controls->setObjectName("clipControls");
     m_seek=new PlaybackSlider; m_seek->setObjectName("clipSeek"); m_seek->setAccessibleName("Playback position"); m_seek->setRange(0,0); m_seek->setSingleStep(1000); m_seek->setPageStep(5000); m_seek->setTracking(false); transport->addWidget(m_seek);
-    auto *controls=new QHBoxLayout; controls->setSpacing(7); m_next=button("Next","clipNext",controls); playerIcon(m_next,"skip-previous","Next replay (Page Up)");
-    auto *rewind=button("","clipSeekBack",controls); playerIcon(rewind,"back","Back 5 seconds (Left)");
-    m_play=button("Play","clipPlayPause",controls);
-    auto *forward=button("","clipSeekForward",controls); playerIcon(forward,"forward","Forward 5 seconds (Right)");
-    m_previous=button("Previous","clipPrevious",controls); playerIcon(m_previous,"skip-next","Previous replay (Page Down)");
-    controls->addStretch(); m_time=new QLabel("00:00 / 00:00"); m_time->setObjectName("clipTime"); controls->addWidget(m_time); controls->addStretch();
+    auto *controls=new QHBoxLayout; controls->setSpacing(7);
+    m_time=new QLabel("00:00 / 00:00"); m_time->setObjectName("clipTime"); m_time->setFixedWidth(210); controls->addWidget(m_time); controls->addStretch();
+    auto *navigationWidget=new QWidget; auto *navigation=new QHBoxLayout(navigationWidget); navigation->setContentsMargins(0,0,0,0); navigation->setSpacing(7); controls->addWidget(navigationWidget);
+    m_next=button("Next","clipNext",navigation); playerIcon(m_next,"skip-previous","Next replay (Page Up)");
+    auto *rewind=button("","clipSeekBack",navigation); playerIcon(rewind,"back","Back 5 seconds (Left)");
+    m_play=button("Play","clipPlayPause",navigation);
+    auto *forward=button("","clipSeekForward",navigation); playerIcon(forward,"forward","Forward 5 seconds (Right)");
+    m_previous=button("Previous","clipPrevious",navigation); playerIcon(m_previous,"skip-next","Previous replay (Page Down)");
+    controls->addStretch();
+    auto *utilitiesWidget=new QWidget; utilitiesWidget->setFixedWidth(210); auto *utilities=new QHBoxLayout(utilitiesWidget); utilities->setContentsMargins(0,0,0,0); utilities->setSpacing(6); controls->addWidget(utilitiesWidget);
     m_speed=new QComboBox; m_speed->setObjectName("clipSpeed"); m_speed->setAccessibleName("Playback speed");
     for(double speed:{.25,.5,.75,1.,1.25,1.5,2.}) m_speed->addItem(QString::number(speed)+"×",speed);
-    m_speed->setCurrentIndex(3); controls->addWidget(m_speed);
-    m_mute=new QCheckBox; m_mute->setObjectName("clipMute"); m_mute->setIcon(QIcon(":/shadowless/icons/speaker.svg")); m_mute->setToolTip("Mute (M)"); m_mute->setAccessibleName("Mute"); controls->addWidget(m_mute); m_volume=new QSlider(Qt::Horizontal); m_volume->setRange(0,100); m_volume->setValue(80); m_volume->setFixedWidth(90); m_volume->setAccessibleName("Playback volume"); controls->addWidget(m_volume);
-    m_edit=button("Edit clip","clipTrim",controls); m_edit->setCheckable(true);
-    m_fullscreenButton=button("Fullscreen","clipFullscreen",controls); playerIcon(m_fullscreenButton,"fullscreen","Fullscreen (F)"); transport->addLayout(controls); m_videoLayout->addWidget(m_controls,1,0);
+    m_speed->setCurrentIndex(3); m_speed->setFixedWidth(60); utilities->addWidget(m_speed);
+    m_mute=new QCheckBox; m_mute->setObjectName("clipMute"); m_mute->setIcon(QIcon(":/shadowless/icons/speaker.svg")); m_mute->setToolTip("Mute (M)"); m_mute->setAccessibleName("Mute"); utilities->addWidget(m_mute); m_volume=new QSlider(Qt::Horizontal); m_volume->setRange(0,100); m_volume->setValue(80); m_volume->setFixedWidth(70); m_volume->setAccessibleName("Playback volume"); utilities->addWidget(m_volume);
+    m_edit=button("Edit clip","clipTrim",header); m_edit->setCheckable(true);
+    m_fullscreenButton=button("Fullscreen","clipFullscreen",utilities); playerIcon(m_fullscreenButton,"fullscreen","Fullscreen (F)"); transport->addLayout(controls); m_videoLayout->addWidget(m_controls,1,0);
     m_audio=new QWidget; m_trackLayout=new QVBoxLayout(m_audio); m_trackLayout->setContentsMargins(0,0,0,0); m_trackLayout->setSpacing(6);
     m_trackLayout->setAlignment(Qt::AlignTop);
     m_audioScroll=new QScrollArea; m_audioScroll->setObjectName("clipAudioTracks"); m_audioScroll->setWidgetResizable(true);
     m_audioScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); m_audioScroll->setWidget(m_audio); m_audioScroll->hide(); playback->addWidget(m_audioScroll);
-    m_editing=new QWidget; auto *editing=new QVBoxLayout(m_editing); editing->setContentsMargins(0,0,0,0); m_timeline=new ClipTimeline; editing->addWidget(m_timeline);
+    m_editing=new QWidget; auto *editing=new QVBoxLayout(m_editing); editing->setContentsMargins(0,0,0,0); editing->setSpacing(6);
+    auto *videoLabel=new QLabel("VIDEO RANGE"); videoLabel->setObjectName("sectionTitle"); editing->addWidget(videoLabel);
+    m_timeline=new ClipTimeline; editing->addWidget(m_timeline);
     auto *range=new QHBoxLayout; range->setSpacing(8); range->addWidget(new QLabel("Start")); m_in=new ClipTimeEdit; m_in->setObjectName("clipIn"); m_in->setAccessibleName("Trim start"); range->addWidget(m_in); auto *setIn=button("Set here","clipSetIn",range); setIn->setToolTip("Set start to playback position (I)");
     range->addSpacing(12); range->addWidget(new QLabel("End")); m_out=new ClipTimeEdit; m_out->setObjectName("clipOut"); m_out->setAccessibleName("Trim end"); range->addWidget(m_out); auto *setOut=button("Set here","clipSetOut",range); setOut->setToolTip("Set end to playback position (O)"); range->addStretch();
     for(auto *field:{m_in,m_out}) { field->setDecimals(3); field->setRange(0,0); field->setSingleStep(.1); }
-    editing->addLayout(range); m_mix=new QCheckBox("Merge selected audio tracks into one"); editing->addWidget(m_mix);
-    auto *note=new QLabel("Video is copied to keep exports light. Cuts can begin at an earlier keyframe; selected audio stays separate unless merged."); note->setWordWrap(true); editing->addWidget(note);
-    auto *jobs=new QHBoxLayout; m_export=button("Save trimmed copy…","clipExport",jobs); m_cancel=button("Cancel job","clipCancel",jobs); m_jobStatus=new QLabel; m_jobStatus->setTextFormat(Qt::PlainText); jobs->addWidget(m_jobStatus,1); editing->addLayout(jobs); playback->addWidget(m_editing); m_editing->hide(); m_cancel->hide();
+    editing->addLayout(range);
+    auto *audioLabel=new QLabel; audioLabel->setObjectName("clipAudioHeading"); audioLabel->hide(); editing->addWidget(audioLabel);
+    connect(m_player,&MpvPlayer::tracksChanged,this,[this,audioLabel] {
+        const int count=m_player->audioTracks().size();
+        audioLabel->setText(QString("AUDIO TRACKS · %1 · Select tracks to keep").arg(count));
+        audioLabel->setVisible(count>0);
+    });
+    m_mix=new QCheckBox("Merge selected audio tracks into one");
+    auto *jobs=new QHBoxLayout; jobs->addWidget(m_mix); m_jobStatus=new QLabel; m_jobStatus->setTextFormat(Qt::PlainText); jobs->addWidget(m_jobStatus,1); m_cancel=button("Cancel job","clipCancel",jobs); m_export=button("Save trimmed copy…","clipExport",jobs); m_export->setToolTip("Original video quality. Cuts may start at the preceding keyframe. Selected audio stays separate unless merged."); editing->addLayout(jobs); playback->addWidget(m_editing); m_editing->hide(); m_cancel->hide();
     m_error=new QLabel; m_error->setTextFormat(Qt::PlainText); m_error->setWordWrap(true); playback->addWidget(m_error);
     connect(backButton,&QPushButton::clicked,this,&ClipPlayer::back);
     connect(m_play,&QPushButton::clicked,this,[this] { m_player->pause(!m_player->paused()); showControls(); });
@@ -236,7 +248,9 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     connect(m_speed,&QComboBox::currentIndexChanged,this,[this] { m_player->setSpeed(m_speed->currentData().toDouble()); });
     connect(m_fullscreenButton,&QPushButton::clicked,this,[this] { setFullscreen(!m_fullscreen); }); connect(m_player,&MpvPlayer::doubleClicked,this,[this] { setFullscreen(!m_fullscreen); });
     connect(m_player,&MpvPlayer::stateChanged,this,&ClipPlayer::updateState); connect(m_player,&MpvPlayer::tracksChanged,this,&ClipPlayer::updateTracks); connect(m_player,&MpvPlayer::error,m_error,&QLabel::setText);
-    connect(m_edit,&QPushButton::toggled,this,[this](bool enabled) {
+    connect(m_edit,&QPushButton::toggled,this,[this, editing, playback](bool enabled) {
+        if(enabled) editing->insertWidget(4,m_audioScroll);
+        else playback->insertWidget(playback->indexOf(m_editing),m_audioScroll);
         m_editingEnabled=enabled; m_editing->setVisible(enabled&&!m_fullscreen); showControls();
         if(enabled) analyze(); else { m_analyzePending=false; if(!m_exporting) m_tools->stop(); }
         for(int id:m_waveforms.keys()) m_waveforms[id]->setVisible(enabled);
@@ -270,7 +284,7 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     qApp->installEventFilter(this); updateState();
 }
 void ClipPlayer::setClips(const QStringList &paths) {
-    m_clips=paths; m_highlightedSource.clear(); m_recent->clear(); for(const auto &path:paths) { auto *item=new QListWidgetItem(QIcon(":/shadowless/icons/video.svg"),QFileInfo(path).completeBaseName(),m_recent); item->setData(Qt::UserRole,path); item->setToolTip(path); item->setSizeHint(QSize(0,52)); } updateState();
+    m_clips=paths; m_highlightedSource.clear(); m_recent->clear(); for(const auto &path:paths) { auto *item=new QListWidgetItem(QIcon(":/shadowless/icons/film.svg"),QFileInfo(path).completeBaseName(),m_recent); item->setData(Qt::UserRole,path); item->setToolTip(path); item->setSizeHint(QSize(0,52)); } updateState();
 }
 void ClipPlayer::setThumbnail(const QString &path,const QPixmap &image) {
     const int index=m_clips.indexOf(path);

@@ -77,6 +77,7 @@ private slots:
         {
             Shortcuts shortcuts;
             QSignalSpy status(&shortcuts, &Shortcuts::status);
+            QSignalSpy approval(&shortcuts, &Shortcuts::approvalChanged);
             shortcuts.setKeys({"Meta+K", "Ctrl+F9", "Alt+Space"});
             shortcuts.start();
             QTRY_COMPARE(portal.bindings.size(), 1);
@@ -87,6 +88,9 @@ private slots:
             QVERIFY(status.last()[0].toString().contains("Meta+K"));
             QVERIFY(status.last()[0].toString().contains("Ctrl+F9"));
             QVERIFY(status.last()[0].toString().contains("not assigned"));
+            QTRY_COMPARE(approval.size(), 2);
+            QCOMPARE(approval.first()[0].toBool(), true);
+            QCOMPARE(approval.last()[0].toBool(), false);
             shortcuts.setKeys({"Alt+J", "Ctrl+F8", "Alt+F9"});
             QTRY_COMPARE(portal.bindings.size(), 2);
             QCOMPARE(portal.bindings[1][0].properties.value("preferred_trigger").toString(), QString("ALT+j"));
@@ -106,10 +110,21 @@ private slots:
                 QVERIFY(bus.send(signal));
             }
             QTRY_COMPARE(activation.size(), 1);
+            bus.unregisterService("org.freedesktop.portal.Desktop");
+            QTRY_VERIFY(status.last()[0].toString().contains("service stopped"));
+            QVERIFY(bus.registerService("org.freedesktop.portal.Desktop"));
+            QTRY_COMPARE(portal.bindings.size(), 3);
+            QTRY_VERIFY(status.last()[0].toString().contains("Meta+K"));
+            auto resumed = QDBusMessage::createSignal("/org/freedesktop/portal/desktop", "org.freedesktop.portal.GlobalShortcuts", "Activated");
+            resumed.setArguments({QVariant::fromValue(QDBusObjectPath(portal.sessions.last())), "save-replay", QVariant::fromValue(qulonglong(0)), QVariantMap{}});
+            QVERIFY(bus.send(resumed));
+            QTRY_COMPARE(activation.size(), 2);
+            QCOMPARE(activation.last()[0].toString(), QString("save-replay"));
             portal.rejectBindings = true;
             shortcuts.setKeys({"Alt+L", "Ctrl+F8", "Alt+F9"});
-            QTRY_COMPARE(portal.bindings.size(), 3);
+            QTRY_COMPARE(portal.bindings.size(), 4);
             QTRY_VERIFY(status.last()[0].toString().contains("cancelled or rejected"));
+            QCOMPARE(approval.last()[0].toBool(), false);
         }
         QTRY_COMPARE(portal.closed.size(), 3);
         QVERIFY2(!QFile::exists(log), "Plasma must never run hyprctl, including on destruction");

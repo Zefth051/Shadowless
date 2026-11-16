@@ -14,6 +14,8 @@
 #include <QGraphicsOpacityEffect>
 #include <QComboBox>
 #include <QFileDialog>
+#include <QMessageBox>
+#include <QAbstractItemView>
 #include <QKeySequenceEdit>
 #include <QLineEdit>
 #include <QPushButton>
@@ -85,6 +87,56 @@ private slots:
         QVERIFY(notice->isVisible()); QVERIFY(page.rect().contains(notice->mapTo(&page, QPoint())));
         page.setCaptureActive(false); QVERIFY(fields->isEnabled());
         QVERIFY(!notice->isVisible()); QCOMPARE(effect->opacity(), 1.);
+    }
+    void settingsRowsFitNarrowPanelAndSwitchFromKeyboard() {
+        SettingsPage page(caps); applyTheme(&page);
+        GsrOptions options; options.source = "DP-1"; options.bufferSeconds = 60;
+        page.edit(options, false, false, keys);
+        for (const auto size : {QSize(420, 620), QSize(560, 740)}) {
+            page.resize(size); page.show(); QCoreApplication::processEvents();
+            auto *scroll = page.findChild<QScrollArea *>(); QVERIFY(scroll);
+            QVERIFY(scroll->widget()->width() <= scroll->viewport()->width());
+            auto *toggle = page.findChild<QCheckBox *>("organizeByGame"); QVERIFY(toggle);
+            scroll->ensureWidgetVisible(toggle); QCoreApplication::processEvents();
+            QVERIFY(toggle->width() > 250);
+            const bool previous = toggle->isChecked();
+            QTest::mouseClick(toggle, Qt::LeftButton, Qt::NoModifier, QPoint(toggle->width() - 10, toggle->height() / 2));
+            QCOMPARE(toggle->isChecked(), !previous);
+            if (toggle->isChecked())
+                QCOMPARE(toggle->grab().toImage().pixelColor(toggle->width() - 35, toggle->height() / 2), accentColor("violet"));
+            toggle->setFocus(); QTest::keyClick(toggle, Qt::Key_Space);
+            QCOMPARE(toggle->isChecked(), previous);
+            scroll->verticalScrollBar()->setValue(0);
+            const auto output = qEnvironmentVariable("SHADOWLESS_SETTINGS_SCREENSHOT");
+            if (!output.isEmpty()) QVERIFY(page.grab().save(output + QString::number(size.width()) + ".png"));
+        }
+    }
+    void shortcutApprovalReleasesOverlayAndRestoresVisibility() {
+        QTemporaryDir directory;
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, directory.path());
+        Controller controller(caps, {}, false);
+        auto *shortcuts = controller.findChild<Shortcuts *>();
+        QVERIFY(shortcuts);
+        Dashboard *dashboard = nullptr;
+        for (auto *widget : QApplication::topLevelWidgets())
+            if (auto *candidate = qobject_cast<Dashboard *>(widget)) dashboard = candidate;
+        QVERIFY(dashboard); QVERIFY(dashboard->isVisible());
+        const auto approval = [shortcuts](bool pending) {
+            return QMetaObject::invokeMethod(shortcuts, "approvalChanged", Q_ARG(bool, pending));
+        };
+        QVERIFY(approval(true)); QVERIFY(!dashboard->isVisible());
+        controller.command("show"); QVERIFY(!dashboard->isVisible());
+        QVERIFY(approval(false)); QVERIFY(dashboard->isVisible());
+        auto *engine = controller.findChild<GsrCapture *>(); QVERIFY(engine);
+        QVERIFY(approval(true));
+        QVERIFY(QMetaObject::invokeMethod(engine, "authenticationChanged", Q_ARG(bool, true)));
+        QVERIFY(approval(false)); QVERIFY(!dashboard->isVisible());
+        QVERIFY(QMetaObject::invokeMethod(engine, "authenticationChanged", Q_ARG(bool, false)));
+        QVERIFY(dashboard->isVisible());
+        controller.command("hide");
+        QVERIFY(approval(true)); QVERIFY(approval(false)); QVERIFY(!dashboard->isVisible());
+        controller.command("show"); QVERIFY(approval(true));
+        controller.command("hide"); QVERIFY(approval(false)); QVERIFY(!dashboard->isVisible());
     }
     void noticesStayOnDashboard() {
         Dashboard dashboard(caps); dashboard.show();
@@ -390,8 +442,10 @@ private slots:
             dashboard.resize(size);
             QCoreApplication::processEvents();
             for (auto *tile : tiles) {
-                QVERIFY(tile->height() >= 88 && tile->height() <= 100);
+                QVERIFY(tile->height() >= 120 && tile->height() <= 140);
                 QVERIFY(tile->parentWidget()->rect().contains(tile->geometry()));
+                auto *overlay = dashboard.findChild<QPushButton *>("overlayToggle");
+                QVERIFY(overlay->mapTo(&dashboard, QPoint()).y() < tile->mapTo(&dashboard, QPoint()).y());
             }
         }
     }
@@ -495,6 +549,39 @@ private slots:
         QVERIFY(player.findChild<QPushButton *>("clipPrevious"));
         QVERIFY(player.findChild<QComboBox *>("clipSpeed"));
         QVERIFY(player.findChild<QPushButton *>("clipTrim"));
+    }
+    void editorLayoutKeepsTimelineAndExportVisible() {
+        QTemporaryDir directory;
+        const auto path=directory.filePath("layout.mp4");
+        QCOMPARE(QProcess::execute("ffmpeg", {"-v","error","-f","lavfi","-i","testsrc2=s=320x180:r=15","-t","2","-c:v","mpeg4",path}),0);
+        Dashboard dashboard(caps); dashboard.resize(1280,800); dashboard.show();
+        auto *player=dashboard.findChild<ClipPlayer *>();
+        dashboard.findChild<Library *>()->clipRequested(path);
+        auto *media=player->findChild<MpvPlayer *>();
+        QSignalSpy frames(media,&MpvPlayer::frameRendered);
+        QTRY_VERIFY(media->loaded()); QTRY_VERIFY(!frames.isEmpty()); media->pause(true);
+        player->findChild<QPushButton *>("clipTrim")->click();
+        auto *exportButton=player->findChild<QPushButton *>("clipExport");
+        QTRY_VERIFY_WITH_TIMEOUT(exportButton->isEnabled(),15000);
+        auto *timeline=player->findChild<QWidget *>("clipTimeline");
+        const auto output=qEnvironmentVariable("SHADOWLESS_UI_OUTPUT");
+        if(!output.isEmpty()) QVERIFY(dashboard.findChild<QWidget *>("shadowlessPanel")->grab().save(output+".editor.png"));
+        auto *audio=player->findChild<QScrollArea *>("clipAudioTracks");
+        auto *audioHeading=player->findChild<QLabel *>("clipAudioHeading"); QVERIFY(audioHeading);
+        // Reserve the same vertical space as four audio rows without opening an audio device.
+        const QSignalBlocker block(media);
+        audio->setFixedHeight(184); audio->show();
+        audioHeading->setText("AUDIO TRACKS · 4 · Select tracks to keep"); audioHeading->show();
+        QCOMPARE(audio->parentWidget(),timeline->parentWidget());
+        for(const auto size:{QSize(1280,800),QSize(1024,768)}) {
+            dashboard.resize(size); QCoreApplication::processEvents();
+            QVERIFY(timeline->mapTo(player,QPoint()).y()>media->mapTo(player,media->rect().bottomLeft()).y());
+            QVERIFY(exportButton->mapTo(player,QPoint()).y()>timeline->mapTo(player,timeline->rect().bottomLeft()).y());
+            QVERIFY(timeline->mapTo(player,QPoint()).y()<audio->mapTo(player,QPoint()).y());
+            QVERIFY2(exportButton->mapTo(player,QPoint()).y()>audio->mapTo(player,audio->rect().bottomLeft()).y(),
+                     qPrintable(QString("Export y=%1, audio y=%2 height=%3, player height=%4").arg(exportButton->mapTo(player,QPoint()).y()).arg(audio->mapTo(player,QPoint()).y()).arg(audio->height()).arg(player->height())));
+            QVERIFY(player->rect().contains(QRect(exportButton->mapTo(player,QPoint()),exportButton->size())));
+        }
     }
     void fullscreenControlsKeepVideoGeometry() {
         QTemporaryDir directory; const auto path=directory.filePath("fullscreen.mp4");
@@ -754,6 +841,9 @@ private slots:
             QVERIFY(track->height() >= 32);
         }
         auto *exportButton = player->findChild<QPushButton *>("clipExport");
+        auto *timeline = player->findChild<QWidget *>("clipTimeline"); QVERIFY(timeline);
+        QVERIFY(timeline->mapTo(player, QPoint()).y() < audio->mapTo(player, QPoint()).y());
+        QVERIFY(exportButton->mapTo(player, QPoint()).y() > audio->mapTo(player, QPoint()).y());
         QVERIFY(exportButton->isEnabled());
         auto *in = player->findChild<QDoubleSpinBox *>("clipIn"), *out = player->findChild<QDoubleSpinBox *>("clipOut");
         in->setFocus(); in->selectAll(); QTest::keyClicks(in,"1.5"); QTest::keyClick(in,Qt::Key_Return);
@@ -944,6 +1034,30 @@ private slots:
             QVERIFY(qAbs(qGray(foreground.rgb()) - qGray(background.rgb())) >= 100);
         }
         QCOMPARE(accentColor("#xyz"), accentColor("violet"));
+    }
+    void dialogsRemainReadableWithLightDesktopPalette() {
+        QWidget root;
+        QPalette light;
+        light.setColor(QPalette::Window, Qt::white);
+        light.setColor(QPalette::Base, Qt::white);
+        light.setColor(QPalette::AlternateBase, QColor("#eeeeee"));
+        light.setColor(QPalette::Button, Qt::white);
+        root.setPalette(light);
+        applyTheme(&root);
+        QFileDialog picker(&root);
+        picker.setOption(QFileDialog::DontUseNativeDialog);
+        picker.resize(600, 400); picker.show();
+        QMessageBox message(QMessageBox::Question, "Update", "Download update?", QMessageBox::Yes | QMessageBox::No, &root);
+        message.show(); QCoreApplication::processEvents();
+        for (auto *view : picker.findChildren<QAbstractItemView *>()) {
+            if (!view->isVisible()) continue;
+            const auto image = view->viewport()->grab().toImage();
+            QVERIFY(!image.isNull());
+            QVERIFY2(image.pixelColor(image.width() - 2, image.height() - 2).lightness() < 100,
+                     "File views must not inherit a white desktop background under light text");
+        }
+        QVERIFY(message.grab().toImage().pixelColor(2, 2).lightness() < 100);
+        QVERIFY(message.palette().color(QPalette::Button).lightness() < 100);
     }
     void customAccentButtonStatesRemainReadable() {
         const auto luminance = [](const QColor &color) {
