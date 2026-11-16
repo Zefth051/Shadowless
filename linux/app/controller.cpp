@@ -14,10 +14,11 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QtConcurrentRun>
+#include <utility>
 
 namespace Shadowless {
 Controller::Controller(const GsrCapabilities &caps, const QString &probeError, bool background)
-    : m_caps(caps), m_options(m_settings.capture(caps)), m_scene(m_settings.scene()),
+    : m_caps(caps), m_options(m_settings.capture(caps)), m_scene(m_settings.scene()), m_engine(this),
       m_menu(std::make_unique<QMenu>()), m_dashboard(std::make_unique<Dashboard>(caps)), m_indicator(std::make_unique<StatusIndicator>()),
       m_notification(std::make_unique<ClipNotification>()) {
     m_savedSound.setSource(QUrl("qrc:/shadowless/replay-saved.wav"));
@@ -123,6 +124,17 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         if (action == "toggle-overlay") command("toggle"); else if (action == "save-replay") command("save"); else if (action == "toggle-capture") toggleCapture();
     });
     connect(&m_shortcuts, &Shortcuts::status, m_dashboard.get(), &Dashboard::shortcutStatus);
+    connect(&m_engine, &GsrCapture::authenticationChanged, this, [this](bool pending) {
+        if (m_authenticating == pending) return;
+        m_authenticating = pending;
+        if (pending) {
+            m_restoreAfterAuthentication = m_dashboard->isVisible();
+            m_dashboard->hide();
+        } else {
+            const bool restore = std::exchange(m_restoreAfterAuthentication, false);
+            if (restore) show();
+        }
+    });
     connect(&m_engine, &GsrCapture::started, this, [this] {
         refresh(); const auto scene = m_pending.value_or(m_scene); m_pending.reset(); apply(scene);
     });
@@ -169,8 +181,9 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     });
 }
 Controller::~Controller() = default;
-void Controller::show() { if (!m_quitting) { m_dashboard->refreshLibrary(m_options.outputDirectory); OverlaySurface::show(m_dashboard.get()); } }
+void Controller::show() { if (!m_quitting && !m_authenticating) { m_dashboard->refreshLibrary(m_options.outputDirectory); OverlaySurface::show(m_dashboard.get()); } }
 void Controller::hide() {
+    m_restoreAfterAuthentication = false;
     m_dashboard->overlayEditor()->flush();
     m_dashboard->hide();
     m_dashboard->home();

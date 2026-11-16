@@ -3,6 +3,8 @@
 #include <QHash>
 #include <QWidget>
 #include <QXmlStreamReader>
+#include <QRegularExpression>
+#include <cmath>
 
 namespace Shadowless {
 namespace {
@@ -17,7 +19,18 @@ const QList<Accent> accents{
     {"amber", "#f5b94c", "#f8c96e", "#b97d1e", "#251702"},
 };
 
-const Accent &paletteFor(const QString &name) {
+QString tint(const QColor &base, const QColor &color, int percent);
+QString contrastText(const QColor &color) {
+    const auto linear = [](double channel) { return channel <= .04045 ? channel / 12.92 : std::pow((channel + .055) / 1.055, 2.4); };
+    const auto luminance = .2126 * linear(color.redF()) + .7152 * linear(color.greenF()) + .0722 * linear(color.blueF());
+    return luminance > .179 ? "#000000" : "#ffffff";
+}
+Accent paletteFor(const QString &name) {
+    if (QRegularExpression("^#[0-9a-fA-F]{6}$").match(name).hasMatch()) {
+        const QColor color(name);
+        return {"violet", color.name(), tint(color, Qt::white, 18), tint(color, QColor("#141719"), 35),
+                contrastText(color)};
+    }
     for (const auto &accent : accents)
         if (accent.name == name) return accent;
     return accents.first();
@@ -46,6 +59,11 @@ void applyTheme(QWidget *widget, const QString &name) {
     palette.setColor(QPalette::Accent, color);
     palette.setColor(QPalette::Highlight, color);
     palette.setColor(QPalette::HighlightedText, QColor(accent.text));
+    palette.setColor(QPalette::Window, QColor("#111416"));
+    palette.setColor(QPalette::Base, QColor("#111619"));
+    palette.setColor(QPalette::WindowText, QColor("#e7ecea"));
+    palette.setColor(QPalette::Text, QColor("#e7ecea"));
+    palette.setColor(QPalette::ButtonText, QColor("#e7ecea"));
     widget->setPalette(palette);
     QFile file(":/shadowless/theme.xaml"); QHash<QString, QString> colors;
     if (file.open(QIODevice::ReadOnly)) {
@@ -62,18 +80,18 @@ void applyTheme(QWidget *widget, const QString &name) {
         QWidget { color: %1; font-family: sans-serif; font-size: 13px; }
         QLabel { background: transparent; }
         QLabel[muted="true"] { color: %2; font-size: 12px; }
-        QLabel#heading { font-size: 21px; font-weight: bold; }
-        QLabel#brand { font-size: 20px; font-weight: bold; }
-        QLabel#statusTitle { font-size: 15px; font-weight: bold; }
-        QLabel#sectionTitle { color: %2; font-size: 11px; font-weight: bold; }
-        QFrame#shadowlessPanel { background: #141719; border: 1px solid #2b3236; border-radius: 16px; }
+        QLabel#heading { font-size: 22px; font-weight: 600; padding: 2px 0 6px 0; }
+        QLabel#brand { font-size: 18px; font-weight: 600; }
+        QLabel#statusTitle { font-size: 14px; font-weight: 600; }
+        QLabel#sectionTitle { color: %2; font-size: 11px; font-weight: 600; padding: 3px 0; }
+        QFrame#shadowlessPanel { background: #111416; border: 1px solid #30363b; border-radius: 16px; }
         QFrame#segments { background: #101416; border: 1px solid %4; border-radius: 8px; }
         QFrame#divider { background: #22282c; }
         QLabel#notice { color: %1; background: #1d2226; padding: 5px 8px; border-radius: 6px; }
         QLabel#emptyClips { color: %2; background: %3; padding: 14px 12px; border-radius: 8px; }
-        QLabel#overlayMark { background: %9; color: %5; border-radius: 10px; font-size: 26px; }
-        QLabel#thumbnail { background: #101416; color: %5; border-radius: 5px; }
-        QLabel#clipName { font-weight: bold; }
+        QLabel#overlayMark { background: %9; color: %11; border-radius: 10px; font-size: 26px; }
+        QLabel#thumbnail { background: #101416; color: %11; border-radius: 5px; }
+        QLabel#clipName { font-weight: 600; }
         QProgressBar { background: #242a2e; border: 0; border-radius: 2px; }
         QProgressBar::chunk { background: %7; border-radius: 2px; }
         QSlider::groove:horizontal { height: 4px; border-radius: 2px; background: %4; }
@@ -87,8 +105,8 @@ void applyTheme(QWidget *widget, const QString &name) {
         QSlider#clipSeek::handle:horizontal:hover { border-color: %6; }
         QLabel#clipTime { font-family: monospace; font-size: 11px; color: %2; }
         QPushButton[transport="true"] { padding: 0; min-height: 0; }
-        QPushButton#clipTrim, QPushButton#clipExport { background: %5; color: %8; border-color: %5; font-weight: bold; }
-        QPushButton#clipTrim:hover, QPushButton#clipExport:hover { background: %6; }
+        QPushButton#clipTrim, QPushButton#clipExport { background: %5; color: %8; border-color: %11; font-weight: bold; }
+        QPushButton#clipTrim:hover, QPushButton#clipExport:hover { background: %6; color: %13; }
         QWidget#clipSidebar { background: %3; border: 1px solid %4; border-radius: 12px; }
         QListWidget#clipRecent { background: transparent; border: 0; padding: 0; outline: none; }
         QListWidget#clipRecent::item { border: 1px solid transparent; border-radius: 7px; padding: 5px; margin: 3px 0; font-size: 11px; }
@@ -99,39 +117,50 @@ void applyTheme(QWidget *widget, const QString &name) {
         QWidget#clipAudioRow { background: %3; border: 1px solid %4; border-radius: 8px; }
         QCheckBox[clipAudioTrack="true"] { background: transparent; color: %2; border: 1px solid transparent; border-radius: 6px; padding: 0 8px; spacing: 8px; }
         QCheckBox[clipAudioTrack="true"]:checked { background: %10; color: %1; border-color: %7; }
-        QCheckBox[clipAudioTrack="true"]:hover, QCheckBox[clipAudioTrack="true"]:focus { border-color: %5; }
+        QCheckBox[clipAudioTrack="true"]:hover, QCheckBox[clipAudioTrack="true"]:focus { border-color: %11; }
         QCheckBox[clipAudioTrack="true"]::indicator { width: 14px; height: 14px; border: 1px solid %2; border-radius: 7px; background: transparent; }
-        QCheckBox[clipAudioTrack="true"]::indicator:checked { background: %5; border-color: %5; image: url(:/shadowless/icons/speaker.svg); }
+        QCheckBox[clipAudioTrack="true"]::indicator:checked { background: %5; border-color: %11; image: url(:/shadowless/icons/speaker.svg); }
         QDoubleSpinBox#clipIn, QDoubleSpinBox#clipOut { font-family: monospace; padding: 7px 10px; border-radius: 8px; }
         QComboBox#clipSpeed { font-size: 11px; padding: 4px; padding-right: 22px; }
-        QFrame#panel, QWidget#clip { background: %3; border: 1px solid %4; border-radius: 12px; }
-        QPushButton { background: %3; border: 1px solid %4; border-radius: 8px; padding: 6px 10px; min-height: 19px; }
-        QPushButton:hover { border-color: %5; background: %9; }
-        QPushButton:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus { border: 1px solid %5; }
-        QPushButton:checked { background: %9; border-color: %5; color: %5; }
+        QFrame#panel { background: #181c1f; border: 1px solid #262d32; border-radius: 12px; }
+        QWidget#clip { background: transparent; border: 1px solid transparent; border-radius: 8px; }
+        QWidget#clip:hover { background: #20262a; }
+        QPushButton { background: #20262a; border: 1px solid #30383d; border-radius: 7px; padding: 6px 11px; min-height: 20px; }
+        QPushButton:hover { border-color: #46525a; background: #2a3237; }
+        QPushButton:pressed { background: #101416; border-color: %7; }
+        QPushButton#openClipFolder, QPushButton#deleteClip { padding: 0; min-height: 30px; }
+        QPushButton#deleteClip:hover { color: #ff9999; background: #40272b; border-color: #864750; }
+        QPushButton:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus { border: 1px solid %11; }
+        QPushButton:checked { background: %9; border-color: %11; color: %11; }
         QPushButton:disabled { color: %2; background: #151a1c; }
         QPushButton:checked:disabled { color: %2; background: %9; border-color: %10; }
-        QPushButton#captureMode { background: %3; border: 1px solid %4; border-radius: 12px; padding: 0; min-height: 144px; }
-        QPushButton#captureMode:checked { background: %9; border-color: %5; }
-        QPushButton#captureMode:hover, QPushButton#captureMode:focus { border-color: %5; }
+        QPushButton#captureMode { background: %3; border: 1px solid %4; border-radius: 12px; padding: 0; min-height: 92px; }
+        QPushButton#captureMode:checked { background: %9; border-color: %11; }
+        QPushButton#captureMode:hover, QPushButton#captureMode:focus { border-color: %11; }
         QPushButton#captureMode:checked:disabled { border-color: %7; }
         QPushButton#segment { border: 1px solid transparent; background: transparent; color: %2; font-weight: bold; }
-        QPushButton#segment:checked { color: %5; background: %9; }
+        QPushButton#segment:checked { color: %11; background: %9; }
         QPushButton#segment:checked:disabled { color: %2; background: %9; }
-        QPushButton#segment:hover, QPushButton#segment:focus { border-color: %5; }
+        QPushButton#segment:hover, QPushButton#segment:focus { border-color: %11; }
         QPushButton#hideOverlay, QPushButton#refreshClips { background: transparent; padding: 2px 8px; }
         QPushButton#refreshClips { font-size: 17px; }
         QPushButton#sectionLink { padding: 3px 11px; min-height: 20px; }
-        QPushButton#sectionLink:hover { color: %5; }
+        QPushButton#sectionLink:hover { color: %11; }
         QPushButton#settingsLink { background: transparent; text-align: left; color: %2; border-color: transparent; padding: 1px 0; }
-        QPushButton#settingsLink:hover { color: %5; }
-        QPushButton#settingsLink:focus { border-color: %5; }
+        QPushButton#settingsLink:hover { color: %11; }
+        QPushButton#settingsLink:focus { border-color: %11; }
         QPushButton#primary, QPushButton#captureAction { background: %5; color: %8; border: 1px solid transparent; font-weight: bold; }
         QPushButton#captureAction { min-height: 27px; }
-        QPushButton#primary:hover, QPushButton#captureAction:hover { background: %6; }
-        QPushButton#primary:focus, QPushButton#captureAction:focus { border-color: #fff; }
+        QPushButton#primary:hover, QPushButton#captureAction:hover { background: %6; color: %13; }
+        QPushButton#primary:pressed, QPushButton#captureAction:pressed { background: %7; color: %14; }
+        QPushButton#primary:focus, QPushButton#captureAction:focus { border-color: %8; }
         QPushButton#primary:disabled, QPushButton#captureAction:disabled { background: %10; color: %2; }
-        QCheckBox { spacing: 8px; padding: 6px 0; }
+        QCheckBox { spacing: 9px; padding: 7px 0; }
+        QCheckBox::indicator { width: 18px; height: 18px; border: 2px solid #71818b; border-radius: 4px; background: #111619; }
+        QCheckBox::indicator:hover { border-color: %11; }
+        QCheckBox::indicator:checked { background: %5; border-color: %11; image: url(%12); }
+        QCheckBox::indicator:disabled { border-color: #56636b; background: #20262a; }
+        QCheckBox::indicator:checked:disabled { background: %5; border-color: %11; image: url(%12); }
         QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit { background: #101416; border: 1px solid %4; border-radius: 6px; padding: 6px; selection-background-color: %10; selection-color: %1; }
         QComboBox { padding-right: 27px; }
         QComboBox::drop-down { border: 0; width: 25px; subcontrol-origin: padding; }
@@ -155,12 +184,17 @@ void applyTheme(QWidget *widget, const QString &name) {
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
         QListWidget { background: #101416; border: 1px solid %4; border-radius: 8px; padding: 6px; }
         QListWidget::item { padding: 10px; }
-        QListWidget::item:selected { background: %9; color: %5; }
+        QListWidget::item:selected { background: %9; color: %11; }
         QTableWidget { background: #101416; border: 1px solid %4; border-radius: 6px; gridline-color: %4; }
         QHeaderView::section { background: %3; color: %2; border: 0; padding: 5px; }
-        QToolTip { background: #181d20; color: %1; border: 1px solid %4; }
+        QToolTip { background: #252d32; color: %1; border: 1px solid #46525a; padding: 5px 7px; }
+        QLabel#settingsError { color: #ff9999; }
+        QKeySequenceEdit { background: #111619; border: 1px solid %4; border-radius: 6px; padding: 2px; }
     )").arg(colors.value("ColorTextPrimary", "#e7ecea"), colors.value("ColorTextSecondary", "#8b969d"),
              colors.value("ColorBgSurface", "#181d20"), colors.value("ColorBorder", "#242a2e"), accent.color, accent.hover, accent.dim, accent.text,
-             tint(QColor("#141719"), color, 13), tint(QColor("#141719"), color, 24)));
+             tint(QColor("#141719"), color, 13), tint(QColor("#141719"), color, 24),
+             accent.text == "#ffffff" ? tint(color, Qt::white, 60) : accent.color,
+             accent.text == "#ffffff" ? ":/shadowless/check-light.svg" : ":/shadowless/check.svg",
+             contrastText(QColor(accent.hover)), contrastText(QColor(accent.dim))));
 }
 } // namespace Shadowless

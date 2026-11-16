@@ -7,6 +7,7 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QVersionNumber>
+#include <QDebug>
 
 namespace Shadowless {
 static constexpr qint64 maximumAsset = 512LL * 1024 * 1024;
@@ -64,7 +65,8 @@ QString installAppImage(const QString &destination, const QString &download, con
     if (!target.commit()) return target.errorString();
     return {};
 }
-UpdateService::UpdateService(QObject *parent) : QObject(parent) {}
+UpdateService::UpdateService(QObject *parent, QNetworkAccessManager *network)
+    : QObject(parent), m_transport(network ? network : &m_network) {}
 bool UpdateService::enabled() {
 #ifdef SHADOWLESS_PUBLIC_UPDATES
     return true;
@@ -87,7 +89,7 @@ void UpdateService::page(int number, bool interactive) {
     request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
     request.setTransferTimeout(15000);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
-    auto *reply = m_network.get(request); m_reply = reply;
+    auto *reply = m_transport->get(request); m_reply = reply;
     reply->setReadBufferSize(128 * 1024);
     auto data = std::make_shared<QByteArray>();
     connect(reply, &QNetworkReply::readyRead, this, [reply, data] {
@@ -96,7 +98,16 @@ void UpdateService::page(int number, bool interactive) {
     connect(reply, &QNetworkReply::finished, this, [this, reply, data, number, interactive] {
         m_reply.clear(); reply->deleteLater();
         if (reply->error() != QNetworkReply::NoError || reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() != 200) {
-            if (interactive) emit status("Cannot check GitHub releases. Check your connection and try again.");
+            const auto http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            QString message;
+            if (http == 403 || http == 429)
+                message = QString("GitHub refused the update check (HTTP %1). The public API may be rate-limited; wait and try again.").arg(http);
+            else if (reply->error() == QNetworkReply::SslHandshakeFailedError)
+                message = "The update check failed during TLS verification. Check the system clock and trusted certificates. " + reply->errorString();
+            else
+                message = QString("Cannot check GitHub releases (HTTP %1): %2").arg(http).arg(reply->errorString());
+            qWarning().noquote() << "Shadowless updates:" << message;
+            if (interactive) emit status(message);
             return;
         }
         QJsonParseError error;
@@ -129,7 +140,7 @@ void UpdateService::download(const LinuxRelease &release) {
     QNetworkRequest request(release.url);
     request.setTransferTimeout(60000);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::UserVerifiedRedirectPolicy);
-    auto *reply = m_network.get(request); m_reply = reply;
+    auto *reply = m_transport->get(request); m_reply = reply;
     reply->setReadBufferSize(128 * 1024);
     connect(reply, &QNetworkReply::redirected, this, [reply](const QUrl &url) {
         if (url.scheme() == "https" && url.userInfo().isEmpty() && url.port(-1) == -1

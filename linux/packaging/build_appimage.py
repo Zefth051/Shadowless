@@ -99,10 +99,12 @@ def stage_qt_plugins(appdir):
     selected = [tls]
     for pattern in ["platforms/libqwayland*.so", "platforms/libqoffscreen.so", "wayland-shell-integration/lib*.so",
                     "wayland-graphics-integration-client/lib*.so", "imageformats/libqjpeg.so", "imageformats/libqgif.so",
-                    "imageformats/libqwebp.so", "imageformats/libqsvg.so", "iconengines/libqsvgicon.so", "multimedia/lib*.so"]:
+                    "imageformats/libqwebp.so", "imageformats/libqsvg.so", "imageformats/libqico.so", "iconengines/libqsvgicon.so", "multimedia/lib*.so"]:
         selected.extend(plugins.glob(pattern))
     if not any(path.name.startswith("libqwayland") for path in selected) or not (plugins / "imageformats/libqsvg.so").is_file():
         raise FileNotFoundError("Install the Qt Wayland and SVG plugins before packaging.")
+    if not (plugins / "imageformats/libqico.so").is_file():
+        raise FileNotFoundError("Install the Qt ICO image plugin before packaging application icons.")
     for path in selected:
         target = appdir / "usr/plugins" / path.relative_to(plugins)
         target.parent.mkdir(parents=True, exist_ok=True)

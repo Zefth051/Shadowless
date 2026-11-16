@@ -11,7 +11,11 @@ check_dependencies() {
             missing=1
         fi
     done
-    for tool in ffmpeg ffprobe hyprctl pactl pw-loopback; do
+    tools="ffmpeg ffprobe pactl pw-loopback"
+    case ":${XDG_CURRENT_DESKTOP:-}:" in
+        *:[Hh][Yy][Pp][Rr][Ll][Aa][Nn][Dd]:*) tools="$tools hyprctl" ;;
+    esac
+    for tool in $tools; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             printf 'Shadowless needs the host tool: %s\n' "$tool" >&2
             missing=1

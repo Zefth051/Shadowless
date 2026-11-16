@@ -1,5 +1,9 @@
 #include "audio.h"
 #include <QElapsedTimer>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QStandardPaths>
 #include <QtConcurrentRun>
 #include <QThread>
@@ -74,6 +78,20 @@ AudioCatalog AudioCatalog::probe(const QString &program) {
         if (!name.contains('|') && !name.contains('\r')) catalog.applications.append(name);
     catalog.applications.removeDuplicates();
     catalog.applications.sort(Qt::CaseInsensitive);
+    const auto streams = run("pactl", {"-f", "json", "list", "sink-inputs"});
+    if (streams.ok) {
+        for (const auto &entry : QJsonDocument::fromJson(streams.output.toUtf8()).array()) {
+            const auto properties = entry.toObject().value("properties").toObject();
+            const auto name = properties.value("application.name").toString();
+            if (!catalog.applications.contains(name)) continue;
+            const auto icon = properties.value("application.icon_name").toString().trimmed();
+            if (!icon.isEmpty()) catalog.applicationIcons.insert(name, icon);
+            else if (!catalog.applicationIcons.contains(name)) {
+                const auto binary = QFileInfo(properties.value("application.process.binary").toString()).fileName();
+                if (!binary.isEmpty()) catalog.applicationIcons.insert(name, binary);
+            }
+        }
+    }
     return catalog;
 }
 

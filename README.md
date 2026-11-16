@@ -24,6 +24,11 @@ GSR interface is needed. The existing 0.2.4 draft still requires host GSR.
   <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
 </p>
 
+Current Linux source also adds Plasma 6 Wayland startup/portal support, custom HEX
+accents and a compact native UI refresh. These changes are not yet published;
+live Plasma capture and desktop integration remain unverified. See the
+[Linux roadmap](docs/ROADMAP.md) for the scoped QOL work.
+
 ## Current release status
 
 **Public source and releases.** Linux 0.3.3 is available as an AppImage with

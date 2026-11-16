@@ -1,5 +1,6 @@
 #include "controller.h"
 #include "desktop_entry.h"
+#include "../platform/hyprland/desktop_session.h"
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
@@ -40,8 +41,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (parser.isSet("quit") || parser.isSet("save") || parser.isSet("hide")) { fprintf(stderr, "Shadowless is not running.\n"); return 1; }
-    if (QGuiApplication::platformName() != "wayland" || !qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains("Hyprland", Qt::CaseInsensitive)) {
-        fprintf(stderr, "This Shadowless build requires a native Wayland session on Hyprland.\n"); return 1;
+    if (!Shadowless::isSupportedWaylandDesktop(QGuiApplication::platformName(), qEnvironmentVariable("XDG_CURRENT_DESKTOP"))) {
+        fprintf(stderr, "This Shadowless build requires native Wayland on Hyprland or Plasma 6.\n"); return 1;
     }
     QLockFile lock(QDir(runtime).filePath("shadowless-linux.lock"));
     if (!lock.tryLock(0)) { fprintf(stderr, "Another Shadowless instance is starting.\n"); return 1; }

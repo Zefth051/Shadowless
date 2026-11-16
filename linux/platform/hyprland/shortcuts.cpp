@@ -1,4 +1,5 @@
 #include "shortcuts.h"
+#include "desktop_session.h"
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusMetaType>
@@ -22,10 +23,12 @@ const QDBusArgument &operator>>(const QDBusArgument &a, PortalShortcut &s) {
 }
 Shortcuts::Shortcuts(QObject *parent) : QObject(parent), m_bus(QDBusConnection::connectToBus(QDBusConnection::SessionBus, "shadowless-shortcuts")) {
     qDBusRegisterMetaType<PortalShortcut>(); qDBusRegisterMetaType<PortalShortcuts>();
+    m_hyprland = isHyprlandDesktop();
     auto bus = m_bus;
     bus.connect(service, {}, "org.freedesktop.portal.Request", "Response", this, SLOT(response(uint,QVariantMap,QDBusMessage)));
     const bool connected = bus.connect(service, path, interface, "Activated", this, SLOT(triggered(QDBusObjectPath,QString,qulonglong,QVariantMap)));
     if (!connected) qWarning() << "Shadowless shortcut subscription failed:" << bus.lastError();
+    bus.connect(service, path, interface, "ShortcutsChanged", this, SLOT(shortcutsChanged(QDBusObjectPath,Shadowless::PortalShortcuts)));
     m_timeout.setSingleShot(true);
     connect(this, &Shortcuts::status, this, [](const QString &message) { qInfo().noquote() << "Shadowless shortcuts:" << message; });
     connect(&m_timeout, &QTimer::timeout, this, [this] {
@@ -36,18 +39,28 @@ Shortcuts::Shortcuts(QObject *parent) : QObject(parent), m_bus(QDBusConnection::
         if (m_eventBuffer.size() > 65536) { m_eventBuffer.clear(); return; }
         while (m_eventBuffer.contains('\n')) {
             const auto end = m_eventBuffer.indexOf('\n'); const auto line = m_eventBuffer.left(end); m_eventBuffer.remove(0, end + 1);
-            if (line.startsWith("configreloaded>>") && m_stage == 3) { m_owned.clear(); installBindings(); }
+            if (m_hyprland && line.startsWith("configreloaded>>") && m_stage == 3) { m_owned.clear(); installBindings(); }
         }
     });
     const auto runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
     const auto signature = qEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE");
-    if (!signature.isEmpty()) m_events.connectToServer(QDir(runtime).filePath("hypr/" + signature + "/.socket2.sock"));
+    if (m_hyprland && !signature.isEmpty()) m_events.connectToServer(QDir(runtime).filePath("hypr/" + signature + "/.socket2.sock"));
 }
 Shortcuts::~Shortcuts() {
     removeBindings();
+    closeSession();
+}
+void Shortcuts::closeSession() {
+    m_timeout.stop();
+    if (!m_request.isEmpty()) {
+        auto request = QDBusMessage::createMethodCall(service, m_request, "org.freedesktop.portal.Request", "Close");
+        m_bus.asyncCall(request);
+        m_request.clear();
+    }
     if (!m_session.isEmpty()) {
         auto message = QDBusMessage::createMethodCall(service, m_session, "org.freedesktop.portal.Session", "Close");
         m_bus.asyncCall(message);
+        m_session.clear();
     }
 }
 void Shortcuts::call(const QString &method, const QVariantList &args, const QString &token) {
@@ -56,7 +69,8 @@ void Shortcuts::call(const QString &method, const QVariantList &args, const QStr
     m_request = "/org/freedesktop/portal/desktop/request/" + sender + "/" + token;
     auto message = QDBusMessage::createMethodCall(service, path, interface, method); message.setArguments(args);
     auto *watcher = new QDBusPendingCallWatcher(bus.asyncCall(message), this);
-    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, request = m_request] {
+        if (request != m_request) { watcher->deleteLater(); return; }
         const QDBusPendingReply<QDBusObjectPath> reply = *watcher;
         if (reply.isError()) { m_timeout.stop(); emit status("Global shortcuts unavailable: " + reply.error().message() + ". Use the tray or --toggle."); }
         watcher->deleteLater();
@@ -72,32 +86,60 @@ void Shortcuts::start() {
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
         const QDBusPendingReply<> reply = *watcher;
         if (reply.isError()) emit status("Cannot register Shadowless's shortcut identity: " + reply.error().message());
-        else createSession();
+        else { m_registered = true; createSession(); }
         watcher->deleteLater();
     });
 }
 void Shortcuts::createSession() {
+    m_stage = 1;
     const auto token = "shadowless_" + QUuid::createUuid().toString(QUuid::Id128);
     call("CreateSession", {QVariantMap{{"handle_token", token}, {"session_handle_token", token}}}, token);
 }
 void Shortcuts::response(uint code, const QVariantMap &results, const QDBusMessage &message) {
     if (message.path() != m_request) return;
     m_timeout.stop();
+    m_request.clear();
     if (code != 0) { emit status("Global shortcut setup was cancelled or rejected. Use the tray or --toggle."); return; }
     if (m_stage == 1) {
         m_session = results.value("session_handle").toString();
         if (m_session.isEmpty()) { emit status("The shortcut portal returned no session."); return; }
         m_stage = 2;
         const auto token = "shadowless_" + QUuid::createUuid().toString(QUuid::Id128);
-        const PortalShortcuts shortcuts{
-            {"toggle-overlay", {{"description", "Show or hide Shadowless"}, {"preferred_trigger", "ALT+z"}}},
-            {"save-replay", {{"description", "Save Shadowless replay"}, {"preferred_trigger", "CTRL+SHIFT+F10"}}},
-            {"toggle-capture", {{"description", "Start or stop Shadowless capture"}, {"preferred_trigger", "ALT+F10"}}}};
+        const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture"};
+        const QStringList descriptions{"Show or hide Shadowless", "Save Shadowless replay", "Start or stop Shadowless capture"};
+        PortalShortcuts shortcuts;
+        for (int i = 0; i < ids.size(); ++i) {
+            HyprBinding binding;
+            QVariantMap properties{{"description", descriptions[i]}};
+            if (HyprBinding::parse(m_keys[i], ids[i], &binding)) {
+                auto modifiers = binding.modifiers.split(' ', Qt::SkipEmptyParts);
+                modifiers.replaceInStrings("SUPER", "LOGO");
+                modifiers << (binding.key.size() == 1 ? binding.key.toLower() : binding.key);
+                properties.insert("preferred_trigger", modifiers.join('+'));
+            }
+            shortcuts.append({ids[i], properties});
+        }
         call("BindShortcuts", {QVariant::fromValue(QDBusObjectPath(m_session)), QVariant::fromValue(shortcuts), QString{}, QVariantMap{{"handle_token", token}}}, token);
     } else {
         m_stage = 3;
-        installBindings();
+        if (m_hyprland) installBindings();
+        else reportBindings(qdbus_cast<PortalShortcuts>(results.value("shortcuts")));
     }
+}
+void Shortcuts::shortcutsChanged(const QDBusObjectPath &session, const PortalShortcuts &shortcuts) {
+    if (!m_hyprland && session.path() == m_session) reportBindings(shortcuts);
+}
+void Shortcuts::reportBindings(const PortalShortcuts &shortcuts) {
+    const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture"};
+    const QStringList labels{"Overlay", "Save replay", "Capture"};
+    QStringList messages;
+    for (int i = 0; i < ids.size(); ++i) {
+        QString trigger;
+        for (const auto &shortcut : shortcuts)
+            if (shortcut.id == ids[i]) trigger = shortcut.properties.value("trigger_description").toString();
+        messages << labels[i] + ": " + (trigger.isEmpty() ? QString("not assigned by the desktop") : trigger);
+    }
+    emit status(messages.join(" · "));
 }
 void Shortcuts::triggered(const QDBusObjectPath &session, const QString &id, qulonglong, const QVariantMap &) {
     if (session.path() == m_session) emit activated(id);
@@ -109,9 +151,12 @@ static QByteArray hyprctl(const QStringList &arguments) {
 }
 void Shortcuts::setKeys(const QStringList &keys) {
     if (keys.size() != 3 || keys == m_keys) return;
-    removeBindings(); m_keys = keys; if (m_stage == 3) installBindings();
+    removeBindings();
+    m_keys = keys;
+    if (m_registered) { closeSession(); createSession(); }
 }
 void Shortcuts::installBindings() {
+    if (!m_hyprland) return;
     QJsonParseError error; auto document = QJsonDocument::fromJson(hyprctl({"-j", "binds"}), &error);
     if (error.error != QJsonParseError::NoError || !document.isArray()) { emit status("Cannot inspect Hyprland bindings. Use the tray or --toggle."); return; }
     const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture"};
@@ -158,6 +203,7 @@ void Shortcuts::installBindings() {
     emit status(messages.join(" · "));
 }
 void Shortcuts::removeBindings() {
+    if (!m_hyprland || m_owned.isEmpty()) return;
     const auto bindings = QJsonDocument::fromJson(hyprctl({"-j", "binds"})).array();
     for (const auto &binding : m_owned) {
         if (m_lua) {

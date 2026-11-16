@@ -27,9 +27,11 @@ checks and downloads. TLS uses the system certificate trust store.
 
 ## Host requirements
 
-Hyprland on native Wayland, compatible graphics drivers, PipeWire/pipewire-pulse,
+Hyprland or Plasma 6 on native Wayland, compatible graphics drivers, PipeWire/pipewire-pulse,
 `ffmpeg`, `ffprobe`,
-`hyprctl`, `pactl` and `pw-loopback` must be installed through the distribution.
+`pactl` and `pw-loopback` must be installed through the distribution. Hyprland
+also requires `hyprctl`; Plasma uses the desktop shortcut portal. Current source
+adds Plasma support; previous published binaries are unchanged.
 GSR does not need to be installed. Only the recording engine and helper are
 included, without GSR UI/services. The overlay uses the bundled source header.
 Direct KMS capture may ask for Polkit administrator authentication. The managed
@@ -68,3 +70,6 @@ their license/copyright texts and provide corresponding source and build inputs
 to recipients. A source archive of Shadowless alone does not cover bundled Qt,
 libmpv, FFmpeg or their transitive libraries. The generated manifest is an
 inventory, not certification that those obligations are satisfied.
+
+The package includes Qt SVG and ICO readers for bundled and desktop application
+icons. Missing ICO support fails staging instead of shipping an empty app icon.

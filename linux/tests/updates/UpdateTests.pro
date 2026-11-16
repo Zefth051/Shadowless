@@ -5,3 +5,5 @@ TARGET = shadowless-update-tests
 SOURCES += tst_updates.cpp ../../app/update_service.cpp
 HEADERS += ../../app/update_service.h
 QMAKE_CXXFLAGS += -Wall -Wextra -Werror
+
+DEFINES += SHADOWLESS_PUBLIC_UPDATES

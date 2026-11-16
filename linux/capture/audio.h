@@ -2,6 +2,7 @@
 
 #include "gsr_capture.h"
 #include <QFutureWatcher>
+#include <QHash>
 #include <QList>
 #include <atomic>
 
@@ -14,6 +15,7 @@ struct AudioDevice {
 struct AudioCatalog {
     QList<AudioDevice> outputs, inputs;
     QStringList applications;
+    QHash<QString, QString> applicationIcons;
     QString error;
     static AudioCatalog probe(const QString &program = managedGsrProgram());
 };

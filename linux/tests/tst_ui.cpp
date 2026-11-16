@@ -11,6 +11,7 @@
 #include "../ui/clip_notification.h"
 #include "../ui/theme.h"
 #include <QCheckBox>
+#include <QGraphicsOpacityEffect>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QKeySequenceEdit>
@@ -28,9 +29,11 @@
 #include <QJsonObject>
 #include <QSpinBox>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QWheelEvent>
 #include <algorithm>
 #include <clocale>
+#include <cmath>
 #include <QScopeGuard>
 #include <QDesktopServices>
 #include <QUrl>
@@ -51,6 +54,68 @@ class UiTests : public QObject {
     QUrl m_openedUrl;
 private slots:
     void captureOpenedUrl(const QUrl &url) { m_openedUrl = url; }
+    void authenticationReleasesOverlayAndRestoresVisibility() {
+        QTemporaryDir directory;
+        QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, directory.path());
+        Controller controller(caps, {}, false);
+        auto *engine = controller.findChild<GsrCapture *>(); QVERIFY(engine);
+        Dashboard *dashboard = nullptr;
+        for (auto *widget : QApplication::topLevelWidgets())
+            if (auto *candidate = qobject_cast<Dashboard *>(widget)) dashboard = candidate;
+        QVERIFY(dashboard); QVERIFY(dashboard->isVisible());
+        const auto auth = [engine](bool active) {
+            return QMetaObject::invokeMethod(engine, "authenticationChanged", Q_ARG(bool, active));
+        };
+        QVERIFY(auth(true)); QVERIFY(!dashboard->isVisible());
+        controller.command("show"); QVERIFY(!dashboard->isVisible());
+        QVERIFY(auth(false)); QVERIFY(dashboard->isVisible());
+        controller.command("hide");
+        QVERIFY(auth(true)); QVERIFY(auth(false)); QVERIFY(!dashboard->isVisible());
+        controller.command("show"); QVERIFY(auth(true));
+        controller.command("hide"); QVERIFY(auth(false)); QVERIFY(!dashboard->isVisible());
+    }
+    void activeCaptureNoticeStaysVisibleAndFieldsDim() {
+        SettingsPage page(caps); applyTheme(&page, "violet");
+        page.resize(560, 650); page.edit(GsrOptions{}, false, true, keys); page.show();
+        auto *notice = page.findChild<QLabel *>("captureActiveNotice"); QVERIFY(notice);
+        auto *fields = page.findChild<QWidget *>("captureSettings"); QVERIFY(fields);
+        auto *effect = qobject_cast<QGraphicsOpacityEffect *>(fields->graphicsEffect()); QVERIFY(effect);
+        QVERIFY(!fields->isEnabled()); QCOMPARE(effect->opacity(), .84);
+        page.showAudio(); QTest::qWait(20);
+        QVERIFY(notice->isVisible()); QVERIFY(page.rect().contains(notice->mapTo(&page, QPoint())));
+        page.setCaptureActive(false); QVERIFY(fields->isEnabled());
+        QVERIFY(!notice->isVisible()); QCOMPARE(effect->opacity(), 1.);
+    }
+    void noticesStayOnDashboard() {
+        Dashboard dashboard(caps); dashboard.show();
+        dashboard.notice("Capture diagnostic");
+        auto *notice = dashboard.findChild<QLabel *>("notice"); QVERIFY(notice);
+        QVERIFY(notice->isVisible());
+        dashboard.findChild<QPushButton *>("openSettings")->click();
+        QVERIFY(!notice->isVisible());
+        dashboard.notice("Another diagnostic");
+        QVERIFY(!notice->isVisible());
+        dashboard.home(); QVERIFY(notice->isVisible());
+        QCOMPARE(notice->text(), QString("Another diagnostic"));
+        dashboard.findChild<QPushButton *>("openOverlays")->click();
+        QVERIFY(!notice->isVisible());
+        dashboard.home(); dashboard.notice(""); QVERIFY(!notice->isVisible());
+    }
+    void disabledCheckboxKeepsCheckedFill() {
+        QWidget host; applyTheme(&host, "violet");
+        QCheckBox check("Enabled option", &host);
+        host.resize(240, 60); check.setGeometry(10, 10, 220, 40);
+        host.show(); check.setEnabled(false);
+        check.setChecked(false); QCoreApplication::processEvents();
+        const auto unchecked = check.grab().toImage();
+        check.setChecked(true); QCoreApplication::processEvents();
+        const auto checked = check.grab().toImage();
+        int changed = 0;
+        for (int y = 0; y < checked.height(); ++y)
+            for (int x = 0; x < 18 * check.devicePixelRatioF(); ++x)
+                if (checked.pixelColor(x, y) != unchecked.pixelColor(x, y)) ++changed;
+        QVERIFY2(changed > 100, "Disabled checked boxes must keep a distinct filled background");
+    }
     void startupOptionsAreIndependentAndPersisted() {
         QTemporaryDir directory;
         const auto path = directory.filePath("settings.ini");
@@ -84,6 +149,21 @@ private slots:
         QVERIFY(!error.isEmpty());
         QVERIFY(!settings.launchAtLogin());
         QVERIFY(!settings.startReplayOnLaunch());
+    }
+    void libraryActionsFitNarrowPanel() {
+        QTemporaryDir directory;
+        for (int i = 0; i < 10; ++i) {
+            QFile clip(directory.filePath(QString("Replay_2026-11-15_01-37-%1.mp4").arg(i)));
+            QVERIFY(clip.open(QIODevice::WriteOnly)); clip.write("fixture");
+        }
+        Library library; applyTheme(&library, "mint");
+        library.setFixedSize(400, 550); library.show(); library.refresh(directory.path());
+        QTRY_COMPARE(library.findChildren<QPushButton *>("deleteClip").size(), 10);
+        QTest::qWait(100);
+        auto *scroll = library.findChild<QScrollArea *>(); QVERIFY(scroll);
+        for (auto *action : library.findChildren<QPushButton *>("deleteClip")) {
+            QVERIFY(action->mapTo(scroll->viewport(), QPoint(action->width(), 0)).x() <= scroll->viewport()->width());
+        }
     }
     void libraryOpensContainingGameFolder() {
         QTemporaryDir directory;
@@ -310,7 +390,7 @@ private slots:
             dashboard.resize(size);
             QCoreApplication::processEvents();
             for (auto *tile : tiles) {
-                QVERIFY(tile->height() >= 140);
+                QVERIFY(tile->height() >= 88 && tile->height() <= 100);
                 QVERIFY(tile->parentWidget()->rect().contains(tile->geometry()));
             }
         }
@@ -831,6 +911,75 @@ private slots:
         QCOMPARE(options.frameRate, 75);
         QCOMPARE(options.bitrateMbps, 27);
     }
+    void customHexAccentPersistsAndRejectsInvalidInput() {
+        QTemporaryDir directory;
+        Settings settings(directory.filePath("settings.ini"));
+        SettingsPage page(caps);
+        GsrOptions options; options.source = "DP-1"; options.outputDirectory = directory.path();
+        page.edit(options, false, false, keys, "#39a7f0");
+        auto *selector = page.findChild<QComboBox *>("accentColor");
+        auto *hex = page.findChild<QLineEdit *>("customAccent");
+        QVERIFY(hex); QCOMPARE(hex->text(), "#39a7f0");
+        QCOMPARE(selector->currentData().toString(), "custom");
+        QSignalSpy saved(&page, &SettingsPage::saved);
+        button(&page, "Save settings")->click();
+        QCOMPARE(saved.size(), 1); QCOMPARE(saved.first()[3].toString(), "#39a7f0");
+        QString error;
+        QVERIFY(settings.save(options, {}, false, &error, keys, saved.first()[3].toString()));
+        QCOMPARE(Settings(directory.filePath("settings.ini")).accent(), "#39a7f0");
+        Dashboard dashboard(caps); dashboard.setAccent(settings.accent());
+        QCOMPARE(dashboard.palette().color(QPalette::Accent), QColor("#39a7f0"));
+        QVERIFY(!dashboard.windowIcon().pixmap(22, 22).isNull());
+        hex->setText("#xyz"); button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 1);
+        selector->setCurrentIndex(selector->findData("mint"));
+        button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 2);
+        QCOMPARE(saved.last()[3].toString(), "mint");
+    }
+    void customAccentsKeepReadableForegrounds() {
+        for (const auto &value : {"#000000", "#ffffff", "#39a7f0"}) {
+            QWidget widget; applyTheme(&widget, value);
+            QCOMPARE(accentColor(value), QColor(value));
+            const auto foreground = widget.palette().color(QPalette::HighlightedText);
+            const auto background = widget.palette().color(QPalette::Highlight);
+            QVERIFY(qAbs(qGray(foreground.rgb()) - qGray(background.rgb())) >= 100);
+        }
+        QCOMPARE(accentColor("#xyz"), accentColor("violet"));
+    }
+    void customAccentButtonStatesRemainReadable() {
+        const auto luminance = [](const QColor &color) {
+            const auto linear = [](double c) { return c <= .04045 ? c / 12.92 : std::pow((c + .055) / 1.055, 2.4); };
+            return .2126 * linear(color.redF()) + .7152 * linear(color.greenF()) + .0722 * linear(color.blueF());
+        };
+        const auto contrast = [&](const QColor &a, const QColor &b) {
+            const auto x = luminance(a), y = luminance(b);
+            return (qMax(x, y) + .05) / (qMin(x, y) + .05);
+        };
+        for (const auto &accent : {"#757575", "#808080", "#39a7f0", "#ffffff"}) {
+            QPushButton action("MMMM"); action.setObjectName("primary");
+            applyTheme(&action, accent); action.resize(200, 50); action.show();
+            action.clearFocus(); QCoreApplication::processEvents();
+            QColor baseFill;
+            for (int state : {0, 1, 2}) {
+                QTest::mouseMove(&action, state == 1 ? QPoint(100, 25) : QPoint(-10, -10));
+                action.setAttribute(Qt::WA_UnderMouse, state == 1);
+                action.setDown(state == 2); QCoreApplication::processEvents();
+                const auto image = action.grab().toImage();
+                const auto fill = image.pixelColor(20, 25);
+                if (state == 0) baseFill = fill;
+                else if (state != 1 || QString(accent) != "#ffffff")
+                    QVERIFY2(fill != baseFill, "The rendered button must enter its hover/pressed state.");
+                double strongest = 1;
+                for (int y = 17; y < 33; ++y) for (int x = 70; x < 130; ++x)
+                    strongest = qMax(strongest, contrast(fill, image.pixelColor(x, y)));
+                QVERIFY2(strongest >= 4.5, accent);
+            }
+            action.setAttribute(Qt::WA_UnderMouse, false);
+            action.setDown(false); action.clearFocus();
+            const auto unfocused = action.grab().toImage();
+            action.setFocus(); QCoreApplication::processEvents();
+            QVERIFY2(unfocused != action.grab().toImage(), accent);
+        }
+    }
     void violetIsDefaultAndSavedAccentsArePreserved() {
         QTemporaryDir directory;
         const auto path = directory.filePath("settings.ini");
@@ -861,7 +1010,7 @@ private slots:
         page.edit(options, false, false, keys, settings.accent());
         const auto selector = page.findChild<QComboBox *>("accentColor");
         QVERIFY(selector);
-        QCOMPARE(selector->count(), 5);
+        QCOMPARE(selector->count(), 6);
         selector->setCurrentIndex(selector->findData("violet"));
         QSignalSpy saved(&page, &SettingsPage::saved);
         button(&page, "Save settings")->click();

@@ -26,6 +26,7 @@ signals:
 private slots:
     void response(uint code, const QVariantMap &results, const QDBusMessage &message);
     void triggered(const QDBusObjectPath &session, const QString &id, qulonglong timestamp, const QVariantMap &options);
+    void shortcutsChanged(const QDBusObjectPath &session, const Shadowless::PortalShortcuts &shortcuts);
 private:
     QString m_request, m_session;
     QDBusConnection m_bus;
@@ -36,10 +37,13 @@ private:
     QLocalSocket m_events;
     QByteArray m_eventBuffer;
     bool m_lua = false;
+    bool m_hyprland = false, m_registered = false;
     void call(const QString &method, const QVariantList &args, const QString &token);
     void createSession();
     void installBindings();
     void removeBindings();
+    void closeSession();
+    void reportBindings(const PortalShortcuts &shortcuts);
 };
 } // namespace Shadowless
 Q_DECLARE_METATYPE(Shadowless::PortalShortcut)

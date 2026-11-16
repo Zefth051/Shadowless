@@ -29,7 +29,7 @@ class AppImageTests(unittest.TestCase):
 
     def qt_plugin_fixture(self):
         plugins = self.root / "qt-plugins"
-        for name in ["platforms/libqwayland.so", "imageformats/libqsvg.so",
+        for name in ["platforms/libqwayland.so", "imageformats/libqsvg.so", "imageformats/libqico.so",
                      "wayland-shell-integration/liblayer-shell.so", "tls/libqopensslbackend.so"]:
             path = plugins / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -49,6 +49,7 @@ class AppImageTests(unittest.TestCase):
             self.module.stage_qt_plugins(appdir)
         self.assertEqual((appdir / "usr/plugins/tls/libqopensslbackend.so").read_text(),
                          "tls/libqopensslbackend.so")
+        self.assertTrue((appdir / "usr/plugins/imageformats/libqico.so").is_file())
         for name in ["libssl", "libcrypto"]:
             for suffix in [".so", ".so.3", ".so.3.6"]:
                 self.assertEqual((appdir / "usr/lib" / (name + suffix)).read_text(), name)
@@ -58,6 +59,13 @@ class AppImageTests(unittest.TestCase):
         (plugins / "tls/libqopensslbackend.so").unlink()
         with patch.object(self.module.subprocess, "check_output", side_effect=[str(plugins), str(libraries)]):
             with self.assertRaisesRegex(FileNotFoundError, "OpenSSL TLS"):
+                self.module.stage_qt_plugins(self.root / "AppDir")
+
+    def test_missing_ico_plugin_fails_packaging(self):
+        plugins, libraries = self.qt_plugin_fixture()
+        (plugins / "imageformats/libqico.so").unlink()
+        with patch.object(self.module.subprocess, "check_output", side_effect=[str(plugins), str(libraries)]):
+            with self.assertRaisesRegex(FileNotFoundError, "ICO image plugin"):
                 self.module.stage_qt_plugins(self.root / "AppDir")
 
     def test_missing_openssl_runtime_fails_packaging(self):
@@ -125,6 +133,22 @@ class AppImageTests(unittest.TestCase):
         result = subprocess.run([str(appdir / "AppRun"), "--help"], env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, str(host) + "|unset")
+
+    def test_plasma_dependency_check_does_not_require_hyprctl(self):
+        appdir = self.root / "AppDir"
+        self.module.stage_appdir(self.build, appdir)
+        host = self.root / "host"
+        host.mkdir()
+        for name in ["ffmpeg", "ffprobe", "pactl", "pw-loopback"]:
+            tool = host / name
+            tool.write_text("#!/bin/sh\nexit 0\n")
+            tool.chmod(0o755)
+        for desktop, expected in [("KDE", 0), ("KDE:Plasma", 0), ("Hyprland", 1)]:
+            with self.subTest(desktop=desktop):
+                result = subprocess.run([str(appdir / "AppRun"), "--check-dependencies"],
+                                        env={"PATH": str(host), "XDG_CURRENT_DESKTOP": desktop},
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, expected, result.stderr)
 
     def test_bundled_recorder_wins_over_conflicting_host_recorder(self):
         appdir = self.root / "AppDir"

@@ -34,3 +34,10 @@ Build inputs: `linux/engine/build.sh`, upstream Meson files, system development
 dependencies recorded in release `BUILD_PACKAGES.txt`; shared library hashes appear
 in the bundle manifest. Future engine patches belong in this source tree, with
 this provenance updated and recording regressions rerun.
+
+The KMS Polkit branch emits `shadowless-kms-auth: begin` immediately before
+`pkexec`, and `shadowless-kms-auth: end` after the helper connects. Shadowless
+uses these markers to release its overlay during required authentication.
+Direct privileged/capability launches and portal capture emit neither marker;
+failed authentication is cleared when the recorder exits. No authorization
+policy or credential handling is added.

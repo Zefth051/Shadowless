@@ -10,8 +10,11 @@
     <file alias="amber.ico">../../src/Shadowless/Assets/ShadowlessAmber.ico</file>
     <file alias="moon.png">../../src/Shadowless/Assets/ShadowlessMoon.png</file>
     <file>chevron.svg</file>
+    <file>check.svg</file>
+    <file>check-light.svg</file>
     <file>chevron-up.svg</file>
     <file>icons/settings.svg</file>
+    <file>icons/application.svg</file>
     <file>icons/layers.svg</file>
     <file>icons/replay.svg</file>
     <file>icons/record.svg</file>

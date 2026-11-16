@@ -1,4 +1,6 @@
 #include "../capture/gsr_capture.h"
+#include "../capture/audio.h"
+#include "../capture/replay_paths.h"
 #include <QFile>
 #include <QDateTime>
 #include <QJsonDocument>
@@ -17,6 +19,108 @@ class GsrTests : public QObject {
     Q_OBJECT
     const GsrCapabilities supported{"6.1.5", "nvidia", "wayland", {"h264", "hevc"}, {"DP-1", "portal"}};
 private slots:
+    void authenticationFollowsRecorderMarkers_data() {
+        QTest::addColumn<bool>("authorize");
+        QTest::addColumn<bool>("complete");
+        QTest::newRow("polkit-cancelled") << true << false;
+        QTest::newRow("polkit-accepted") << true << true;
+        QTest::newRow("no-polkit") << false << false;
+    }
+    void authenticationFollowsRecorderMarkers() {
+        QFETCH(bool, authorize);
+        QFETCH(bool, complete);
+        QTemporaryDir directory;
+        QFile script(directory.filePath("recorder.py")); QVERIFY(script.open(QIODevice::WriteOnly));
+        script.write("#!/usr/bin/python\nimport sys,time\nprint('ordinary diagnostic', flush=True)\n");
+        if (authorize) script.write(
+            "sys.stdout.write('gsr info: shadowless-kms-auth: be');sys.stdout.flush();time.sleep(.1)\n"
+            "print('gin', flush=True);time.sleep(.1)\n"
+            "print('gsr info: shadowless-kms-auth: begin', flush=True);time.sleep(.1)\n");
+        if (complete) script.write("print('gsr info: shadowless-kms-auth: end', flush=True);time.sleep(.5)\n");
+        script.write("time.sleep(.2)\nsys.exit(126)\n"); script.close();
+        QVERIFY(script.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        GsrCapture engine(nullptr, script.fileName());
+        QSignalSpy auth(&engine, SIGNAL(authenticationChanged(bool))); QVERIFY(auth.isValid());
+        QSignalSpy stopped(&engine, &GsrCapture::stopped);
+        GsrOptions options; options.source = "DP-1"; options.systemAudio = false; options.outputDirectory = directory.path();
+        engine.start(options, supported);
+        if (complete) { QTRY_COMPARE(auth.size(), 2); QVERIFY(engine.active()); QCOMPARE(stopped.size(), 0); }
+        QTRY_COMPARE(stopped.size(), 1);
+        QCOMPARE(auth.size(), authorize ? 2 : 0);
+        if (authorize) { QCOMPARE(auth[0][0].toBool(), true); QCOMPARE(auth[1][0].toBool(), false); }
+    }
+    void audioCatalogPreservesNamesAndAddsIcons() {
+        QTemporaryDir directory;
+        const auto previousPath = qgetenv("PATH");
+        const auto restore = qScopeGuard([&] { qputenv("PATH", previousPath); });
+        QFile recorder(directory.filePath("recorder")); QVERIFY(recorder.open(QIODevice::WriteOnly));
+        recorder.write("#!/bin/sh\ncase \"$1\" in\n--list-audio-devices) echo 'studio.monitor|Studio' ;;\n--list-application-audio) printf 'Browser\\nMusic\\nUnknown\\nBrowser\\n' ;;\nesac\n");
+        recorder.close(); QVERIFY(recorder.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        QFile pactl(directory.filePath("pactl")); QVERIFY(pactl.open(QIODevice::WriteOnly));
+        pactl.write(R"SH(#!/bin/sh
+if [ "$*" != '-f json list sink-inputs' ]; then exit 1; fi
+echo '[{"properties":{"application.name":"Browser","application.icon_name":"firefox","application.process.binary":"browser-bin"}},
+{"properties":{"application.name":"Browser","application.process.binary":"browser-bin"}},
+{"properties":{"application.name":"Music","application.process.binary":"/usr/bin/music-player"}},
+{"properties":{"application.name":"Not listed","application.icon_name":"other"}},
+{"properties":{"application.name":"Unknown"}}, {"properties":{}}]'
+)SH");
+        pactl.close(); QVERIFY(pactl.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        qputenv("PATH", directory.path().toUtf8());
+        auto catalog = AudioCatalog::probe(recorder.fileName());
+        QCOMPARE(catalog.applications, QStringList({"Browser", "Music", "Unknown"}));
+        QCOMPARE(catalog.applicationIcons.value("Browser"), QString("firefox"));
+        QCOMPARE(catalog.applicationIcons.value("Music"), QString("music-player"));
+        QVERIFY(!catalog.applicationIcons.contains("Unknown"));
+        QVERIFY(!catalog.applicationIcons.contains("Not listed"));
+        QVERIFY(catalog.error.isEmpty());
+        QVERIFY(pactl.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        pactl.write("#!/bin/sh\necho 'not json'\n"); pactl.close();
+        catalog = AudioCatalog::probe(recorder.fileName());
+        QCOMPARE(catalog.applications, QStringList({"Browser", "Music", "Unknown"}));
+        QVERIFY(catalog.applicationIcons.isEmpty()); QVERIFY(catalog.error.isEmpty());
+    }
+    void conflictingGameIdentitiesStayInRoot() {
+        QJsonObject window{{"mapped", true}, {"focusHistoryID", 0},
+            {"initialClass", "rocketleague.exe"}, {"class", "cs2.exe"}};
+        QVERIFY(gameForClients({window}).isEmpty());
+        window["class"] = "game.exe";
+        QVERIFY(gameForClients({window}).isEmpty());
+        window["initialClass"] = "steam_app_123";
+        window["initialTitle"] = "Native game";
+        QVERIFY(gameForClients({window}).isEmpty());
+        window["class"] = "unknown-native-game";
+        QCOMPARE(gameForClients({window}), QString("Native game"));
+        window["class"] = "cs2.exe";
+        QCOMPARE(gameForClients({window}), QString("Counter-Strike 2"));
+    }
+    void unidentifiedGamePreservesExistingClip() {
+        QTemporaryDir directory;
+        const auto path = directory.filePath("original.mp4");
+        QFile file(path); QVERIFY(file.open(QIODevice::WriteOnly)); file.write("saved clip"); file.close();
+        QString error;
+        QCOMPARE(routeClip(directory.path(), path, {}, &error), path);
+        QVERIFY(error.isEmpty());
+        QVERIFY(file.open(QIODevice::ReadOnly)); QCOMPARE(file.readAll(), QByteArray("saved clip"));
+        QCOMPARE(QDir(directory.path()).entryList(QDir::Dirs | QDir::NoDotAndDotDot).size(), 0);
+    }
+    void plasmaGameDetectionDoesNotQueryHyprland() {
+        QTemporaryDir directory;
+        const auto previousPath = qgetenv("PATH"), previousDesktop = qgetenv("XDG_CURRENT_DESKTOP");
+        const auto previousSession = qgetenv("XDG_SESSION_DESKTOP");
+        const auto restore = qScopeGuard([&] {
+            qputenv("PATH", previousPath); qputenv("XDG_CURRENT_DESKTOP", previousDesktop);
+            qputenv("XDG_SESSION_DESKTOP", previousSession);
+        });
+        QFile fake(directory.filePath("hyprctl")); QVERIFY(fake.open(QIODevice::WriteOnly));
+        fake.write("#!/bin/sh\necho '[{\"mapped\":true,\"focusHistoryID\":0,\"initialClass\":\"rocketleague.exe\"}]'\n");
+        fake.close(); QVERIFY(fake.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+        qputenv("PATH", directory.path().toUtf8()); qputenv("XDG_CURRENT_DESKTOP", "KDE");
+        qputenv("XDG_SESSION_DESKTOP", "KDE");
+        QVERIFY(currentGame().isEmpty());
+        qputenv("XDG_CURRENT_DESKTOP", "Hyprland");
+        QCOMPARE(currentGame(), QString("Rocket League"));
+    }
     void queuedStopKeepsReplayAndRecordingIdentity() {
         QTemporaryDir directory;
         const auto script = directory.filePath("recorder");

@@ -1,4 +1,5 @@
 #include "replay_paths.h"
+#include "../platform/hyprland/desktop_session.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -50,10 +51,14 @@ QString gameForClients(const QJsonArray &clients) {
                 }
             }
         }
+        QString matched;
         for (const auto &candidate : candidates) {
-            const auto name = catalog().value(executableName(candidate));
-            if (!name.isEmpty()) return name;
+            const auto identity = catalog().constFind(executableName(candidate));
+            if (identity == catalog().cend()) continue;
+            if (identity->isEmpty() || (!matched.isEmpty() && matched != *identity)) return {};
+            matched = *identity;
         }
+        if (!matched.isEmpty()) return matched;
         // Native Steam titles are not necessarily represented in the Windows catalog.
         if (window.value("initialClass").toString().startsWith("steam_app_")) {
             const auto title = window.value("initialTitle").toString().trimmed();
@@ -64,6 +69,7 @@ QString gameForClients(const QJsonArray &clients) {
     return {};
 }
 QString currentGame() {
+    if (!isHyprlandDesktop()) return {};
     QProcess query;
     query.start("hyprctl", {"-j", "clients"});
     if (!query.waitForStarted(500) || !query.waitForFinished(1000)) {

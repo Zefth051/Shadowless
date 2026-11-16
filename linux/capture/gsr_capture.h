@@ -88,6 +88,7 @@ signals:
     void error(const QString &message);
     void diagnostic(const QString &message);
     void recordingChanged(bool recording);
+    void authenticationChanged(bool pending);
 private:
     QString m_program, m_socketPath;
     GsrOptions m_options;
@@ -100,6 +101,9 @@ private:
     bool m_ready = false, m_stopping = false, m_stopQueued = false;
     bool m_replayRecording = false, m_preparingAudio = false;
     QStringList m_logTail;
+    QByteArray m_logBuffer;
+    bool m_authenticating = false;
+    void setAuthenticating(bool pending);
     void request(const QString &name, const QJsonValue &data = {});
     void startRecorder(const QString &output, const QString &input);
     void publishClip(const QString &path, bool recording);

@@ -4,6 +4,28 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-11-15
+
+### Improved
+
+- **Capture authorization:** Release the control overlay only when the managed KMS engine requests Polkit authorization, then restore its previous visibility after authorization or failure. Background startup stays hidden; an explicit hide or quit prevents restoration. System authorization is still required for direct KMS capture without existing privileges.
+- **Active capture settings:** Keep the capture-lock notice visible while scrolling and slightly dim locked fields, so it is clear why recording options cannot change until capture stops. Appearance, shortcuts and startup settings remain available.
+- **Settings readability:** Keep checked boxes visibly filled while capture locks their settings, enlarge checkbox indicators, and keep engine notices on the dashboard instead of settings or the editor.
+- **Appearance:** Add validated, persistent HEX accents with readable button text and keyboard focus, compact capture cards and consistent native control states.
+- **Recent clips:** Keep playback, containing-folder and Trash actions visible in narrow panels using adaptive filename elision.
+- **Game folders:** Reject conflicting game identities and preserve files when falling back to the output root. Plasma uses that fallback without invoking Hyprland tools.
+- **Application audio:** Use application icon metadata when available, with theme lookup and a bundled generic fallback. Include the Qt ICO reader for packaged app icons.
+- **Plasma Wayland:** Accept KDE Plasma sessions and use portal shortcuts, including configured triggers and desktop-approved assignments, without requiring Hyprland tools. Live Plasma capture and shortcut approval remain unverified.
+- **Updates:** Report HTTP/rate-limit and TLS failures with actionable details. Public discovery, verified download and atomic installation were exercised on temporary AppImages; the reported intermittent 0.3.3 check error has not been reproduced.
+
+### Upgrade notes
+
+- Use **Check for updates** from an update-enabled 0.3.3 AppImage, then quit and reopen after capture finishes. Keep the AppImage in a writable location. A manual AppImage installation remains available if the old build reports an error.
+
+### Known limitations
+
+- Live Plasma capture/shortcut approval and the real Polkit interaction still need desktop validation. The full HTTPS updater passes isolated download/install tests; a real public 0.3.3-to-0.3.4 upgrade remains an owner test after publication.
+
 ## [0.3.3] - 2026-11-13
 
 ### Improved

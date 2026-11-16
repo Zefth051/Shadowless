@@ -1,10 +1,13 @@
 # Shadowless for Linux
 
-Native C++17 / Qt 6 application for **Hyprland on Wayland**. Shadowless owns its
+Native C++17 / Qt 6 application for **Hyprland and Plasma 6 on Wayland**. Shadowless owns its
 control overlay, settings, library, and media-layer editor. A bundled, source-built
 `gpu-screen-recorder` process performs capture/encoding/replay buffering; a
 Shadowless plugin composites media layers.
 The initial capture experiment is documented in `docs/LINUX_GSR_SPIKE.md`.
+Plasma support is implemented in current source; the published 0.3.3 AppImage is
+unchanged. Live Plasma capture, layer surfaces, tray and shortcut approval still
+need validation in a real Plasma session.
 
 ## Build and run
 
@@ -43,7 +46,11 @@ No GSR graphical interface or service is included. Direct KMS capture can reques
 administrator authentication through Polkit for the matching helper only. The
 launcher stages that helper and its private libdrm outside AppImage's FUSE mount,
 then removes them on exit. It does not run Shadowless as root or install permanent
-capabilities. Engine changes are released together with Shadowless; provenance,
+capabilities. When this helper requests Polkit authorization, the control overlay
+hides so the system prompt can receive input, then restores its previous
+visibility after authorization or failure. Background startup stays hidden.
+Portal capture and direct capture with existing privileges do not trigger this
+handoff. Engine changes are released together with Shadowless; provenance,
 local modifications and build input hashes are in `linux/third_party/`.
 
 ## Controls and configuration
@@ -69,8 +76,9 @@ The library scans nested folders and offers **All games**, individual game folde
 and **Desktop / Unidentified** filters, showing the newest 20 clips in the selected
 collection. Detection queries the focused Hyprland client only when saving a replay
 or starting a recording. It uses the bundled Windows executable catalog (including
-Wine/Proton process metadata) and native Steam window identities. Unknown titles
-stay in the main folder; no game hooks or continuous detection are installed.
+Wine/Proton process metadata) and native Steam window identities. Unknown or conflicting identities
+stay in the main folder; no game hooks or continuous detection are installed. Plasma currently saves to
+the main folder because reliable focused-game detection is unavailable there.
 
 Saving shows a rounded passive card with a status icon and distinct title/detail,
 even with the dashboard hidden, and plays
@@ -130,7 +138,9 @@ atomically replacing the destination; failure/cancellation preserves the origina
 - `--toggle`, `--show`, `--hide`, `--save`, `--capture`, and `--quit` address the
   running instance. A second process does not create a second recorder.
 
-Shortcuts register through the desktop portal. Shadowless installs temporary
+Shortcuts register through the desktop portal using the configured triggers.
+On Plasma, the desktop approves bindings and Settings reports the assigned
+shortcuts; changing keys creates a fresh portal session. On Hyprland, Shadowless installs temporary
 Hyprland bindings using the current Lua API or the legacy keyword API. Existing
 conflicting bindings are preserved and reported in Settings. Bindings owned by
 Shadowless are removed on clean exit and restored after compositor config reload.
@@ -238,8 +248,8 @@ loads that plugin for composition and live preview, so this also excludes the cu
 when composition is disabled or the scene has no layers. This does not disable mouse input. Monitor capture can include the open
 control overlay and status indicator; exclusion is not promised.
 
-Only Hyprland is targeted. KDE/GNOME/X11 compatibility, HDR composition, webcam
-layers and game hooks remain outside this preview. AppImage packaging is available
+Hyprland and Plasma 6 Wayland are targeted. GNOME/X11 compatibility, HDR
+composition, webcam layers and game hooks remain outside this preview. AppImage packaging is available
 for local/private staging; see [the packaging guide](packaging/README.md) and
 [installation instructions](../docs/INSTALL.md). Native player/editor
 controls follow the Windows workflow; Windows runtime code is not used. Fullscreen
@@ -270,11 +280,23 @@ and stores short recorder CPU/RSS measurements beside clips. CPU is expressed
 as a percentage of one core. It does not measure game FPS or GPU execution time.
 See `docs/LINUX_HYPRLAND_OVERLAY.md` for actual coverage and remaining checks.
 
+## Appearance
+
+Settings → Appearance offers the existing named presets and **Custom HEX**. Enter
+a six-digit color such as `#39a7f0`; invalid values cannot be saved. The accent is
+preserved across launches, with readable text for normal, hover and pressed states.
+The dashboard uses compact capture cards and clip names adapt to the available
+width while playback, containing-folder and Trash actions remain accessible.
+
 ## Updates and AI development
 
 Public-enabled AppImages check `linux-vX.Y.Z` releases at startup. Use the tray
 menu to check manually. Downloads require confirmation and a valid GitHub SHA-256
-digest. The writable AppImage is replaced atomically; reopen Shadowless after
+digest. HTTP failures and TLS verification failures are reported distinctly and logged.
+For an opt-in real HTTPS discovery/download/checksum/install test against an
+isolated temporary AppImage, run
+`SHADOWLESS_TEST_PUBLIC_UPDATES=1 .qa/linux-build/tests/updates/shadowless-update-tests publicRuntimeUpdateRoundTrip`.
+The writable AppImage is replaced atomically; reopen Shadowless after
 recording is finished to use the update. Private/development builds update manually.
 The tray About entry and [AI disclosure](../docs/AI_DEVELOPMENT.md) identify
 Shadowless as developed with AI assistance, retaining Captail attribution.

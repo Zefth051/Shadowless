@@ -15,9 +15,21 @@
 #include <QStandardPaths>
 #include <QStorageInfo>
 #include <QVBoxLayout>
+#include <QPainter>
 #include <QtConcurrentRun>
 
 namespace Shadowless {
+namespace {
+class ClipName : public QLabel {
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter painter(this);
+        painter.setFont(font()); painter.setPen(palette().color(QPalette::WindowText));
+        painter.drawText(contentsRect(), Qt::AlignVCenter | Qt::AlignLeft,
+                         fontMetrics().elidedText(text(), Qt::ElideMiddle, contentsRect().width()));
+    }
+};
+}
 Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::findExecutable("ffmpeg")) {
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -239,8 +251,10 @@ void Library::render(const Scan &scan) {
     for (const auto &clip : m_clips) {
         auto *row = new QWidget;
         row->setObjectName("clip");
+        row->setAttribute(Qt::WA_Hover);
         auto *line = new QHBoxLayout(row);
-        line->setContentsMargins(4, 4, 8, 4);
+        line->setContentsMargins(6, 8, 6, 8);
+        line->setSpacing(10);
         auto *thumb = new QLabel("▶");
         thumb->setObjectName("thumbnail");
         thumb->setFixedSize(112, 64);
@@ -257,10 +271,12 @@ void Library::render(const Scan &scan) {
 
         const QFileInfo file(clip.path);
         auto *labels = new QVBoxLayout;
-        auto *name = new QLabel;
+        auto *name = new ClipName;
         name->setObjectName("clipName");
+        name->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
         name->setTextFormat(Qt::PlainText);
-        name->setText(name->fontMetrics().elidedText(file.completeBaseName(), Qt::ElideMiddle, 170));
+        name->setText(file.completeBaseName());
+        name->setAccessibleName(file.completeBaseName());
         name->setToolTip(file.fileName());
         labels->addWidget(name);
         auto *meta = new QLabel(QLocale().toString(clip.modified, QLocale::ShortFormat) +
@@ -272,6 +288,7 @@ void Library::render(const Scan &scan) {
         line->addLayout(labels, 1);
 
         auto *play = new QPushButton("Open");
+        play->setObjectName("openClip");
         play->setAccessibleName("Open " + file.fileName());
         play->setToolTip("Play inside Shadowless");
         play->setIcon(QIcon(":/shadowless/icons/play.svg"));

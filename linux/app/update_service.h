@@ -20,7 +20,7 @@ QString installAppImage(const QString &destination, const QString &download, con
 class UpdateService : public QObject {
     Q_OBJECT
 public:
-    explicit UpdateService(QObject *parent = nullptr);
+    explicit UpdateService(QObject *parent = nullptr, QNetworkAccessManager *network = nullptr);
     static bool enabled();
     void check(bool interactive);
     void download(const LinuxRelease &release);
@@ -29,6 +29,7 @@ signals:
     void status(const QString &message);
 private:
     QNetworkAccessManager m_network;
+    QNetworkAccessManager *m_transport;
     QPointer<QNetworkReply> m_reply;
     std::optional<LinuxRelease> m_newest;
     void page(int number, bool interactive);

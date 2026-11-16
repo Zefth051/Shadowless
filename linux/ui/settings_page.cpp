@@ -3,6 +3,7 @@
 #include "theme.h"
 #include "../platform/hyprland/bindings.h"
 #include <QCheckBox>
+#include <QGraphicsOpacityEffect>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QFormLayout>
@@ -20,6 +21,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QIcon>
+#include <QRegularExpressionValidator>
 #include <QtConcurrentRun>
 
 namespace Shadowless {
@@ -43,7 +45,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     auto *body = new QWidget;
     auto *bodyLayout = new QVBoxLayout(body);
     bodyLayout->setContentsMargins(0, 4, 8, 4);
-    bodyLayout->setSpacing(12);
+    bodyLayout->setSpacing(18);
 
     auto section = [](QVBoxLayout *parent, const QString &name) {
         auto *label = new QLabel(name);
@@ -52,9 +54,9 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
         auto *card = new QFrame;
         card->setObjectName("panel");
         auto *form = new QFormLayout(card);
-        form->setContentsMargins(14, 10, 14, 10);
+        form->setContentsMargins(16, 14, 16, 14);
         form->setHorizontalSpacing(18);
-        form->setVerticalSpacing(8);
+        form->setVerticalSpacing(12);
         form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
         form->setRowWrapPolicy(QFormLayout::WrapLongRows);
         parent->addWidget(card);
@@ -68,8 +70,13 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     };
 
     m_activeNotice = note({});
-    bodyLayout->addWidget(m_activeNotice);
+    m_activeNotice->setObjectName("captureActiveNotice");
+    settingsLayout->addWidget(m_activeNotice);
     m_captureFields = new QWidget;
+    m_captureFields->setObjectName("captureSettings");
+    auto *captureOpacity = new QGraphicsOpacityEffect(m_captureFields);
+    captureOpacity->setOpacity(1.);
+    m_captureFields->setGraphicsEffect(captureOpacity);
     auto *capture = new QVBoxLayout(m_captureFields);
     capture->setContentsMargins(0, 0, 0, 0);
     capture->setSpacing(9);
@@ -260,7 +267,20 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
         label[0] = label[0].toUpper();
         m_accent->addItem(accentIcon(name), label, name);
     }
+    m_accent->addItem("Custom HEX", "custom");
     appearance->addRow("Accent color", m_accent);
+    m_customAccent = new QLineEdit;
+    m_customAccent->setObjectName("customAccent");
+    m_customAccent->setAccessibleName("Custom accent HEX color");
+    m_customAccent->setPlaceholderText("#63e0bd");
+    m_customAccent->setMaxLength(7);
+    m_customAccent->setValidator(new QRegularExpressionValidator(QRegularExpression("#[0-9a-fA-F]{6}"), m_customAccent));
+    m_customAccent->setEnabled(false);
+    m_customAccent->setToolTip("Enter a six-digit color, for example #63e0bd");
+    appearance->addRow("Custom HEX", m_customAccent);
+    connect(m_accent, &QComboBox::currentIndexChanged, this, [this] {
+        m_customAccent->setEnabled(m_accent->currentData().toString() == "custom");
+    });
 
     auto *overlay = section(bodyLayout, "OVERLAY");
     m_indicator = new QCheckBox("Show capture status while playing");
@@ -310,6 +330,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     settingsLayout->addLayout(sections);
     settingsLayout->addWidget(scroll, 1);
     m_error = new QLabel;
+    m_error->setObjectName("settingsError");
     m_error->setWordWrap(true);
     m_error->setTextFormat(Qt::PlainText);
     settingsLayout->addWidget(m_error);
@@ -349,7 +370,14 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
             if (!HyprBinding::parse(key, {}, &binding) || distinct.contains(key)) { m_error->setText("Choose three different shortcuts using letters, digits, function keys, Space, Pause or Print."); return; }
             distinct.insert(key); keys.append(key);
         }
-        emit saved(options, m_indicator->isChecked(), keys, m_accent->currentData().toString(), m_indicatorPosition->currentData().toString());
+        auto accent = m_accent->currentData().toString();
+        if (accent == "custom") {
+            if (!m_customAccent->hasAcceptableInput()) {
+                m_error->setText("Enter an accent color as #RRGGBB, for example #63e0bd."); return;
+            }
+            accent = m_customAccent->text().toLower();
+        }
+        emit saved(options, m_indicator->isChecked(), keys, accent, m_indicatorPosition->currentData().toString());
     });
 }
 bool SettingsPage::launchAtLogin() const { return m_launchAtLogin->isChecked(); }
@@ -359,7 +387,9 @@ void SettingsPage::edit(const GsrOptions &o, bool indicator, bool active, const 
     m_launchAtLogin->setChecked(launch);
     m_startReplayOnLaunch->setChecked(replay);
     m_indicatorPosition->setCurrentIndex(qMax(0, m_indicatorPosition->findData(position)));
-    m_accent->setCurrentIndex(qMax(0, m_accent->findData(accent)));
+    const bool custom = QRegularExpression("^#[0-9a-fA-F]{6}$").match(accent).hasMatch();
+    m_customAccent->setText(custom ? accent.toLower() : QString());
+    m_accent->setCurrentIndex(qMax(0, m_accent->findData(custom ? "custom" : accent)));
     m_pages->setCurrentIndex(0);
     m_scroll->verticalScrollBar()->setValue(0);
     m_original = o; m_source->setCurrentText(o.source); m_codec->setCurrentText(o.codec); m_customFps->setValue(o.frameRate);
@@ -438,8 +468,10 @@ void SettingsPage::populateAudio(const QString &output, const QString &input, co
         m_applications->insertRow(row);
         QString iconName = name.trimmed().toLower();
         iconName.replace(' ', '-');
-        QIcon icon = QIcon::fromTheme(iconName);
+        QIcon icon = QIcon::fromTheme(m_audioCatalog.applicationIcons.value(name));
+        if (icon.isNull()) icon = QIcon::fromTheme(iconName);
         if (icon.isNull()) icon = QIcon::fromTheme("application-x-executable");
+        if (icon.isNull()) icon = QIcon(":/shadowless/icons/application.svg");
         auto *application = new QTableWidgetItem(icon, name);
         m_applications->setItem(row, 0, application);
         auto *choice = new ClickToAdjust<QComboBox>;
@@ -463,7 +495,8 @@ QMap<QString, int> SettingsPage::applicationTracks() const {
 void SettingsPage::setShortcutStatus(const QString &message) { m_shortcuts->setText(message); }
 void SettingsPage::setCaptureActive(bool active) {
     m_captureFields->setEnabled(!active);
-    m_activeNotice->setText("Stop capture from the dashboard to change recording settings.");
+    static_cast<QGraphicsOpacityEffect *>(m_captureFields->graphicsEffect())->setOpacity(active ? .84 : 1.);
+    m_activeNotice->setText("Capture is active. Stop Instant Clip or recording from the dashboard to change capture settings.");
     m_activeNotice->setVisible(active);
 }
 } // namespace Shadowless

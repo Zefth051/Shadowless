@@ -201,11 +201,13 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program)
             m_readyTimer.stop(); m_startTimeout.stop();
             m_audio->stop();
             emit error("Cannot start GPU Screen Recorder: " + m_process.errorString());
+            setAuthenticating(false);
             emit stopped();
         }
     });
     connect(&m_process, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
         readLog();
+        setAuthenticating(false);
         for (const auto &name : QDir(m_runtime.path()).entryList({"shadowless-kms-*"}, QDir::Dirs | QDir::NoDotAndDotDot))
             QDir(m_runtime.filePath(name)).removeRecursively();
         m_readyTimer.stop(); m_startTimeout.stop(); m_stopTimeout.stop();
@@ -224,6 +226,7 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program)
         if (!probe.waitForConnected(25)) return;
         m_readyTimer.stop(); m_startTimeout.stop();
         m_ready = true;
+        setAuthenticating(false);
         emit started();
     });
     connect(&m_startTimeout, &QTimer::timeout, this, [this] {
@@ -281,7 +284,8 @@ void GsrCapture::startRecorder(const QString &output, const QString &input) {
     environment.insert("SHADOWLESS_GSR_KMS_RUNTIME", m_runtime.path());
     m_process.setProcessEnvironment(environment);
     m_ready = false; m_stopping = false; m_stopQueued = false; m_replayRecording = false;
-    m_logTail.clear();
+    m_logTail.clear(); m_logBuffer.clear();
+    setAuthenticating(false);
     m_readyTimer.start(); m_startTimeout.start(60000);
     m_process.start(m_program, options.arguments(m_socketPath));
 }
@@ -360,13 +364,27 @@ void GsrCapture::publishClip(const QString &path, bool recording) {
     emit clipSaved(file.absoluteFilePath(), recording);
 }
 
+void GsrCapture::setAuthenticating(bool pending) {
+    if (m_authenticating == pending) return;
+    m_authenticating = pending;
+    emit authenticationChanged(pending);
+}
+
 void GsrCapture::readLog() {
-    const auto output = QString::fromUtf8(m_process.readAllStandardOutput());
-    for (const auto &line : output.split('\n', Qt::SkipEmptyParts)) {
+    m_logBuffer += m_process.readAllStandardOutput();
+    if (m_process.state() == QProcess::NotRunning && !m_logBuffer.isEmpty()) m_logBuffer += '\n';
+    int newline;
+    while ((newline = m_logBuffer.indexOf('\n')) >= 0) {
+        const auto line = QString::fromUtf8(m_logBuffer.left(qMin(newline, 4096))).trimmed();
+        m_logBuffer.remove(0, newline + 1);
+        if (line.isEmpty()) continue;
+        if (line == "gsr info: shadowless-kms-auth: begin") setAuthenticating(true);
+        else if (line == "gsr info: shadowless-kms-auth: end") setAuthenticating(false);
         m_logTail.append(line.left(1000));
         while (m_logTail.size() > 12) m_logTail.removeFirst();
         emit diagnostic(line);
     }
+    m_logBuffer.truncate(4096);
 }
 
 } // namespace Shadowless

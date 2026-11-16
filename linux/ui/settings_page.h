@@ -39,7 +39,7 @@ private:
     QSpinBox *m_buffer, *m_customFps, *m_customBitrate, *m_microphoneBoost;
     QComboBox *m_audioBitrate, *m_accent, *m_indicatorPosition, *m_pcTrack;
     QCheckBox *m_system, *m_microphone, *m_separate, *m_indicator;
-    QLineEdit *m_folder;
+    QLineEdit *m_folder, *m_customAccent;
     QCheckBox *m_organizeByGame;
     QCheckBox *m_launchAtLogin, *m_startReplayOnLaunch;
     QLabel *m_error, *m_shortcuts, *m_activeNotice;

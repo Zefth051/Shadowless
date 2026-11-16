@@ -1,6 +1,8 @@
 TEMPLATE = subdirs
 SUBDIRS += updatetests
 updatetests.file = tests/updates/UpdateTests.pro
+SUBDIRS += portaltests
+portaltests.file = tests/shortcuts/ShortcutTests.pro
 SUBDIRS += plugins app tests overlaytests uitests playertests previewtests desktoptests playbacktests
 playbacktests.file = tests/playback/PlaybackTests.pro
 playertests.file = tests/player/PlayerTests.pro

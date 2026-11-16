@@ -307,6 +307,7 @@ int gsr_kms_client_init(gsr_kms_client *self, const char *card_path) {
             const char *args[] = { server_filepath, self->initial_socket_path, card_path, NULL };
             execvp(args[0], (char *const*)args);
         } else {
+            gsr_log(GSR_LOG_LEVEL_INFO, "shadowless-kms-auth: begin");
             const char *args[] = { "pkexec", server_filepath, self->initial_socket_path, card_path, NULL };
             execvp(args[0], (char *const*)args);
         }
@@ -350,6 +351,8 @@ int gsr_kms_client_init(gsr_kms_client *self, const char *card_path) {
         }
         poll_fd.revents = 0;
     }
+    if(!inside_flatpak && !has_perm)
+        gsr_log(GSR_LOG_LEVEL_INFO, "shadowless-kms-auth: end");
     gsr_log(GSR_LOG_LEVEL_INFO, "gsr_kms_client_init: server connected");
 
     gsr_log(GSR_LOG_LEVEL_INFO, "replacing file-backed unix domain socket with socketpair");

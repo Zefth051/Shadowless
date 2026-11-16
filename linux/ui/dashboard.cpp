@@ -31,7 +31,7 @@ namespace {
 class CaptureModeTile : public QPushButton {
 public:
     CaptureModeTile(const QString &title, const QString &detail) : QPushButton(title), m_detail(detail) {
-        setFixedHeight(144);
+        setFixedHeight(92);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setAccessibleDescription(detail);
     }
@@ -45,16 +45,18 @@ protected:
         painter.setRenderHint(QPainter::Antialiasing);
         if (!isEnabled()) painter.setOpacity(.55);
         const auto accent = palette().color(QPalette::Accent);
-        painter.setPen(QPen(isChecked() ? accent : QColor("#536169"), 2));
-        painter.drawEllipse(QPointF(width() / 2., 44), 24, 24);
-        icon().paint(&painter, QRect(width() / 2 - 12, 32, 24, 24));
-        auto titleFont = font(); titleFont.setBold(true); painter.setFont(titleFont);
-        painter.setPen(isChecked() ? accent : palette().color(QPalette::WindowText));
-        painter.drawText(QRect(8, 84, width() - 16, 24), Qt::AlignCenter, text());
-        titleFont.setBold(false); titleFont.setPixelSize(11); painter.setFont(titleFont);
-        painter.setPen(QColor("#8b969d"));
-        painter.drawText(QRect(8, 110, width() - 16, 20), Qt::AlignCenter,
-                         painter.fontMetrics().elidedText(m_detail, Qt::ElideRight, width() - 16));
+        const auto ink = palette().color(QPalette::WindowText);
+        QColor badge = isChecked() ? accent : ink; badge.setAlpha(isChecked() ? 28 : 12);
+        painter.setPen(Qt::NoPen); painter.setBrush(badge);
+        painter.drawRoundedRect(QRectF(14, 14, 34, 34), 9, 9);
+        icon().paint(&painter, QRect(21, 21, 20, 20));
+        auto titleFont = font(); titleFont.setWeight(QFont::DemiBold); painter.setFont(titleFont);
+        painter.setPen(ink);
+        painter.drawText(QRect(58, 14, width() - 72, 34), Qt::AlignVCenter | Qt::AlignLeft, text());
+        titleFont.setWeight(QFont::Normal); titleFont.setPixelSize(11); painter.setFont(titleFont);
+        painter.setPen(QColor("#94a0a8"));
+        painter.drawText(QRect(16, 58, width() - 32, 20), Qt::AlignVCenter | Qt::AlignLeft,
+                         painter.fontMetrics().elidedText(m_detail, Qt::ElideRight, width() - 32));
     }
 private:
     QString m_detail;
@@ -127,7 +129,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_panel = new QFrame(this);
     m_panel->setObjectName("shadowlessPanel");
     auto *shell = new QVBoxLayout(m_panel);
-    shell->setContentsMargins(20, 16, 20, 16);
+    shell->setContentsMargins(24, 20, 24, 18);
     shell->setSpacing(16);
 
     m_chrome = new QWidget;
@@ -159,12 +161,12 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_home = new QWidget;
     m_homeLayout = new QBoxLayout(QBoxLayout::LeftToRight, m_home);
     m_homeLayout->setContentsMargins(0, 0, 0, 0);
-    m_homeLayout->setSpacing(24);
+    m_homeLayout->setSpacing(20);
 
     auto *controls = new QWidget;
     auto *homeLayout = new QVBoxLayout(controls);
     homeLayout->setContentsMargins(0, 0, 0, 0);
-    homeLayout->setSpacing(12);
+    homeLayout->setSpacing(8);
     m_controlScroll = new QScrollArea;
     m_controlScroll->setWidgetResizable(true);
     m_controlScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -383,7 +385,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     connect(m_microphone, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(true, checked); });
     auto openSettings = [this] {
         emit settingsRequested();
-        showPage(m_settings, 510);
+        showPage(m_settings, 560);
     };
     connect(m_settingsButton, &QPushButton::clicked, this, openSettings);
     connect(m_audioSettings, &QPushButton::clicked, this, [this, openSettings] {
@@ -485,7 +487,7 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
 void Dashboard::notice(const QString &message) {
     m_notice->setText(message);
     m_notice->setToolTip(message);
-    m_notice->setVisible(!message.isEmpty());
+    m_notice->setVisible(m_pages->currentWidget() == m_home && !message.isEmpty());
 }
 
 void Dashboard::setShortcutKeys(const QStringList &keys) {
@@ -517,6 +519,7 @@ void Dashboard::showPage(QWidget *page, int width) {
     m_panelWidth = width;
     m_panelHeight = dashboard ? 740 : 780;
     m_pages->setCurrentWidget(page);
+    m_notice->setVisible(dashboard && !m_notice->text().isEmpty());
     positionPanel();
 }
 

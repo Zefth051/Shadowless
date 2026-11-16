@@ -1,44 +1,55 @@
-# Shadowless Linux 0.3.3
+# Shadowless Linux 0.3.4 — QOL update
 
-Native replay recording for Hyprland on Wayland, with the maintained GSR engine
-included and public updates enabled. The release includes the AppImage, checksums,
-build inventory and dependency source materials. The dependency archive reuses
-the verified 0.3.2 archive because the 0.3.3 `BUILD_PACKAGES.txt` has the same
-SHA-256. Its archive hash is recorded in `SOURCE_SHA256SUMS.txt`; the
-application-source archive matches the release tag.
+This release makes capture authorization accessible, explains why capture settings
+are locked, and improves everyday controls on Linux. Existing clips and settings
+are preserved.
 
-Native Qt/Wayland edition: replay and continuous recording through GPU Screen
-Recorder engine maintained in this branch, PipeWire application/microphone tracks, recent clips and game folders,
-embedded playback, trimming/audio-track selection, media overlays and shortcuts.
-See [platform features](https://github.com/Zefth051/Shadowless/blob/linux/docs/FEATURES.md).
+### Improved
 
-Settings now provide a direct link to the independent login-launch and Instant
-Clip-on-launch options. The application-audio list also displays icons from the
-Linux icon theme when available.
+- **Capture authorization:** Release the control overlay only when the managed KMS engine requests Polkit authorization, then restore its previous visibility after authorization or failure. Background startup stays hidden; an explicit hide or quit prevents restoration. System authorization is still required for direct KMS capture without existing privileges.
+- **Active capture settings:** Keep the capture-lock notice visible while scrolling and slightly dim locked fields, so it is clear why recording options cannot change until capture stops. Appearance, shortcuts and startup settings remain available.
+- **Settings readability:** Keep checked boxes visibly filled while capture locks their settings, enlarge checkbox indicators, and keep engine notices on the dashboard instead of settings or the editor.
+- **Appearance:** Add validated, persistent HEX accents with readable button text and keyboard focus, compact capture cards and consistent native control states.
+- **Recent clips:** Keep playback, containing-folder and Trash actions visible in narrow panels using adaptive filename elision.
+- **Game folders:** Reject conflicting game identities and preserve files when falling back to the output root. Plasma uses that fallback without invoking Hyprland tools.
+- **Application audio:** Use application icon metadata when available, with theme lookup and a bundled generic fallback. Include the Qt ICO reader for packaged app icons.
+- **Plasma Wayland:** Accept KDE Plasma sessions and use portal shortcuts, including configured triggers and desktop-approved assignments, without requiring Hyprland tools. Live Plasma capture and shortcut approval remain unverified.
+- **Updates:** Report HTTP/rate-limit and TLS failures with actionable details. Public discovery, verified download and atomic installation were exercised on temporary AppImages; the reported intermittent 0.3.3 check error has not been reproduced.
 
-Download the AppImage and `SHA256SUMS.txt`, verify with `sha256sum -c SHA256SUMS.txt`,
-make the AppImage executable and keep it in a permanent writable location.
-The GSR 6.1.7 engine and matching helper are included, without GSR's UI or a
-separate GSR installation. Hyprland, compatible glibc/drivers, PipeWire and FFmpeg
-host tools are required. Direct KMS capture may request administrator authorization
-through Polkit; the Shadowless interface stays unprivileged.
-This is not a generic Linux desktop package; clean-host capture validation remains pending.
+### Upgrade notes
 
-The Linux screenshot gallery shows an earlier 0.2.4 draft, not this release.
-Library/player/editor images use synthetic demo media; they are not capture benchmarks
-and do not validate this release's engine or packaging.
+- Use **Check for updates** from an update-enabled 0.3.3 AppImage, then quit and reopen after capture finishes. Keep the AppImage in a writable location. A manual AppImage installation remains available if the old build reports an error.
 
-Public-enabled AppImages implement checksum-verified updates after confirmation
-and apply them on the next launch. A real in-app update between released versions
-is still untested. Builds with public updates disabled update manually. This release includes Qt's TLS backend and OpenSSL runtime for HTTPS and uses
-the required pipewire-pulse endpoint for playback to avoid the libmpv native
-PipeWire initialization deadlock. Older update-disabled builds need one manual
-upgrade; subsequent updates are downloaded and installed inside Shadowless.
+### Known limitations
 
-Developed with AI assistance, including OpenAI Codex. Derived from Captail by
-FaulMit; GPL-2.0-or-later attribution is retained. The combined Linux runtime
-includes dependencies with GPLv3 requirements; see the dependency audit.
+- Live Plasma capture/shortcut approval and the real Polkit interaction still need desktop validation. The full HTTPS updater passes isolated download/install tests; a real public 0.3.3-to-0.3.4 upgrade remains an owner test after publication.
 
-Windows releases use their own tags and installer; this Linux release does not
-replace the repository's latest Windows release. Native Windows GPU capture and
-full cross-platform hardware coverage are not established by these package tests.
+### Download and compatibility
+
+Download `Shadowless-0.3.4-linux-x86_64.AppImage` and `SHA256SUMS.txt`, verify with
+`sha256sum -c SHA256SUMS.txt`, then make the AppImage executable. Keep it in a
+permanent writable location for in-app updates.
+
+The recorder and matching KMS helper are bundled; no separate GSR installation is
+required. Hyprland or Plasma 6 on native Wayland, compatible graphics drivers and
+glibc, PipeWire/pipewire-pulse, FFmpeg/ffprobe, pactl and pw-loopback remain host
+requirements. Hyprland additionally uses hyprctl. Direct KMS authorization uses the
+system Polkit agent; Shadowless never handles your password or runs its UI as root.
+
+The screenshot gallery contains earlier-build UI and synthetic demo clips; it is
+not a benchmark or proof of live Plasma capture.
+
+### Sources and attribution
+
+The release provides the exact build inventory and matching dependency source
+materials with checksums. Application and modified GSR source are available from
+this release tag through GitHub's source archives. See the included component
+notices and dependency audit for source/build mappings.
+
+Derived from Captail by FaulMit; GPL-2.0-or-later attribution is retained. The
+combined Linux runtime includes components with GPLv3 requirements. Developed with
+AI assistance, including OpenAI Codex.
+
+This Linux release keeps the Windows update channel unchanged.
+
+[Full changelog](https://github.com/Zefth051/Shadowless/compare/linux-v0.3.3...linux-v0.3.4)
