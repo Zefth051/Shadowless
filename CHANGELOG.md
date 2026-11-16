@@ -16,6 +16,7 @@ All notable user-facing changes are documented here.
 ### Fixed
 
 - Keep folder pickers, menus and update dialogs readable when the desktop uses a light palette.
+- Keep settings within narrow panels when large or fallback fonts are used.
 - Release the exclusive overlay while Plasma asks for shortcut approval, then restore its prior visibility. Re-register global shortcuts after the desktop portal restarts.
 - Keep D-Bus subscription cleanup intact when closing the shortcut service, preventing a crash on application exit.
 

@@ -36,6 +36,7 @@ public:
         setToolTip(text);
     }
     QSize sizeHint() const override { return {fontMetrics().horizontalAdvance(text()) + 64, 40}; }
+    QSize minimumSizeHint() const override { return {64, 40}; }
 protected:
     bool hitButton(const QPoint &point) const override { return rect().contains(point); }
     void paintEvent(QPaintEvent *) override {

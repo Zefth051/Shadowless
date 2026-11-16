@@ -92,10 +92,13 @@ private slots:
         SettingsPage page(caps); applyTheme(&page);
         GsrOptions options; options.source = "DP-1"; options.bufferSeconds = 60;
         page.edit(options, false, false, keys);
+        auto *largeLabel=page.findChild<QCheckBox *>("organizeByGame"); QVERIFY(largeLabel);
+        largeLabel->setStyleSheet("font-family: monospace; font-size: 18px;");
         for (const auto size : {QSize(420, 620), QSize(560, 740)}) {
             page.resize(size); page.show(); QCoreApplication::processEvents();
             auto *scroll = page.findChild<QScrollArea *>(); QVERIFY(scroll);
-            QVERIFY(scroll->widget()->width() <= scroll->viewport()->width());
+            QVERIFY2(scroll->widget()->width() <= scroll->viewport()->width(),
+                     qPrintable(QString("Settings body width %1 exceeds viewport %2").arg(scroll->widget()->width()).arg(scroll->viewport()->width())));
             auto *toggle = page.findChild<QCheckBox *>("organizeByGame"); QVERIFY(toggle);
             scroll->ensureWidgetVisible(toggle); QCoreApplication::processEvents();
             QVERIFY(toggle->width() > 250);
