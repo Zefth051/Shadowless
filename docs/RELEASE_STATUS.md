@@ -160,3 +160,10 @@ source-covered official packages. The updated source supplement verifies 51,716
 files, including the four updated dependency source packages and their recipes.
 See the attached `RELEASE_VERIFICATION.md` and `SOURCE_SHA256SUMS.txt`.
 The installed 0.3.3 AppImage was left unchanged for the owner upgrade test.
+
+Post-publication upgrade check: the updater source from the exact `linux-v0.3.3`
+tag, running with the installed 0.3.3 AppImage's Qt/TLS libraries, selected the
+public 0.3.4 release, downloaded it, verified its checksum and executable permission,
+and atomically replaced an isolated temporary AppImage. This is an automated
+service test; the owner still needs to try the installed application's UI flow.
+The installed 0.3.3 AppImage was not replaced by the check.
