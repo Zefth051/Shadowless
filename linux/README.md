@@ -5,8 +5,7 @@ control overlay, settings, library, and media-layer editor. A bundled, source-bu
 `gpu-screen-recorder` process performs capture/encoding/replay buffering; a
 Shadowless plugin composites media layers.
 The initial capture experiment is documented in `docs/LINUX_GSR_SPIKE.md`.
-Plasma support is implemented in current source; the published 0.3.3 AppImage is
-unchanged. Live Plasma capture, layer surfaces, tray and shortcut approval still
+Release 0.3.4 includes the Plasma startup and shortcut implementation. Live Plasma capture, layer surfaces, tray and shortcut approval still
 need validation in a real Plasma session.
 
 ## Build and run

@@ -146,3 +146,11 @@ check/download updates inside Shadowless; Linux applies the AppImage replacement
 and asks the user to quit/reopen, while Windows invokes Setup or its Portable
 replacement helper. This does not promise an unattended update or bypass user
 confirmation. Full updates between actual published versions remain unverified.
+
+## Linux 0.3.4 — artifact-specific clearance
+
+This receipt supersedes the earlier Linux material blockers only for 0.3.4.
+The artifact-specific source/notice checks and remaining live validation are
+recorded in RELEASE_STATUS.md and DEPENDENCY_AUDIT.md. The release includes
+the updated complete dependency source supplement and checksums. Windows
+material and native-validation gaps above are unaffected.

@@ -1,13 +1,14 @@
 # Release and validation status
 
-Last checked: 2026-11-13. The repository source and releases are public. The
-current public releases are Windows 0.3.1 and Linux 0.3.3. Older validation
+Last checked: 2026-11-15. The repository source and releases are public. The
+current public releases are Windows 0.3.1 and Linux 0.3.4. Older validation
 candidates remain drafts; their assets require repository access.
 
 ## Available build candidates
 
 | Platform | Tag | Attached assets | Status |
 | --- | --- | --- | --- |
+| Linux x86_64 / Hyprland and Plasma 6 Wayland | [`linux-v0.3.4`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.4) | AppImage, checksums, build inventory, updated dependency source materials, verification receipt | Public QOL release; live Plasma/Polkit and owner upgrade test pending |
 | Linux x86_64 / Hyprland | [`linux-v0.3.3`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3) | AppImage, checksums, build inventory, dependency source materials | Public release |
 | Windows x64 | [`v0.3.1`](https://github.com/Zefth051/Shadowless/releases/tag/v0.3.1) | Setup EXE, Portable ZIP, checksums | Public release |
 | Linux x86_64 / Hyprland | [`linux-v0.3.2`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.2) | AppImage, checksums, build inventory, dependency source materials | Public release |
@@ -30,9 +31,11 @@ These editions use separate interfaces, capture backends and packaging.
 Windows uses WPF/.NET and libobs, with desktop/direct game capture and Setup or
 Portable packages. New Linux builds use Qt and a bundled, maintained GSR 6.1.7
 engine with its matching helper, without GSR's UI. The older Linux 0.2.4 draft
-still needs host GSR. Hyprland on Wayland, PipeWire, FFmpeg tools and compatible
-graphics drivers remain host requirements. An AppImage does not install those tools
-or establish support for GNOME, KDE, X11 or older glibc systems.
+still needs host GSR. Hyprland or Plasma 6 on native Wayland, PipeWire, FFmpeg tools and compatible
+graphics drivers remain host requirements. Plasma startup/shortcut support is
+included in 0.3.4; live capture and desktop approval remain unverified. An
+AppImage does not install host tools or establish support for GNOME, X11 or
+older glibc systems.
 See the [feature comparison](FEATURES.md) and [installation guide](INSTALL.md).
 
 ## Hardware validation scope
@@ -145,3 +148,15 @@ includes that backend plus OpenSSL libraries. Seventeen packaging tests pass;
 an isolated full-AppImage probe loaded only bundled Qt/TLS/OpenSSL libraries
 and received HTTP 200 from GitHub. This is HTTPS transport evidence, not a full
 production upgrade between released Shadowless versions.
+
+## Linux 0.3.4 release verification
+
+Source commit `3826d8ee8624684b8ef9c70ebf57647c0a0300c3`; workflow
+[43785761418](https://github.com/Zefth051/Shadowless/actions/runs/43785761418).
+AppImage SHA-256: `ad66ff58bd45418dc347af1723bdc61eddd7123aed260a345836322f626e0695`.
+The full build, native suites and 19 packaging checks pass. Final runtime checks
+report 0.3.4 and retain working HTTPS; all 219 shipped third-party ELF paths match
+source-covered official packages. The updated source supplement verifies 51,716
+files, including the four updated dependency source packages and their recipes.
+See the attached `RELEASE_VERIFICATION.md` and `SOURCE_SHA256SUMS.txt`.
+The installed 0.3.3 AppImage was left unchanged for the owner upgrade test.

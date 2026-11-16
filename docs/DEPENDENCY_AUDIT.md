@@ -66,3 +66,15 @@ are embedded under `licenses/third-party/linux/` and recorded by SHA-256.
 Dependency source materials are provided as a separate release download; exact
 Shadowless/GSR application source is provided from the final build commit. The
 source supplement is not the application installer and is not an update payload.
+
+## Linux 0.3.4 artifact receipt
+
+The 0.3.4 workflow rebuilt source commit `3826d8ee8624684b8ef9c70ebf57647c0a0300c3`.
+All 219 shipped third-party ELF paths match official package build IDs and source
+recipes. The supplement updates dbus, layer-shell-qt, libmodplug and p11-kit;
+all 145 package recipes match BUILDINFO hashes. All 51,716 files were verified
+inside the final compressed source archive, with no missing or extra material.
+Updated upstream attribution is also embedded in the AppImage.
+This clears the source/notice material gate for this exact Linux artifact; it does
+not clear Windows gaps or establish untested desktop/GPU/upgrade behavior.
+See RELEASE_STATUS.md and the release verification receipt for hashes and limits.

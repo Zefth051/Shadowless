@@ -10,7 +10,7 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Windows / Linux feature comparison](docs/FEATURES.md).
 
 [Windows installer / releases](https://github.com/Zefth051/Shadowless/releases) ·
-[Linux AppImage 0.3.3](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3) ·
+[Linux AppImage 0.3.4](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.4) ·
 [Installation guide](docs/INSTALL.md)
 
 **Capture engines:** Windows uses OBS components (`libobs`), included in the
@@ -21,7 +21,7 @@ GSR interface is needed. The existing 0.2.4 draft still requires host GSR.
 
 <p align="center">
   <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
-  <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.4"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
 </p>
 
 Current Linux source also adds Plasma 6 Wayland startup/portal support, custom HEX
@@ -31,14 +31,14 @@ live Plasma capture and desktop integration remain unverified. See the
 
 ## Current release status
 
-**Public source and releases.** Linux 0.3.3 is available as an AppImage with
+**Public source and releases.** Linux 0.3.4 is available as an AppImage with
 checksums, build inventory and dependency source materials. Windows 0.3.1 is the
 current Windows release. See [available packages and validation status](docs/RELEASE_STATUS.md).
 
 | | Windows edition | Linux edition |
 | --- | --- | --- |
 | Interface / capture | WPF/.NET and libobs | Qt 6 and a managed GSR engine |
-| Target | Windows 10/11 x64 | Hyprland on native Wayland, x86_64 |
+| Target | Windows 10/11 x64 | Hyprland / Plasma 6 on native Wayland, x86_64 |
 | Capture | Desktop and direct game capture | Monitor capture through GSR |
 | Distribution | Setup EXE / Portable ZIP | AppImage; managed GSR, host PipeWire and FFmpeg |
 | Real in-app upgrade | Not yet tested | Not yet tested |
