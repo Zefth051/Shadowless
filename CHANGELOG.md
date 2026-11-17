@@ -16,11 +16,17 @@ All notable user-facing changes are documented here.
 - **Settings reachable beneath notifications:** Overlay notifications are now fully click-through at both the native and WPF level, so the Settings button can always be used, including right after turning Instant Clip off.
 - The replay control is now named "Instant Clip" across the interface.
 
+### Fixed
+
+- **Replay folders for reserved Windows names:** Game folder names such as `CON.notes` or `NUL.game` are reserved by Windows even with an extension; they now fall back to `Game` instead of failing to create the folder.
+
 ### Changed
 
 - Per-application audio routing now requires Windows build 20348 or newer (Windows 11 or Windows Server 2022). Older builds keep mixed device audio and report routing as unavailable.
 
 ### Verification status
+
+- **Added to Windows CI (this release):** Discord presence protocol QA, process audio foundation model QA, automatic capture policy QA and the fullscreen input/overlay QA now run on windows-2022, together with the existing build, analyzers and replay folder routing checks. Results are listed below once the run completes.
 
 - **Checked by Windows CI** (windows-2022, run 44115108863): Release build, full analyzers, GPU capability model, replay folder routing, localization dictionaries and dashboard layout, and the distribution and update policy checks. This shows the code builds and the static checks pass; it does not exercise the UI or audio.
 - **Needs testing on Windows 11:** the pause hotkey, both dashboard menus (including keyboard navigation) and running Instant Clip with a recording at the same time; the System track (play tones from two selected apps and one unselected app, in replay clips and recordings, with AAC and Opus, plus app restarts and all six tracks occupied); microphone fallback and its live restore; and entering Settings right after turning Instant Clip off. The cause of that delay was identified by code analysis only.
