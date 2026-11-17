@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFile>
 #include <QSignalSpy>
+#include <QSet>
 #include <QTemporaryDir>
 #include <QtTest>
 #include <unistd.h>
@@ -79,12 +80,51 @@ private slots:
     }
     void exitCodesMapToUserOutcomes() {
         using R = InputAccess::Result;
-        QCOMPARE(InputAccess::resultForExit(0, QProcess::NormalExit), R::Granted);
-        QCOMPARE(InputAccess::resultForExit(126, QProcess::NormalExit), R::Cancelled);   // dialog dismissed
-        QCOMPARE(InputAccess::resultForExit(127, QProcess::NormalExit), R::Cancelled);   // not authorized
-        QCOMPARE(InputAccess::resultForExit(2, QProcess::NormalExit), R::Failed);
-        QCOMPARE(InputAccess::resultForExit(4, QProcess::NormalExit), R::Failed);
+        const auto N = QProcess::NormalExit;
+        QCOMPARE(InputAccess::resultForExit(0, N), R::Granted);
+        QCOMPARE(InputAccess::resultForExit(126, N, "Error executing command as another user: Request dismissed"), R::Cancelled);   // the only cancel
+        QCOMPARE(InputAccess::resultForExit(126, N), R::Cancelled);
+        // 127 is NOT a cancellation: every other pkexec failure uses it, and each needs its own message.
+        QCOMPARE(InputAccess::resultForExit(127, N, "Error executing command as another user: Not authorized\nThis incident has been reported."), R::NotAuthorized);
+        QCOMPARE(InputAccess::resultForExit(127, N, "Error executing command as another user: No authentication agent found."), R::NoAgent);
+        QCOMPARE(InputAccess::resultForExit(127, N, "Error getting authority: Error initializing authority: Could not connect"), R::PolkitUnavailable);
+        QCOMPARE(InputAccess::resultForExit(127, N, "pkexec must be setuid root"), R::PolkitUnavailable);
+        QCOMPARE(InputAccess::resultForExit(127, N), R::Failed);                          // unknown 127: never reported as a cancel
+        QCOMPARE(InputAccess::resultForExit(126, N, "sh: /run/shadowless-input.x/h: Permission denied"), R::HelperBlocked);   // noexec mount
+        QCOMPARE(InputAccess::resultForExit(127, N, "sh: line 1: /run/x/h: No such file or directory"), R::HelperBlocked);
+        QCOMPARE(InputAccess::resultForExit(2, N), R::Failed);
+        QCOMPARE(InputAccess::resultForExit(3, N), R::Failed);
+        QCOMPARE(InputAccess::resultForExit(4, N), R::AppliedNeedsReload);                 // rule written, udev reload failed
         QCOMPARE(InputAccess::resultForExit(0, QProcess::CrashExit), R::Failed);
+    }
+    void everyFailureClassHasItsOwnPlainMessage() {
+        using R = InputAccess::Result;
+        QSet<QString> seen;
+        for (const auto r : {R::Cancelled, R::NoAgent, R::NotAuthorized, R::PolkitUnavailable, R::HelperBlocked, R::AppliedNeedsReload, R::Unavailable}) {
+            const QString m = InputAccess::messageFor(r, 1, "raw output");
+            QVERIFY(!m.isEmpty()); QVERIFY(!seen.contains(m)); seen.insert(m);
+            QVERIFY2(!m.contains("raw output"), "technical output must not be the user message");
+        }
+        QVERIFY(InputAccess::messageFor(R::NotAuthorized, 127, "").contains("did not authorize"));
+        QVERIFY(!InputAccess::messageFor(R::NotAuthorized, 127, "").contains("cancel", Qt::CaseInsensitive));
+        QVERIFY(InputAccess::messageFor(R::Failed, 2, "").contains("nothing was changed", Qt::CaseInsensitive));
+        QVERIFY(InputAccess::messageFor(R::Failed, 3, "").contains("read-only"));
+        QVERIFY(InputAccess::messageFor(R::Failed, 9, "").contains("error 9"));
+        QVERIFY(InputAccess::messageFor(R::AppliedNeedsReload, 4, "").contains("Reconnect"));
+    }
+    void notAuthorizedIsNotReportedAsCancelled() {
+        QTemporaryDir t;
+        const QString launcher = script(t.path(), "pkexec", "echo 'Error executing command as another user: Not authorized' >&2; exit 127");
+        const QString helper = script(t.path(), "helper", "exit 0");
+        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules")); access.setStagingBaseForTesting(t.path());
+        AccessDevice d; d.vendor = "1111"; d.product = "2222"; d.cls = AccessDevice::Mouse;
+        QSignalSpy done(&access, &InputAccess::finished);
+        access.grant({d});
+        QTRY_COMPARE_WITH_TIMEOUT(done.size(), 1, 10000);
+        QCOMPARE(done[0][0].value<InputAccess::Result>(), InputAccess::Result::NotAuthorized);
+        QVERIFY(!done[0][1].toString().contains("cancelled", Qt::CaseInsensitive));
+        QVERIFY(access.diagnostics().contains("exit code 127"));                     // technical detail kept for support only
+        QVERIFY(access.diagnostics().contains("Not authorized"));
     }
     void groupsInterfacesIntoOnePhysicalDeviceWithTheRightClass() {
         QTemporaryDir t; const QString sys = t.filePath("sys"), dev = t.filePath("dev");
@@ -231,8 +271,9 @@ private slots:
         QSignalSpy done(&access, &InputAccess::finished);
         access.grant({d});
         QTRY_COMPARE_WITH_TIMEOUT(done.size(), 1, 10000);
-        QCOMPARE(done[0][0].value<InputAccess::Result>(), InputAccess::Result::Failed);
-        QVERIFY(done[0][1].toString().contains("udev reload failed"));
+        QCOMPARE(done[0][0].value<InputAccess::Result>(), InputAccess::Result::AppliedNeedsReload);
+        QVERIFY(done[0][1].toString().contains("Reconnect"));                         // plain next step, not the raw udev output
+        QVERIFY(access.diagnostics().contains("udev reload failed"));
         QVERIFY(!access.busy());
         access.grant({d});                                               // can try again after a failure
         QVERIFY(access.busy());
