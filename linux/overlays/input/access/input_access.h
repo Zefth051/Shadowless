@@ -15,6 +15,9 @@ struct AccessDevice {
     int eventNumber = 0;
     bool readable = false;
     QString identity() const { return vendor + ":" + product; }                  // groups nodes of one physical device
+    QVector<AccessDevice> members;                                               // group only: every classified node of the physical device
+    QVector<Class> alternatives;                                                 // group only: other classes with verified nodes (hybrid devices)
+    AccessDevice asClass(Class other) const;                                     // group only: same device seen as another verified class
     QString triple() const;                                                      // "41e4:211a:keyboard", the helper's argument
 };
 
@@ -31,6 +34,9 @@ public:
 
     // Reads /sys/class/input only (no device node is opened). Nodes that are neither keyboard, mouse nor gamepad are skipped.
     static QVector<AccessDevice> enumerate(const QString &sysRoot = "/sys/class/input", const QString &devRoot = "/dev/input");
+    // One entry per physical device (vendor:product) with its most likely class decided automatically from verified
+    // capabilities and the device's own name. Extra HID interfaces (vendor, consumer, radio control) are folded in.
+    static QVector<AccessDevice> groupDevices(const QVector<AccessDevice> &nodes);
     // Triples for the devices to grant: unique, valid, sorted; hostile or malformed ids are dropped.
     static QStringList triples(const QVector<AccessDevice> &devices);
     // The node of each physical device that the user most likely means (lowest event number) and its siblings.
@@ -44,6 +50,7 @@ public:
     QString helperPath() const;                  // empty when no helper ships with this build
     bool available() const;                      // pkexec and a helper are both present
     bool ruleInstalled() const;
+    void setStagingBaseForTesting(const QString &base);
     void configureForTesting(const QString &launcher, const QString &helper, const QString &ruleFile);
 
     void grant(const QVector<AccessDevice> &devices);   // asynchronous; emits finished()
@@ -56,9 +63,8 @@ signals:
 private:
     QString m_launcher, m_helper, m_ruleFile;
     QProcess *m_process = nullptr;
-    QString m_staged;
+    QString m_stagingBase = QStringLiteral("/run");
     void run(const QStringList &helperArguments);
-    QString stagedHelper(QString *error);
     void cleanup();
 };
 

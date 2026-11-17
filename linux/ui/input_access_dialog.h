@@ -1,22 +1,27 @@
 #pragma once
 #include "../overlays/input/access/input_access.h"
-#include <QDialog>
+#include <QFrame>
 #include <QVector>
 
 class QCheckBox;
-class QDialogButtonBox;
+class QComboBox;
+class QPushButton;
 namespace Shadowless {
-// Plain-language consent step: shows the detected keyboards, mice and controllers and lets the user choose
-// which ones Shadowless may read. Nothing is changed until the system authorization dialog that follows.
-class InputAccessDialog : public QDialog {
+// Inline consent card (not a separate window, so it can never end up behind the overlay editor on layer-shell
+// compositors). Lists one row per detected physical device, preselected and classified automatically; nothing is
+// changed until the system authorization dialog that follows "Allow access".
+class InputAccessDialog : public QFrame {
     Q_OBJECT
 public:
-    InputAccessDialog(const QVector<Input::AccessDevice> &devices, QWidget *parent = nullptr);
+    explicit InputAccessDialog(const QVector<Input::AccessDevice> &groups, QWidget *parent = nullptr);
     QVector<Input::AccessDevice> selected() const;
+signals:
+    void accepted();
+    void rejected();
 private:
-    struct Row { Input::AccessDevice device; QCheckBox *box; };
+    struct Row { Input::AccessDevice group; QCheckBox *box; QComboBox *kind; };
     QVector<Row> m_rows;
-    QDialogButtonBox *m_buttons;
+    QPushButton *m_allow = nullptr;
     void updateButtons();
 };
 } // namespace Shadowless

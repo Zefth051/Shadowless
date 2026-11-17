@@ -158,7 +158,7 @@ void InputOverlayPanel::refresh() {
     const bool failed = m_status == InputStatus::Error;
     m_access->setVisible(enabled && (denied || empty || failed));
     const bool automatic = m_setupTool->available();
-    m_enableAccess->setVisible(enabled && denied && automatic);
+    m_enableAccess->setVisible(enabled && denied && automatic && !m_consent);
     m_enableAccess->setEnabled(!m_setupTool->busy());
     m_removeAccess->setVisible(enabled && automatic && m_setupTool->ruleInstalled());
     m_removeAccess->setEnabled(!m_setupTool->busy());
@@ -195,15 +195,25 @@ QString InputOverlayPanel::statusBadge() const {
 }
 void InputOverlayPanel::enableAccess() {
     m_accessResult->hide();
-    const auto devices = Input::InputAccess::enumerate();
-    QVector<Input::AccessDevice> missing;
-    for (const auto &d : devices) if (!d.readable) missing.append(d);
-    if (devices.isEmpty()) { m_accessResult->setText("No keyboard, mouse or controller was found."); m_accessResult->show(); return; }
-    if (missing.isEmpty()) { m_accessResult->setText("Your input devices are already readable."); m_accessResult->show(); emit accessChanged(); return; }
-    InputAccessDialog dialog(devices, window());
-    if (dialog.exec() != QDialog::Accepted || dialog.selected().isEmpty()) return;
-    m_enableAccess->setEnabled(false); m_removeAccess->setEnabled(false);
-    m_setupTool->grant(dialog.selected());
+    if (m_consent) return;
+    const auto groups = Input::InputAccess::groupDevices(Input::InputAccess::enumerate());
+    bool missing = false;
+    for (const auto &g : groups) missing = missing || !g.readable;
+    if (groups.isEmpty()) { m_accessResult->setText("No keyboard, mouse or controller was found."); m_accessResult->show(); return; }
+    if (!missing) { m_accessResult->setText("Your input devices are already readable."); m_accessResult->show(); emit accessChanged(); return; }
+    // Inline card in the panel: a separate window would open behind the layer-shell editor.
+    m_consent = new InputAccessDialog(groups, this);
+    static_cast<QVBoxLayout *>(layout())->insertWidget(layout()->indexOf(m_enableAccess), m_consent);
+    m_enableAccess->hide();
+    auto close = [this] { if (m_consent) { m_consent->hide(); m_consent->deleteLater(); m_consent = nullptr; } refresh(); };
+    connect(m_consent, &InputAccessDialog::rejected, this, close);
+    connect(m_consent, &InputAccessDialog::accepted, this, [this, close] {
+        const auto chosen = m_consent->selected();
+        close();
+        if (chosen.isEmpty()) return;
+        m_enableAccess->setEnabled(false); m_removeAccess->setEnabled(false);
+        m_setupTool->grant(chosen);
+    });
 }
 void InputOverlayPanel::accessFinished(Input::InputAccess::Result result, const QString &message) {
     m_accessResult->setText(message); m_accessResult->setVisible(!message.isEmpty());

@@ -45,6 +45,7 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QLayout>
+#include "../ui/input_access_dialog.h"
 
 using namespace Shadowless;
 Q_DECLARE_METATYPE(Shadowless::GsrOptions)
@@ -411,6 +412,32 @@ private slots:
         QVERIFY(full.width() > game.width());
         QVERIFY(full.width() <= video.width() * 40 / 100);                     // still moderate
         QCOMPARE(Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 50, "full").width(), full.width() / 2);
+    }
+    void consentCardIsInlineCompactAndSelectsDevicesAutomatically() {
+        using Shadowless::Input::AccessDevice;
+        AccessDevice kb; kb.name = "MCHOSE Jet75-II"; kb.vendor = "41e4"; kb.product = "211a"; kb.cls = AccessDevice::Keyboard;
+        AccessDevice ms; ms.name = "Compx Wireless mouse 8k dongle"; ms.vendor = "373b"; ms.product = "111a"; ms.cls = AccessDevice::Mouse;
+        AccessDevice ready; ready.name = "Already Readable"; ready.vendor = "046d"; ready.product = "c548"; ready.cls = AccessDevice::Mouse; ready.readable = true;
+        AccessDevice hybrid; hybrid.name = "Acme Combo"; hybrid.vendor = "1234"; hybrid.product = "abcd"; hybrid.cls = AccessDevice::Keyboard;
+        AccessDevice pointer = hybrid; pointer.cls = AccessDevice::Mouse; hybrid.members = {hybrid, pointer};
+        hybrid.alternatives = {AccessDevice::Mouse};
+        QWidget host; host.resize(420, 400);
+        auto *layout = new QVBoxLayout(&host);
+        auto *card = new InputAccessDialog({kb, ms, ready, hybrid}, &host);
+        layout->addWidget(card); host.show();
+        QVERIFY(!card->isWindow());                                   // an inline card can never open behind the layer-shell editor
+        QVERIFY(card->sizeHint().height() < 320);                               // compact: sized to its content, not half the screen
+        QCOMPARE(card->selected().size(), 3);                         // unreadable devices preselected, the readable one is left alone
+        QCOMPARE(card->selected().at(0).triple(), QString("41e4:211a:keyboard"));
+        QCOMPARE(card->selected().at(1).triple(), QString("373b:111a:mouse"));
+        auto *kind = card->findChild<QComboBox *>("inputAccessKind");  // only the true hybrid asks a question
+        QVERIFY(kind); kind->setCurrentIndex(1);
+        QCOMPARE(card->selected().at(2).triple(), QString("1234:abcd:mouse"));
+        for (auto *box : card->findChildren<QCheckBox *>("inputAccessDevice")) box->setChecked(false);
+        QVERIFY(!card->findChild<QPushButton *>("inputAccessContinue")->isEnabled());   // nothing selected: nothing to authorize
+        QSignalSpy no(card, &InputAccessDialog::rejected), yes(card, &InputAccessDialog::accepted);
+        card->findChild<QPushButton *>("inputAccessCancel")->click();
+        QCOMPARE(no.size(), 1); QCOMPARE(yes.size(), 0);
     }
     void inputAccessControlsFollowAvailabilityAndNeverBlockTheApp() {
         QTemporaryDir dir; QFile rule(dir.filePath("70.rules")); QVERIFY(rule.open(QIODevice::WriteOnly)); rule.close();

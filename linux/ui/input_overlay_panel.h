@@ -11,6 +11,7 @@ class QSpinBox;
 class QPushButton;
 namespace Shadowless {
 class InputOverlayPreview;
+class InputAccessDialog;
 // "Peripheral overlay" controls for the Capture overlays editor: preview card, overlay dropdown,
 // position/size/opacity, the saved-events switch and the privacy/permission notes. It owns no input:
 // the controller feeds it live state and source status, and reads input only while previewWanted()
@@ -40,6 +41,7 @@ private:
     QCheckBox *m_sidecar;
     QLabel *m_notice, *m_access, *m_setup, *m_badge, *m_placeholder, *m_accessResult;
     QPushButton *m_enableAccess, *m_removeAccess;
+    InputAccessDialog *m_consent = nullptr;
     Input::InputAccess *m_setupTool;
     bool m_noAgent = false;
     void enableAccess();

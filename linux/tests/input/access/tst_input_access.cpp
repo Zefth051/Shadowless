@@ -22,10 +22,10 @@ QString keyCaps(std::initializer_list<int> codes) {
     while (words.size() > 1 && words.first() == "0") words.removeFirst();
     return words.join(' ');
 }
-void node(const QString &sys, const QString &dev, int n, const QString &name, const QString &vendor, const QString &product, const QString &caps, bool readable = true) {
+void node(const QString &sys, const QString &dev, int n, const QString &name, const QString &vendor, const QString &product, const QString &caps, bool readable = true, const QString &ev = "10001f", const QString &rel = "3") {
     const QString base = QString("%1/event%2/device").arg(sys).arg(n);
     put(base + "/name", name + "\n"); put(base + "/id/vendor", vendor + "\n"); put(base + "/id/product", product + "\n");
-    put(base + "/capabilities/key", caps + "\n");
+    put(base + "/capabilities/key", caps + "\n"); put(base + "/capabilities/ev", ev + "\n"); put(base + "/capabilities/rel", rel + "\n");
     put(QString("%1/event%2").arg(dev).arg(n), "");
     if (!readable) QFile::setPermissions(QString("%1/event%2").arg(dev).arg(n), {});
 }
@@ -86,13 +86,56 @@ private slots:
         QCOMPARE(InputAccess::resultForExit(4, QProcess::NormalExit), R::Failed);
         QCOMPARE(InputAccess::resultForExit(0, QProcess::CrashExit), R::Failed);
     }
-    void grantRunsTheHelperThroughTheLauncherWithOnlyValidatedArguments() {
+    void groupsInterfacesIntoOnePhysicalDeviceWithTheRightClass() {
+        QTemporaryDir t; const QString sys = t.filePath("sys"), dev = t.filePath("dev");
+        const QString kb = keyCaps({28, 30, 44, 57}), ms = keyCaps({272, 273});
+        // MCHOSE Jet75-II (keyboard with a pointer interface), measured from real sysfs
+        node(sys, dev, 10, "MCHOSE Jet75-II", "41e4", "211a", kb, true, "120013", "0");
+        node(sys, dev, 11, "MCHOSE Jet75-II", "41e4", "211a", keyCaps({}), true, "9", "0");
+        node(sys, dev, 12, "MCHOSE Jet75-II Keyboard", "41e4", "211a", kb, true, "10001f", "1040");
+        node(sys, dev, 13, "MCHOSE Jet75-II Mouse", "41e4", "211a", ms, true, "17", "1943");
+        node(sys, dev, 14, "MCHOSE Jet75-II Wireless Radio Control", "41e4", "211a", keyCaps({247}), true, "13", "0");
+        // Compx Wireless mouse 8K (mouse whose dongle also exposes a keyboard interface)
+        node(sys, dev, 16, "Compx Wireless mouse 8k dongle", "373b", "111a", ms, true, "17", "1943");
+        node(sys, dev, 19, "Compx Wireless mouse 8k dongle Consumer Control", "373b", "111a", kb, true, "1f", "1040");  // no autorepeat: not a keyboard
+        node(sys, dev, 22, "Compx Wireless mouse 8k dongle Mouse", "373b", "111a", ms, true, "17", "1943");
+        node(sys, dev, 23, "Compx Wireless mouse 8k dongle", "373b", "111a", kb, true, "120013", "0");
+        // DualSense: pad wins; its touchpad (no relative axes) is never a mouse
+        node(sys, dev, 30, "Wireless Controller", "054c", "0ce6", keyCaps({304, 305}), true, "1b", "0");
+        node(sys, dev, 31, "Wireless Controller Touchpad", "054c", "0ce6", keyCaps({272}), true, "b", "0");
+        const auto groups = InputAccess::groupDevices(InputAccess::enumerate(sys, dev));
+        QCOMPARE(groups.size(), 3);
+        QCOMPARE(groups[0].triple(), QString("41e4:211a:keyboard"));
+        QCOMPARE(groups[0].name, QString("MCHOSE Jet75-II"));
+        QVERIFY(groups[0].alternatives.isEmpty());                       // confident: no category question for the user
+        QCOMPARE(groups[1].triple(), QString("373b:111a:mouse"));
+        QCOMPARE(groups[1].name, QString("Compx Wireless mouse 8k dongle"));
+        QVERIFY(groups[1].alternatives.isEmpty());
+        QCOMPARE(groups[2].triple(), QString("054c:0ce6:gamepad"));
+        QCOMPARE(InputAccess::triples(groups).size(), 3);                // exactly one grant per physical device
+    }
+    void trueHybridsKeepTheirAlternativeAvailable() {
+        QTemporaryDir t; const QString sys = t.filePath("sys"), dev = t.filePath("dev");
+        node(sys, dev, 1, "Acme Combo", "1234", "abcd", keyCaps({28, 30, 44}), true, "120013", "0");
+        node(sys, dev, 2, "Acme Combo Pointer", "1234", "abcd", keyCaps({272}), true, "17", "3");
+        const auto groups = InputAccess::groupDevices(InputAccess::enumerate(sys, dev));
+        QCOMPARE(groups.size(), 1);
+        QCOMPARE(groups[0].triple(), QString("1234:abcd:keyboard"));
+        QCOMPARE(groups[0].alternatives, (QVector<AccessDevice::Class>{AccessDevice::Mouse}));
+        QCOMPARE(groups[0].asClass(AccessDevice::Mouse).triple(), QString("1234:abcd:mouse"));
+    }
+    void groupReadabilityRequiresEveryNodeOfTheChosenClass() {
+        QTemporaryDir t; const QString sys = t.filePath("sys"), dev = t.filePath("dev");
+        node(sys, dev, 16, "Some Mouse", "373b", "111a", keyCaps({272}), true);
+        node(sys, dev, 22, "Some Mouse", "373b", "111a", keyCaps({272}), false);
+        QVERIFY(!InputAccess::groupDevices(InputAccess::enumerate(sys, dev))[0].readable);
+    }
+    void grantStreamsAHashCheckedHelperToRootInsteadOfRunningAUserCopy() {
         QTemporaryDir t;
-        const QString log = t.filePath("args.log");
-        const QString launcher = script(t.path(), "pkexec", "printf '%s\\n' \"$@\" > " + log + "\nexec \"$@\"");
-        const QString helper = script(t.path(), "helper", "echo '{\"ok\":true}'");
-        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules"));
-        QVERIFY(access.available());
+        const QString log = t.filePath("args.log"), out = t.filePath("ran.log");
+        const QString launcher = script(t.path(), "pkexec", "printf '%s\\n' \"$@\" > " + log + "\nexec \"$@\"");   // stands in for pkexec
+        const QString helper = script(t.path(), "helper", "echo \"$@\" > " + out + "\necho '{\"ok\":true}'");
+        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules")); access.setStagingBaseForTesting(t.path());
         AccessDevice good; good.vendor = "41e4"; good.product = "211a"; good.cls = AccessDevice::Keyboard;
         AccessDevice evil; evil.vendor = "41e4;x"; evil.product = "211a"; evil.cls = AccessDevice::Mouse;
         QSignalSpy done(&access, &InputAccess::finished);
@@ -101,14 +144,28 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(done.size(), 1, 10000);
         QCOMPARE(done[0][0].value<InputAccess::Result>(), InputAccess::Result::Granted);
         QFile f(log); QVERIFY(f.open(QIODevice::ReadOnly));
-        const QStringList lines = QString::fromUtf8(f.readAll()).split('\n', Qt::SkipEmptyParts);
-        QCOMPARE(lines.size(), 3);                                       // staged helper, "install", exactly one triple
-        QVERIFY(lines[0] != helper);                                     // not run from the original (possibly FUSE) location
-        QCOMPARE(lines[1], QString("install")); QCOMPARE(lines[2], QString("41e4:211a:keyboard"));
-        QVERIFY(!QFileInfo::exists(lines[0]));                           // staged copy removed afterwards
-        const QString runtime = qEnvironmentVariable("XDG_RUNTIME_DIR");
-        if (!runtime.isEmpty()) QVERIFY(lines[0].startsWith(runtime + "/shadowless-setup-")); // private per-user directory
-        QVERIFY(!access.busy());
+        const QStringList lines = QString::fromUtf8(f.readAll()).split('\n');
+        QVERIFY(lines[0] == "/usr/bin/sh" || lines[0] == "/bin/sh");                 // a root-owned interpreter, never the user's copy
+        QCOMPARE(lines[1], QString("-c"));
+        QVERIFY(!lines.contains(helper));                                          // the helper path is not what gets authorized
+        QCOMPARE(lines[4].size(), 64);                                             // sha256 of the helper, fixed in argv
+        QCOMPARE(lines[6], QString("install")); QCOMPARE(lines[7], QString("41e4:211a:keyboard"));
+        QCOMPARE(lines.size(), 9);                                                // trailing empty entry only: the evil device never reached the command line
+        QCOMPARE(QString::fromUtf8(QFile(out).open(QIODevice::ReadOnly) ? QByteArray("ok") : QByteArray()), QString("ok"));
+        QCOMPARE(QDir(t.path()).entryList({"shadowless-input.*"}, QDir::Dirs).size(), 0);   // root's private directory is removed afterwards
+    }
+    void aTamperedHelperStreamIsRejectedBeforeItRuns() {
+        QTemporaryDir t;
+        const QString out = t.filePath("ran.log");
+        const QString launcher = script(t.path(), "pkexec", "echo '#!/bin/sh' > " + out + "\nprintf '#!/bin/sh\\ntouch " + out + ".pwned\\n' | exec \"$@\"");   // substitutes the bytes in transit
+        const QString helper = script(t.path(), "helper", "exit 0");
+        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules")); access.setStagingBaseForTesting(t.path());
+        AccessDevice d; d.vendor = "41e4"; d.product = "211a"; d.cls = AccessDevice::Keyboard;
+        QSignalSpy done(&access, &InputAccess::finished);
+        access.grant({d});
+        QTRY_COMPARE_WITH_TIMEOUT(done.size(), 1, 10000);
+        QCOMPARE(done[0][0].value<InputAccess::Result>(), InputAccess::Result::Failed);
+        QVERIFY(!QFileInfo::exists(out + ".pwned"));                                // the substituted program never executed
     }
     void onlyRootControlledHelpersRunInPlace() {
         QTemporaryDir t;
@@ -122,7 +179,7 @@ private slots:
         QTemporaryDir t;
         const QString launcher = script(t.path(), "pkexec", "exit 126");
         const QString helper = script(t.path(), "helper", "exit 0");
-        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules"));
+        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules")); access.setStagingBaseForTesting(t.path());
         AccessDevice d; d.vendor = "1111"; d.product = "2222"; d.cls = AccessDevice::Mouse;
         QSignalSpy done(&access, &InputAccess::finished);
         access.grant({d});
@@ -134,7 +191,7 @@ private slots:
         QTemporaryDir t;
         const QString launcher = script(t.path(), "pkexec", "echo 'Error executing command as another user: No authentication agent found.' >&2; exit 127");
         const QString helper = script(t.path(), "helper", "exit 0");
-        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules"));
+        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules")); access.setStagingBaseForTesting(t.path());
         AccessDevice d; d.vendor = "1111"; d.product = "2222"; d.cls = AccessDevice::Mouse;
         QSignalSpy done(&access, &InputAccess::finished);
         access.grant({d});
@@ -146,7 +203,7 @@ private slots:
         QTemporaryDir t;
         const QString launcher = script(t.path(), "pkexec", "exec \"$@\"");
         const QString helper = script(t.path(), "helper", "echo 'udev reload failed'; exit 4");
-        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules"));
+        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules")); access.setStagingBaseForTesting(t.path());
         AccessDevice d; d.vendor = "1111"; d.product = "2222"; d.cls = AccessDevice::Mouse;
         QSignalSpy done(&access, &InputAccess::finished);
         access.grant({d});
@@ -174,7 +231,7 @@ private slots:
         put(rules, "# rule\n");
         const QString launcher = script(t.path(), "pkexec", "printf '%s\\n' \"$@\" > " + log + "\nexit 0");
         const QString helper = script(t.path(), "helper", "exit 0");
-        InputAccess access; access.configureForTesting(launcher, helper, rules);
+        InputAccess access; access.configureForTesting(launcher, helper, rules); access.setStagingBaseForTesting(t.path());
         QVERIFY(access.ruleInstalled());
         QSignalSpy done(&access, &InputAccess::finished);
         access.revoke();

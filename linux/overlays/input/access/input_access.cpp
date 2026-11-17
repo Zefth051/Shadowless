@@ -1,9 +1,11 @@
 #include "input_access.h"
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QHash>
 #include <QSet>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -69,15 +71,69 @@ QVector<AccessDevice> InputAccess::enumerate(const QString &sysRoot, const QStri
         device.node = devRoot + "/" + entry;
         device.eventNumber = match.captured(1).toInt();
         const QStringList keys = attribute(base + "/capabilities/key").split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
+        bool evOk = false;
+        const quint64 evBits = attribute(base + "/capabilities/ev").toULongLong(&evOk, 16);
+        bool relOk = false;
+        const quint64 relBits = attribute(base + "/capabilities/rel").toULongLong(&relOk, 16);
+        const bool repeats = evOk && ((evBits >> 20) & 1);                   // EV_REP: only real keyboards autorepeat
+        const bool pointer = relOk && (relBits & 3) == 3;                    // REL_X and REL_Y: excludes touchpads and tablets
         if (hasKey(keys, kBtnSouth) || hasKey(keys, kBtnEast)) device.cls = AccessDevice::Gamepad;
-        else if (hasKey(keys, kKeyA) && hasKey(keys, kKeyZ) && hasKey(keys, kKeyEnter)) device.cls = AccessDevice::Keyboard;
-        else if (hasKey(keys, kBtnLeft)) device.cls = AccessDevice::Mouse;
+        else if (repeats && hasKey(keys, kKeyA) && hasKey(keys, kKeyZ) && hasKey(keys, kKeyEnter)) device.cls = AccessDevice::Keyboard;
+        else if (pointer && hasKey(keys, kBtnLeft)) device.cls = AccessDevice::Mouse;
         else continue;
         if (!validTriple(device.triple())) continue;               // virtual or oddly identified devices cannot be granted
         device.readable = ::access(QFile::encodeName(device.node).constData(), R_OK) == 0;
         devices.append(device);
     }
     return devices;
+}
+
+AccessDevice AccessDevice::asClass(Class other) const {
+    AccessDevice result = *this;
+    result.cls = other;
+    result.readable = true;
+    bool any = false;
+    for (const auto &member : members) if (member.cls == other) { any = true; result.readable = result.readable && member.readable; }
+    if (!any) result.readable = false;
+    result.alternatives.clear();
+    for (const auto &member : members) if (member.cls != other && !result.alternatives.contains(member.cls)) result.alternatives.append(member.cls);
+    return result;
+}
+
+QVector<AccessDevice> InputAccess::groupDevices(const QVector<AccessDevice> &nodes) {
+    QVector<AccessDevice> groups;
+    QStringList order;
+    QHash<QString, QVector<AccessDevice>> byIdentity;
+    for (const auto &node : nodes) {
+        if (!byIdentity.contains(node.identity())) order.append(node.identity());
+        byIdentity[node.identity()].append(node);
+    }
+    for (const QString &identity : order) {
+        const auto &members = byIdentity[identity];
+        int counts[3] = {0, 0, 0};
+        QString base = members.first().name;
+        for (const auto &m : members) { ++counts[m.cls]; if (m.name.size() < base.size()) base = m.name; }
+        using C = AccessDevice::Class;
+        C chosen = C::Keyboard;
+        bool confident = true;
+        const bool mouseName = base.contains(QRegularExpression("\\b(mouse|mice|trackball)\\b", QRegularExpression::CaseInsensitiveOption));
+        const bool keyboardName = base.contains(QRegularExpression("\\b(keyboard|keypad)\\b", QRegularExpression::CaseInsensitiveOption));
+        if (counts[C::Gamepad] > 0) chosen = C::Gamepad;
+        else if (counts[C::Mouse] > 0 && counts[C::Keyboard] == 0) chosen = C::Mouse;
+        else if (counts[C::Mouse] == 0) chosen = C::Keyboard;
+        else if (mouseName && !keyboardName) chosen = C::Mouse;
+        else if (keyboardName && !mouseName) chosen = C::Keyboard;
+        else if (counts[C::Mouse] != counts[C::Keyboard]) chosen = counts[C::Mouse] > counts[C::Keyboard] ? C::Mouse : C::Keyboard;  // the larger interface set wins
+        else confident = false;                                                           // true hybrid: keep the keyboard default and offer the alternative
+        AccessDevice group = members.first();
+        group.name = base;
+        group.members = members;
+        for (const auto &m : members) group.eventNumber = qMin(group.eventNumber, m.eventNumber);
+        group = group.asClass(chosen);
+        if (confident) group.alternatives.clear();
+        groups.append(group);
+    }
+    return groups;
 }
 
 QStringList InputAccess::triples(const QVector<AccessDevice> &devices) {
@@ -125,26 +181,21 @@ void InputAccess::configureForTesting(const QString &launcher, const QString &he
     m_launcher = launcher; m_helper = helper; m_ruleFile = ruleFile;
 }
 
-void InputAccess::cleanup() {
-    if (!m_staged.isEmpty()) { QDir(QFileInfo(m_staged).absolutePath()).removeRecursively(); m_staged.clear(); }
-}
+void InputAccess::cleanup() {}
 
-// A helper inside a FUSE-mounted AppImage is not reachable by root, so it is copied to a private 0700 directory first.
-// A helper that root fully controls (system install) runs in place; anything user-writable is never trusted by path.
 bool InputAccess::rootControlled(const QString &path) { return rootControlledImpl(path); }
 
-QString InputAccess::stagedHelper(QString *error) {
-    if (rootControlled(m_helper)) return m_helper;
-    // Prefer the per-user runtime directory (0700, tmpfs, not shared); fall back to the temp directory.
-    QString base = qEnvironmentVariable("XDG_RUNTIME_DIR");
-    if (base.isEmpty() || !QFileInfo(base).isDir()) base = QDir::tempPath();
-    const QString dir = base + "/shadowless-setup-" + QUuid::createUuid().toString(QUuid::Id128).left(16);
-    if (::mkdir(QFile::encodeName(dir).constData(), 0700) != 0) { *error = "Could not prepare a private directory for the setup helper."; return {}; }
-    const QString target = dir + "/shadowless-input-setup";
-    if (!QFile::copy(m_helper, target) || !QFile::setPermissions(target, QFile::ReadOwner | QFile::ExeOwner)) { *error = "Could not stage the setup helper."; QDir(dir).removeRecursively(); return {}; }
-    m_staged = target;
-    return target;
-}
+void InputAccess::setStagingBaseForTesting(const QString &base) { m_stagingBase = base; }
+
+namespace {
+// Runs as root through pkexec when the helper is not root-owned (AppImage, dev builds). Root, not the user, creates the
+// directory and file, the helper bytes arrive on stdin, and they must match the hash passed in the (unforgeable) argv.
+// A user-controlled copy of the helper is therefore never executed as root, and nothing can be swapped after authorization.
+constexpr const char *kRunScript =
+    "set -eu; sum=$1; base=$2; shift 2; umask 077; "
+    "d=$(mktemp -d \"$base/shadowless-input.XXXXXXXX\"); trap 'rm -rf \"$d\"' EXIT; "
+    "cat > \"$d/h\"; printf '%s  %s\\n' \"$sum\" \"$d/h\" | sha256sum -c - >/dev/null; chmod 0700 \"$d/h\"; \"$d/h\" \"$@\"";
+} // namespace
 
 void InputAccess::grant(const QVector<AccessDevice> &devices) {
     const QStringList list = triples(devices);
@@ -157,20 +208,28 @@ void InputAccess::revoke() { run({"remove"}); }
 void InputAccess::run(const QStringList &helperArguments) {
     if (m_process) { emit finished(Result::Failed, "A setup is already in progress."); return; }
     if (!available()) { emit finished(Result::Unavailable, "Automatic setup is not available on this system."); return; }
-    QString error;
-    const QString helper = stagedHelper(&error);
-    if (helper.isEmpty()) { emit finished(Result::Failed, error); return; }
+    QStringList arguments;
+    QByteArray payload;
+    if (rootControlled(m_helper)) {
+        arguments = QStringList{m_helper} + helperArguments;
+    } else {
+        QFile file(m_helper);
+        if (!file.open(QIODevice::ReadOnly) || file.size() > 8 * 1024 * 1024) { emit finished(Result::Failed, "Could not read the setup helper."); return; }
+        payload = file.readAll();
+        const QString shell = QFileInfo("/usr/bin/sh").exists() ? "/usr/bin/sh" : "/bin/sh";
+        arguments = QStringList{shell, "-c", kRunScript, "sh", QString::fromLatin1(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex()), m_stagingBase} + helperArguments;
+    }
     m_process = new QProcess(this);
     m_process->setProcessChannelMode(QProcess::MergedChannels);
     connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
         if (e != QProcess::FailedToStart) return;
-        auto *p = std::exchange(m_process, nullptr); p->deleteLater(); cleanup();
+        auto *p = std::exchange(m_process, nullptr); p->deleteLater();
         emit finished(Result::Failed, "The authorization tool could not be started.");
     });
     connect(m_process, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
         auto *p = std::exchange(m_process, nullptr);
         const QString output = QString::fromUtf8(p->readAll()).trimmed().left(300);
-        p->deleteLater(); cleanup();
+        p->deleteLater();
         Result result = resultForExit(code, status);
         if (code == 127 && output.contains("authentication agent", Qt::CaseInsensitive)) result = Result::NoAgent;
         emit finished(result, result == Result::Granted ? QString("Input access enabled.")
@@ -179,7 +238,9 @@ void InputAccess::run(const QStringList &helperArguments) {
                               : result == Result::Cancelled ? QString("Authorization was cancelled. Shadowless works normally without input capture.")
                               : output.isEmpty() ? QString("The setup failed (exit code %1).").arg(code) : output);
     });
-    m_process->start(m_launcher, QStringList{helper} + helperArguments);
+    m_process->start(m_launcher, arguments);
+    if (!payload.isEmpty()) m_process->write(payload);
+    m_process->closeWriteChannel();
 }
 
 } // namespace Shadowless::Input
