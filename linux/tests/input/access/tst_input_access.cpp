@@ -106,7 +106,17 @@ private slots:
         QVERIFY(lines[0] != helper);                                     // not run from the original (possibly FUSE) location
         QCOMPARE(lines[1], QString("install")); QCOMPARE(lines[2], QString("41e4:211a:keyboard"));
         QVERIFY(!QFileInfo::exists(lines[0]));                           // staged copy removed afterwards
+        const QString runtime = qEnvironmentVariable("XDG_RUNTIME_DIR");
+        if (!runtime.isEmpty()) QVERIFY(lines[0].startsWith(runtime + "/shadowless-setup-")); // private per-user directory
         QVERIFY(!access.busy());
+    }
+    void onlyRootControlledHelpersRunInPlace() {
+        QTemporaryDir t;
+        QVERIFY(!InputAccess::rootControlled(script(t.path(), "helper", "exit 0")));  // user-writable: must be staged, never trusted by path
+        QVERIFY(!InputAccess::rootControlled("/nonexistent/helper"));
+        if (QFileInfo("/usr/bin/env").ownerId() == 0) QVERIFY(InputAccess::rootControlled("/usr/bin/env"));  // not meaningful inside a user namespace
+        const QString link = t.filePath("link"); QVERIFY(QFile::link("/usr/bin/env", link));
+        QVERIFY(!InputAccess::rootControlled(link));                                  // symlinks are never trusted
     }
     void dismissedDialogIsNotAnError() {
         QTemporaryDir t;

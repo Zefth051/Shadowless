@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<!-- For distro packages: install to /usr/share/polkit-1/actions/ together with the root-owned helper at
+     /usr/libexec/shadowless/shadowless-input-setup. Gives pkexec a clear, specific prompt for that exact path.
+     The AppImage uses a staged copy and therefore the generic pkexec prompt. -->
+<policyconfig>
+  <vendor>Shadowless</vendor>
+  <vendor_url>https://github.com/zefth051/Shadowless</vendor_url>
+  <action id="io.github.zefth051.shadowless.input-access">
+    <description>Allow Shadowless to read your keyboard and mouse for input overlays</description>
+    <message>Authentication is required to let Shadowless read the selected keyboards, mice and controllers for input overlays</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/shadowless/shadowless-input-setup</annotate>
+  </action>
+</policyconfig>

@@ -6,6 +6,13 @@ For the native Linux/GSR experiment in `linux/`, read `linux/README.md` and
 `docs/LINUX_GSR_SPIKE.md`. Its build and validation use qmake6/Make/Qt Test;
 the Windows solution and PowerShell validation below apply to Windows code.
 
+## Product philosophy (always apply)
+
+Shadowless is simple: install once and it just works; it adapts to the user,
+not the reverse. Read `docs/PRODUCT_PHILOSOPHY.md` (single source of truth)
+before designing or reviewing any feature, installer, setting or permission
+flow. Security, testing and duo rules below still apply.
+
 ## Start here
 
 1. Read `docs/agent/INDEX.md`.

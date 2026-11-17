@@ -37,6 +37,8 @@ public:
     static QVector<AccessDevice> primaryNodes(const QVector<AccessDevice> &devices);
     static bool allReadable(const QVector<AccessDevice> &devices);
     static bool validTriple(const QString &triple);
+    // True when root controls the file and all its parent directories (safe to authorize in place).
+    static bool rootControlled(const QString &path);
     static Result resultForExit(int exitCode, QProcess::ExitStatus status);
 
     QString helperPath() const;                  // empty when no helper ships with this build

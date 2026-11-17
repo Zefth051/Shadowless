@@ -9,12 +9,25 @@
 #include <QTemporaryDir>
 #include <QUuid>
 #include <algorithm>
+#include <sys/stat.h>
 #include <unistd.h>
 
 namespace Shadowless::Input {
 namespace {
 constexpr const char *kRuleFile = "/etc/udev/rules.d/71-shadowless-input-access.rules";
 constexpr int kKeyA = 30, kKeyZ = 44, kKeyEnter = 28, kBtnLeft = 272, kBtnSouth = 304, kBtnEast = 305;
+
+// True when root controls the file and every directory above it, so nobody else can swap it between authorization and execution.
+bool rootControlledImpl(const QString &path) {
+    QString current = QFileInfo(path).absoluteFilePath();
+    while (true) {
+        struct stat st {};
+        if (::lstat(QFile::encodeName(current).constData(), &st) != 0 || st.st_uid != 0 || (st.st_mode & (S_IWGRP | S_IWOTH)) || S_ISLNK(st.st_mode))
+            return false;
+        if (current == "/") return true;
+        current = QFileInfo(current).absolutePath();
+    }
+}
 
 QString attribute(const QString &path) {
     QFile file(path);
@@ -117,11 +130,16 @@ void InputAccess::cleanup() {
 }
 
 // A helper inside a FUSE-mounted AppImage is not reachable by root, so it is copied to a private 0700 directory first.
-// Helpers installed in system directories are run in place.
+// A helper that root fully controls (system install) runs in place; anything user-writable is never trusted by path.
+bool InputAccess::rootControlled(const QString &path) { return rootControlledImpl(path); }
+
 QString InputAccess::stagedHelper(QString *error) {
-    if (m_helper.startsWith("/usr/") || m_helper.startsWith("/opt/")) return m_helper;
-    const QString dir = QDir::temp().filePath("shadowless-setup-" + QUuid::createUuid().toString(QUuid::Id128).left(12));
-    if (!QDir().mkpath(dir) || !QFile::setPermissions(dir, QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner)) { *error = "Could not prepare a private directory for the setup helper."; return {}; }
+    if (rootControlled(m_helper)) return m_helper;
+    // Prefer the per-user runtime directory (0700, tmpfs, not shared); fall back to the temp directory.
+    QString base = qEnvironmentVariable("XDG_RUNTIME_DIR");
+    if (base.isEmpty() || !QFileInfo(base).isDir()) base = QDir::tempPath();
+    const QString dir = base + "/shadowless-setup-" + QUuid::createUuid().toString(QUuid::Id128).left(16);
+    if (::mkdir(QFile::encodeName(dir).constData(), 0700) != 0) { *error = "Could not prepare a private directory for the setup helper."; return {}; }
     const QString target = dir + "/shadowless-input-setup";
     if (!QFile::copy(m_helper, target) || !QFile::setPermissions(target, QFile::ReadOwner | QFile::ExeOwner)) { *error = "Could not stage the setup helper."; QDir(dir).removeRecursively(); return {}; }
     m_staged = target;

@@ -2,6 +2,11 @@
 
 Use this page to route work. Read one area document, not the whole set.
 
+## Product philosophy
+
+Every area follows `docs/PRODUCT_PHILOSOPHY.md` (install once, zero friction,
+native authorization, graceful degradation, no repeated setup).
+
 ## Task router
 
 | Area | Use for | Read | Primary validation |
