@@ -67,9 +67,7 @@ bool Layout::load(const QString &path, Layout *result, QString *error) {
     return fromJson(doc.object(), result, error);
 }
 
-QStringList Layout::builtinIds() {
-    return {"qwerty", "qwerty-full", "arrows", "azerty", "dualsense"};
-}
+QStringList Layout::builtinIds() { return builtinLayoutIds(); }
 
 bool Layout::builtin(const QString &id, Layout *result, QString *error) {
     if (!builtinIds().contains(id)) return fail(error, "unknown built-in layout");

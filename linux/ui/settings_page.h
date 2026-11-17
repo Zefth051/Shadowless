@@ -1,4 +1,5 @@
 #pragma once
+#include "../settings/settings.h"
 #include "../capture/audio.h"
 #include <QWidget>
 #include <QFutureWatcher>
@@ -13,6 +14,7 @@ class QKeySequenceEdit;
 class QTableWidget;
 class QPushButton;
 namespace Shadowless {
+class InputOverlayPreview;
 class SettingsPage : public QWidget {
     Q_OBJECT
 public:
@@ -24,6 +26,8 @@ public:
     void setDiscordPresence(bool enabled);
     bool idleCompression() const;
     void setIdleCompression(bool enabled);
+    InputOverlaySettings inputOverlay() const;
+    void setInputOverlay(const InputOverlaySettings &value);
     void showError(const QString &error);
     void showVideo();
     void showStorage();
@@ -48,6 +52,12 @@ private:
     QCheckBox *m_organizeByGame;
     QCheckBox *m_launchAtLogin, *m_startReplayOnLaunch, *m_discordPresence, *m_idleCompression;
     QLabel *m_error, *m_shortcuts, *m_activeNotice;
+    InputOverlayPreview *m_inputPreview;
+    QComboBox *m_inputLayout, *m_inputCorner;
+    QSpinBox *m_inputScale, *m_inputOpacity;
+    QCheckBox *m_inputSidecar;
+    QLabel *m_inputNotice, *m_inputAccess, *m_inputSetup;
+    void updateInputOverlay();
     QList<QKeySequenceEdit *> m_keys;
     QTableWidget *m_applications;
     QPushButton *m_refreshAudio;

@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "../overlays/input/core/input_types.h"
 #include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
@@ -108,6 +109,30 @@ QStringList Settings::shortcutKeys() const {
     auto keys = m_store->value("overlay/shortcuts", defaults).toStringList();
     if (keys.size() == 3) keys << defaults[3]; // settings written before the pause shortcut existed
     return keys.size() == 4 ? keys : defaults;
+}
+InputOverlaySettings InputOverlaySettings::sanitized() const {
+    InputOverlaySettings v = *this;
+    if (!Input::builtinLayoutIds().contains(v.layout)) v.layout = "none";
+    if (!QStringList{"top-left", "top-right", "bottom-left", "bottom-right"}.contains(v.corner)) v.corner = "bottom-left";
+    v.scale = qBound(50, v.scale, 200); v.opacity = qBound(20, v.opacity, 100);
+    if (!v.enabled()) v.sidecar = false; // no layout, no allowlist, nothing to record
+    return v;
+}
+InputOverlaySettings Settings::inputOverlay() const {
+    InputOverlaySettings v;
+    v.layout = m_store->value("inputOverlay/layout", v.layout).toString();
+    v.sidecar = m_store->value("inputOverlay/sidecar", v.sidecar).toBool();
+    v.corner = m_store->value("inputOverlay/corner", v.corner).toString();
+    v.scale = m_store->value("inputOverlay/scale", v.scale).toInt();
+    v.opacity = m_store->value("inputOverlay/opacity", v.opacity).toInt();
+    return v.sanitized();
+}
+void Settings::setInputOverlay(const InputOverlaySettings &value) {
+    const auto v = value.sanitized();
+    m_store->setValue("inputOverlay/layout", v.layout); m_store->setValue("inputOverlay/sidecar", v.sidecar);
+    m_store->setValue("inputOverlay/corner", v.corner); m_store->setValue("inputOverlay/scale", v.scale);
+    m_store->setValue("inputOverlay/opacity", v.opacity);
+    m_store->sync();
 }
 bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicator, QString *error, const QStringList &keys, const QString &accent, const QString &position) {
     auto &s = *m_store;

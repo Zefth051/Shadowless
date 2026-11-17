@@ -43,3 +43,7 @@ HEADERS += ../ui/clip_waveform.h
 
 SOURCES += discord_presence.cpp idle_compressor.cpp
 HEADERS += discord_presence.h idle_compressor.h
+
+include(../overlays/input/core/input.pri)
+SOURCES += $$PWD/../ui/input_overlay_preview.cpp
+HEADERS += $$PWD/../ui/input_overlay_preview.h
