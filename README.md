@@ -5,8 +5,8 @@ Captail by FaulMit; original attribution and licensing are retained.
 See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Windows / Linux feature comparison](docs/FEATURES.md).
 
-[Windows installer / releases](https://github.com/Zefth051/Shadowless/releases) ·
-[Linux AppImage 0.3.5](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.5) ·
+[Windows 0.3.2 installer / releases](https://github.com/Zefth051/Shadowless/releases) ·
+[Linux AppImage 0.3.6](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.6) ·
 [Installation guide](docs/INSTALL.md)
 
 **Capture engines:** Windows uses OBS components (`libobs`), included in the
@@ -18,8 +18,8 @@ Linux 0.2.4 draft still requires host GSR.
 
 ## Current release status
 
-**Public source and releases.** Linux 0.3.5 is available as an AppImage with
-checksums, build inventory and dependency source materials. Windows 0.3.1 is the
+**Public source and releases.** Linux 0.3.6 is available as an AppImage with
+checksums, build inventory and dependency source materials. Windows 0.3.2 is the
 current Windows release. See [available packages and validation status](docs/RELEASE_STATUS.md).
 
 | | Windows edition | Linux edition |
@@ -57,7 +57,7 @@ See [updates and local work](docs/UPDATES_AND_LOCAL_WORK.md) for the release pro
 
 <p align="center">
   <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
-  <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.5"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.6"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
 </p>
 
 <p align="center">

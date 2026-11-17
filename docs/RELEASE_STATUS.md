@@ -1,13 +1,15 @@
 # Release and validation status
 
 Last checked: 2026-11-13. The repository source and releases are public. The
-current public releases are Windows 0.3.1 and Linux 0.3.3. Older validation
+current public releases are Windows 0.3.2 and Linux 0.3.6. Older validation
 candidates remain drafts; their assets require repository access.
 
 ## Available build candidates
 
 | Platform | Tag | Attached assets | Status |
 | --- | --- | --- | --- |
+| Windows x64 | [`v0.3.2`](https://github.com/Zefth051/Shadowless/releases/tag/v0.3.2) | Setup EXE, Portable ZIP, checksums | Public release; built and package-verified in CI, not yet run on a real Windows host |
+| Linux x86_64 / Hyprland and Plasma 6 | [`linux-v0.3.6`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.6) | AppImage, checksums, build inventory | Public release; verified updater from 0.3.5 |
 | Linux x86_64 / Hyprland | [`linux-v0.3.3`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.3) | AppImage, checksums, build inventory, dependency source materials | Public release |
 | Windows x64 | [`v0.3.1`](https://github.com/Zefth051/Shadowless/releases/tag/v0.3.1) | Setup EXE, Portable ZIP, checksums | Public release |
 | Linux x86_64 / Hyprland | [`linux-v0.3.2`](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.2) | AppImage, checksums, build inventory, dependency source materials | Public release |
