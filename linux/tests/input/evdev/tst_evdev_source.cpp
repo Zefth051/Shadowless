@@ -2,12 +2,15 @@
 #include <QFile>
 #include <QTemporaryDir>
 #include <QThread>
+#include <QTimer>
+#include <QPointer>
 #include "evdev_source.h"
 #include "evdev_keymap.h"
 #include <linux/input.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <cstdarg>
 #include <cstring>
 
@@ -15,6 +18,14 @@ using namespace Shadowless::Input;
 
 // Pipe fixtures cannot implement evdev ioctls; emulate one kernel snapshot response.
 static int snapshotFd = -1;
+static QString countedPath;
+static int identityChecks = 0;
+// Count per-node scan work without replacing the real identity lookup.
+extern "C" int __real_stat(const char *path, struct stat *result);
+extern "C" int __wrap_stat(const char *path, struct stat *result) {
+    if (!countedPath.isEmpty() && QFile::decodeName(path) == countedPath) ++identityChecks;
+    return __real_stat(path, result);
+}
 extern "C" int __real_ioctl(int fd, unsigned long request, ...);
 extern "C" int __wrap_ioctl(int fd, unsigned long request, ...) {
     va_list args; va_start(args, request); void *data = va_arg(args, void *); va_end(args);
@@ -30,9 +41,12 @@ extern "C" int __wrap_ioctl(int fd, unsigned long request, ...) {
 class TestSource : public EvdevInputSource {
 public:
     explicit TestSource(const QString &path) : EvdevInputSource(path) {}
+    using EvdevInputSource::setRetryPolicy;
     QHash<QString, int> readers;
+    QList<qint64> attemptTimes;
     QList<int> opened;
-    bool denied = false, holdWOnOpen = false;
+    bool denied = false, holdWOnOpen = false, rejected = false, failConfiguration = false;
+    QHash<QString, int> attempts;
     int openError = 0;
     void triggerRange(int minimum, int maximum) {
         info.leftMinimum = info.rightMinimum = minimum;
@@ -40,18 +54,21 @@ public:
     }
 protected:
     int openDevice(const QString &path) override {
+        ++attempts[QFileInfo(path).fileName()];
+        attemptTimes.append(monotonicMs());
         if (denied || openError) { errno = openError ? openError : EACCES; return -1; }
         const int fd = readers.value(QFileInfo(path).fileName(), -1);
         if (fd < 0) { errno = ENOENT; return -1; }
         const int owned = dup(fd);
         if (owned >= 0) opened.append(owned);
         if (owned >= 0 && holdWOnOpen) snapshotFd = owned; // the fixture reports W as held from the first query
+        if (owned >= 0 && failConfiguration) close(owned); // Make the source's fcntl fail.
         return owned;
     }
     DeviceInfo info;
     bool probeDevice(int, DeviceInfo *result) override {
         *result = info;
-        return true;
+        return !rejected;
     }
 };
 
@@ -70,7 +87,211 @@ static InputEvent eventAt(const QSignalSpy &spy, int i) { return qvariant_cast<I
 class EvdevTests : public QObject {
     Q_OBJECT
 private slots:
-    void cleanup() { snapshotFd = -1; }
+    void cleanup() { snapshotFd = -1; countedPath.clear(); identityChecks = 0; }
+    void rejectedNodesStayCached() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.rejected = true; source.readers.insert("event0", pipe.fds[0]);
+        touch(dir.filePath("event0")); source.start({"key.w"});
+        QCOMPARE(source.attempts.value("event0"), 1);
+        for (int batch = 0; batch < 5; ++batch) {
+            for (int i = 0; i < 100; ++i) touch(dir.filePath(QString("noise%1").arg(i)));
+            QVERIFY(QFile::setPermissions(dir.filePath("event0"), QFile::ReadOwner | QFile::WriteOwner));
+            QTest::qWait(40);
+        }
+        QCOMPARE(source.attempts.value("event0"), 1);
+        QCOMPARE(source.status(), InputStatus::NoDevices);
+        // Renaming a replacement over the node changes its inode without IN_DELETE.
+        touch(dir.filePath("replacement"));
+        const auto old = dir.filePath("event0").toLocal8Bit();
+        const auto replacement = dir.filePath("replacement").toLocal8Bit();
+        QCOMPARE(::rename(replacement.constData(), old.constData()), 0);
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 2, 200);
+        QVERIFY(QFile::remove(dir.filePath("event0"))); touch(dir.filePath("event0"));
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 3, 200);
+        source.stop(); source.start({"key.w"});
+        QCOMPARE(source.attempts.value("event0"), 4);
+    }
+    void unrelatedHotplugDoesNotRetryDeniedNode() {
+        QTemporaryDir dir; TestSource source(dir.path());
+        touch(dir.filePath("event0")); source.denied = true; source.start({"key.w"});
+        for (int i = 0; i < 5; ++i) {
+            touch(dir.filePath(QString("noise%1").arg(i))); QTest::qWait(40);
+        }
+        QCOMPARE(source.attempts.value("event0"), 1);
+        QCOMPARE(source.status(), InputStatus::PermissionDenied);
+    }
+    void boundedRetries_data() {
+        QTest::addColumn<int>("error");
+        QTest::addColumn<InputStatus>("expectedStatus");
+        QTest::newRow("access") << EACCES << InputStatus::PermissionDenied;
+        QTest::newRow("permission") << EPERM << InputStatus::PermissionDenied;
+        QTest::newRow("io") << EIO << InputStatus::Error;
+        QTest::newRow("other") << EMFILE << InputStatus::Error;
+        QTest::newRow("gone") << ENODEV << InputStatus::NoDevices;
+        QTest::newRow("missing") << ENOENT << InputStatus::NoDevices;
+    }
+    void boundedRetries() {
+        QFETCH(int, error); QFETCH(InputStatus, expectedStatus);
+        QTemporaryDir dir; TestSource source(dir.path());
+        source.setRetryPolicy(10, 20, 6); source.openError = error;
+        touch(dir.filePath("event0")); source.start({"key.w"});
+        QCOMPARE(source.attempts.value("event0"), 1);
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 6, 200);
+        QCOMPARE(source.status(), expectedStatus);
+        QCOMPARE(source.attemptTimes.size(), 6);
+        // The first delay doubles once, then remains capped at 20 ms.
+        for (int i = 1; i < 6; ++i) {
+            const auto interval = source.attemptTimes[i] - source.attemptTimes[i-1];
+            QVERIFY(interval >= (i == 1 ? 10 : 20));
+            QVERIFY(interval < 100);
+        }
+        QVERIFY(source.findChildren<QTimer *>().size() == 1); // Only the inactive debounce remains.
+        QTest::qWait(120); QCOMPARE(source.attempts.value("event0"), 6);
+        touch(dir.filePath("noise")); QTest::qWait(60);
+        QCOMPARE(source.attempts.value("event0"), 6); QCOMPARE(source.status(), expectedStatus);
+        QVERIFY(QFile::setPermissions(dir.filePath("event0"), QFile::ReadOwner | QFile::WriteOwner));
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 12, 200);
+        QTest::qWait(100); QCOMPARE(source.attempts.value("event0"), 12);
+    }
+    void retryReplacesConfigurationErrorWithPermissionStatus() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.setRetryPolicy(10, 20, 2); source.failConfiguration = true;
+        source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));
+        source.start({"key.w"}); QCOMPARE(source.status(), InputStatus::Error);
+        source.failConfiguration = false; source.denied = true;
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 2, 200);
+        QCOMPARE(source.status(), InputStatus::PermissionDenied);
+        touch(dir.filePath("noise")); QTest::qWait(60);
+        QCOMPARE(source.status(), InputStatus::PermissionDenied);
+    }
+    void timerRecoversWithoutHotplug() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.setRetryPolicy(10, 20, 4); source.denied = true;
+        source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));
+        QSignalSpy spy(&source, &InputSource::inputChanged);
+        source.start({"key.w"}); QCOMPARE(source.status(), InputStatus::PermissionDenied);
+        source.denied = false;
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::Active, 200);
+        QCOMPARE(source.attempts.value("event0"), 2);
+        pipe.send(EV_KEY, KEY_W, 1);
+        QTRY_COMPARE_WITH_TIMEOUT(spy.size(), 1, 200);
+        QCOMPARE(eventAt(spy, 0).id, "key.w");
+        QTest::qWait(80); QCOMPARE(source.attempts.value("event0"), 2);
+        QCOMPARE(source.findChildren<QTimer *>().size(), 1);
+    }
+    void pendingNodesShareOneRetryTimer() {
+        QTemporaryDir dir; TestSource source(dir.path());
+        source.setRetryPolicy(20, 40, 3); source.denied = true;
+        touch(dir.filePath("event0")); touch(dir.filePath("event1"));
+        source.start({"key.w"});
+        QCOMPARE(source.findChildren<QTimer *>().size(), 2);
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 3, 200);
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event1"), 3, 200);
+        QCOMPARE(source.findChildren<QTimer *>().size(), 1);
+        QVERIFY(QFile::setPermissions(dir.filePath("event0"), QFile::ReadOwner));
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 6, 200);
+        QCOMPARE(source.attempts.value("event1"), 3);
+        QTest::qWait(80); QCOMPARE(source.attempts.value("event1"), 3);
+    }
+    void disappearingFailedNodeCancelsRetry() {
+        QTemporaryDir dir; TestSource source(dir.path());
+        source.setRetryPolicy(100, 100, 3); source.denied = true;
+        touch(dir.filePath("event0")); source.start({"key.w"});
+        QCOMPARE(source.findChildren<QTimer *>().size(), 2);
+        QVERIFY(QFile::remove(dir.filePath("event0")));
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::NoDevices, 200);
+        QCOMPARE(source.findChildren<QTimer *>().size(), 1);
+        QTest::qWait(120); QCOMPARE(source.attempts.value("event0"), 1);
+    }
+    void exactAttributeRecoversDormantNode() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.setRetryPolicy(5, 10, 1); source.denied = true;
+        source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));
+        QSignalSpy spy(&source, &InputSource::inputChanged);
+        source.start({"key.w"}); QCOMPARE(source.status(), InputStatus::PermissionDenied);
+        source.denied = false;
+        touch(dir.filePath("event1"));
+        QVERIFY(QFile::setPermissions(dir.filePath("event1"), QFile::ReadOwner));
+        QTest::qWait(60);
+        QCOMPARE(source.attempts.value("event0"), 1);
+        QCOMPARE(source.status(), InputStatus::PermissionDenied);
+        QVERIFY(QFile::setPermissions(dir.filePath("event0"), QFile::ReadOwner));
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::Active, 200);
+        QCOMPARE(source.attempts.value("event0"), 2);
+        pipe.send(EV_KEY, KEY_A, 1); pipe.send(EV_KEY, KEY_W, 1);
+        QTRY_COMPARE_WITH_TIMEOUT(spy.size(), 1, 200);
+        QCOMPARE(eventAt(spy, 0).id, "key.w"); QVERIFY(eventAt(spy, 0).down);
+    }
+    void deleteRecreateRecoversDormantNode() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.setRetryPolicy(5, 10, 1); source.denied = true;
+        source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));
+        source.start({"key.w"}); QCOMPARE(source.attempts.value("event0"), 1);
+        source.denied = false;
+        QVERIFY(QFile::remove(dir.filePath("event0"))); touch(dir.filePath("event0"));
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::Active, 200);
+        QCOMPARE(source.attempts.value("event0"), 2);
+    }
+    void rapidEventsCoalesceScans() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.readers.insert("event0", pipe.fds[0]); source.rejected = true;
+        touch(dir.filePath("event0")); countedPath = dir.filePath("event0");
+        source.start({"key.w"}); QCOMPARE(identityChecks, 1);
+        // Drain inotify repeatedly during the burst, so kernel coalescing alone cannot pass.
+        for (int i = 0; i < 500; ++i) {
+            touch(dir.filePath(QString("noise%1").arg(i)));
+            QCoreApplication::processEvents();
+        }
+        QTest::qWait(70);
+        QVERIFY(identityChecks > 1); QVERIFY(identityChecks < 25);
+        qInfo("500 rapid events caused %d scans after startup", identityChecks - 1);
+        QCOMPARE(source.attempts.value("event0"), 1);
+    }
+    void emptyCacheHasNoRetryTimer() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.setRetryPolicy(5, 10, 6); source.start({"key.w"});
+        QTest::qWait(60); QVERIFY(source.attemptTimes.isEmpty());
+        for (auto *timer : source.findChildren<QTimer *>()) QVERIFY(!timer->isActive());
+        source.denied = true; touch(dir.filePath("event0"));
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::PermissionDenied, 200);
+        source.denied = false; source.readers.insert("event0", pipe.fds[0]);
+        QVERIFY(QFile::setPermissions(dir.filePath("event0"), QFile::ReadOwner));
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::Active, 200);
+        const int attempts = source.attempts.value("event0");
+        QTest::qWait(80); QCOMPARE(source.attempts.value("event0"), attempts);
+        for (auto *timer : source.findChildren<QTimer *>()) QVERIFY(!timer->isActive());
+        QVERIFY(QFile::remove(dir.filePath("event0")));
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::NoDevices, 200);
+        QTest::qWait(60); QCOMPARE(source.attempts.value("event0"), attempts);
+    }
+    void stopAndRestartResetFailuresAndTimers() {
+        QTemporaryDir dir; TestSource source(dir.path());
+        source.setRetryPolicy(10, 20, 3); source.denied = true;
+        touch(dir.filePath("event0")); source.start({"key.w"});
+        touch(dir.filePath("noise")); QCoreApplication::processEvents();
+        source.stop();
+        for (auto *timer : source.findChildren<QTimer *>()) QVERIFY(!timer->isActive());
+        QTest::qWait(80); QCOMPARE(source.attempts.value("event0"), 1);
+        source.start({"key.w"}); QCOMPARE(source.attempts.value("event0"), 2);
+        QTRY_COMPARE_WITH_TIMEOUT(source.attempts.value("event0"), 4, 200);
+        source.stop(); source.start({"key.w"});
+        QCOMPARE(source.attempts.value("event0"), 5);
+    }
+    void destructionWithPendingTimers() {
+        QTemporaryDir dir;
+        auto source = std::make_unique<TestSource>(dir.path());
+        source->setRetryPolicy(100, 100, 3); source->denied = true;
+        touch(dir.filePath("event0")); source->start({"key.w"});
+        touch(dir.filePath("noise")); QCoreApplication::processEvents();
+        QList<QPointer<QTimer>> timers;
+        for (auto *timer : source->findChildren<QTimer *>()) {
+            QVERIFY(timer->isActive()); timers.append(timer);
+        }
+        QCOMPARE(timers.size(), 2);
+        source.reset();
+        for (const auto &timer : timers) QVERIFY(timer.isNull());
+        QTest::qWait(120);
+    }
     void allowlistAndLifecycle() {
         QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
         source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));

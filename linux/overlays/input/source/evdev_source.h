@@ -12,6 +12,8 @@ public:
     void start(const QSet<InputId> &allowlist) override;
     void stop() override;
 protected:
+    // Configure before start(); maxAttempts includes the initial open.
+    void setRetryPolicy(int initialMs, int maxMs, int maxAttempts);
     struct DeviceInfo {
         int leftMinimum = 0, leftMaximum = 255;
         int rightMinimum = 0, rightMaximum = 255;
