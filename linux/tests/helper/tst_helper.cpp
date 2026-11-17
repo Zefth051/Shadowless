@@ -40,7 +40,42 @@ class HelperTests : public QObject {
     static QString rules(const QTemporaryDir &dir) {
         return dir.path() + "/etc/udev/rules.d/71-shadowless-input-access.rules";
     }
+    static void put(const QString &path, const QByteArray &data) {
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        QFile f(path); QVERIFY(f.open(QIODevice::WriteOnly)); f.write(data);
+    }
 private slots:
+    void removeRevokesOnlyTheUsersAclOnUntaggedMatchingNodes() {
+        QTemporaryDir dir;
+        const QString r = dir.path();
+        const QStringList base = {"--root", r, "--no-reload"};
+        QCOMPARE(run(base + QStringList{"install", "41e4:211a:keyboard", "373b:111a:mouse"}), 0);
+        auto node = [&](const char *n, const char *v, const char *p, const char *mm) {
+            put(r + "/sys/class/input/" + n + "/device/id/vendor", QByteArray(v) + "\n");
+            put(r + "/sys/class/input/" + n + "/device/id/product", QByteArray(p) + "\n");
+            put(r + "/sys/class/input/" + n + "/dev", QByteArray(mm) + "\n");
+        };
+        node("event10", "41e4", "211a", "13:74");   // matches, no longer tagged -> revoked
+        node("event12", "373b", "111a", "13:76");   // matches but still tagged by another rule -> kept
+        node("event3",  "046d", "c548", "13:67");   // unrelated device -> never touched
+        node("event../x", "41e4", "211a", "13:99");  // malformed name -> ignored
+        put(r + "/run/udev/data/c13:74", "I:1\nQ:seat\n");
+        put(r + "/run/udev/data/c13:76", "I:1\nQ:uaccess\n");
+        const QString log = r + "/setfacl.log";
+        put(r + "/usr/bin/setfacl", "#!/bin/sh\necho \"$@\" >> " + log.toUtf8() + "\n");
+        QFile::setPermissions(r + "/usr/bin/setfacl", QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+        qputenv("INPUT_SETUP_TEST_UID", "1000");
+        QCOMPARE(run(base + QStringList{"remove"}), 0);
+        qunsetenv("INPUT_SETUP_TEST_UID");
+        QVERIFY(!QFileInfo::exists(rules(dir)));
+        QCOMPARE(read(log).trimmed(), QByteArray("-x u:1000 ") + r.toUtf8() + "/dev/input/event10");
+        QFile::remove(log);
+        QCOMPARE(run(base + QStringList{"install", "41e4:211a:keyboard"}), 0);
+        qputenv("INPUT_SETUP_TEST_UID", "1000; rm -rf /");   // malformed uid is ignored
+        QCOMPARE(run(base + QStringList{"remove"}), 0);
+        qunsetenv("INPUT_SETUP_TEST_UID");
+        QVERIFY(!QFileInfo::exists(log));
+    }
     void initTestCase() { QVERIFY2(QFileInfo::exists(helper), "Set INPUT_SETUP_HELPER to the built helper"); }
     void validation() {
         QTemporaryDir dir;

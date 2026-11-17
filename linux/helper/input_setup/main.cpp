@@ -2,6 +2,8 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <dirent.h>
+#include <fstream>
 #include <fcntl.h>
 #include <iostream>
 #include <set>
@@ -135,7 +137,7 @@ void install(int dir, const std::string &contents) {
         throw;
     }
 }
-bool command(const std::vector<std::string> &args) {
+bool command(const std::vector<std::string> &args, const std::string &program = std::string()) {
     const pid_t pid = fork();
     if (pid < 0) return false;
     if (pid == 0) {
@@ -145,6 +147,7 @@ bool command(const std::vector<std::string> &args) {
         for (const auto &arg : args) argv.push_back(const_cast<char *>(arg.c_str()));
         argv.push_back(nullptr);
         char *env[] = {nullptr};
+        if (!program.empty()) { execve(program.c_str(), argv.data(), env); _exit(127); }
         execve("/usr/bin/udevadm", argv.data(), env);
         if (errno == ENOENT) execve("/bin/udevadm", argv.data(), env);
         _exit(127);
@@ -158,6 +161,41 @@ void reload() {
     if (!command({"udevadm", "control", "--reload-rules"})) throw Failure{4, "udev reload failed"};
     if (!command({"udevadm", "trigger", "--action=change", "--subsystem-match=input"}))
         throw Failure{4, "udev trigger failed"};
+}
+
+std::string firstLine(const std::string &path) {
+    std::ifstream in(path);
+    std::string value;
+    std::getline(in, value);
+    return value;
+}
+bool currentlyTagged(const std::string &root, const std::string &majorMinor) {
+    std::ifstream in(root + "/run/udev/data/c" + majorMinor);
+    for (std::string entry; std::getline(in, entry);)
+        if (entry == "Q:uaccess") return true;
+    return false;
+}
+// Removing a rule does not remove ACLs that logind already applied. Revoke the invoking user's ACL on the nodes of the
+// removed devices, unless another rule still tags them uaccess. Best effort: a failure here never fails the removal.
+void revokeAcls(const std::string &root, const std::string &uid, const std::set<Device> &removed) {
+    if (uid.empty() || uid.size() > 10 || uid.find_first_not_of("0123456789") != std::string::npos) return;
+    const std::string sys = root + "/sys/class/input";
+    DIR *dir = opendir(sys.c_str());
+    if (!dir) return;
+    std::vector<std::string> nodes;
+    while (const dirent *entry = readdir(dir)) {
+        const std::string node = entry->d_name;
+        if (node.compare(0, 5, "event") != 0 || node.size() < 6 || node.size() > 12 || node.find_first_not_of("0123456789", 5) != std::string::npos) continue;
+        const std::string base = sys + "/" + node;
+        const std::string vendor = firstLine(base + "/device/id/vendor"), product = firstLine(base + "/device/id/product");
+        const std::string majorMinor = firstLine(base + "/dev");
+        bool match = false;
+        for (const auto &d : removed) match = match || (d.vendor == vendor && d.product == product);
+        if (match && !majorMinor.empty() && !currentlyTagged(root, majorMinor)) nodes.push_back(node);
+    }
+    closedir(dir);
+    const std::string program = root == "/" ? "/usr/bin/setfacl" : root + "/usr/bin/setfacl";
+    for (const auto &node : nodes) command({"setfacl", "-x", "u:" + uid, (root == "/" ? "" : root) + "/dev/input/" + node}, program);
 }
 }
 int main(int argc, char **argv) {
@@ -201,11 +239,17 @@ int main(int argc, char **argv) {
             installed = true;
             if (fsync(dir.value) != 0) io();
         } else if (operation == "remove" && installed) {
+            validateRules(old, &devices);
             if (unlinkat(dir.value, name, 0) != 0) io();
             installed = false;
             if (fsync(dir.value) != 0) io();
         }
         if (operation != "status" && !noReload) reload();
+        if (operation == "remove") {
+            if (!noReload) command({"udevadm", "settle", "--timeout=5"});
+            const char *uid = std::getenv(root == "/" ? "PKEXEC_UID" : "INPUT_SETUP_TEST_UID");
+            revokeAcls(root, uid ? uid : "", devices);
+        }
         std::cout << "{\"ok\":true,\"installed\":" << (installed ? "true" : "false");
         if (operation == "status") {
             std::cout << ",\"devices\":[";
