@@ -217,7 +217,9 @@ void InputOverlayPanel::enableAccess() {
 }
 void InputOverlayPanel::accessFinished(Input::InputAccess::Result result, const QString &message) {
     m_accessResult->setText(message); m_accessResult->setVisible(!message.isEmpty());
-    if (result == Input::InputAccess::Result::NoAgent) m_noAgent = true;   // the dialog cannot appear here: show the manual steps
+    // The system dialog cannot work here (no agent, no polkit, or the helper cannot run): show the manual steps.
+    using R = Input::InputAccess::Result;
+    if (result == R::NoAgent || result == R::PolkitUnavailable || result == R::HelperBlocked) m_noAgent = true;
     refresh();
     if (result == Input::InputAccess::Result::Cancelled || result == Input::InputAccess::Result::Unavailable) return;
     emit accessChanged();                                  // udev applies the new ACLs asynchronously: probe again shortly after as well

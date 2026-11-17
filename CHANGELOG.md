@@ -4,6 +4,13 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Accurate messages when authorization fails:** Dismissing the system dialog is still treated as a calm cancel, but "not authorized", a missing polkit service, a helper the system will not run, and a rule that could not be applied yet each get their own plain explanation and next step instead of "cancelled". Technical detail is kept for the log.
+- **Remove input access ends access even if udev cannot reload:** The helper now revokes your device permissions before reporting a reload failure.
+- **Updates ignore prereleases on every version:** Linux 0.x installs no longer receive prereleases; only published final releases are offered.
+- **Peripheral hotplug:** Devices that reappear under a new node, duplicate alias nodes and virtual (uinput) devices are handled by device identity; moved device directories are re-watched.
+
 ### Added
 
 - **One-click input access (Linux):** The Peripheral overlay can now request permission to read your keyboard and mouse from the Capture overlays page, with the standard system authorization dialog and no terminal. You choose the devices; a small helper installs a narrow per-device rule that survives restarts and reconnects, and **Remove input access** undoes it. If your devices are already readable the overlay goes LIVE immediately; declining leaves Shadowless fully working without input capture.

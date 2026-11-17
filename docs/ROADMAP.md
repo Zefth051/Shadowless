@@ -24,7 +24,8 @@ Reconciled on 2026-11-17 against both branches' changelogs and logs.
     validation is tracked in release status.
   - Linux: done. The public 0.3.3 updater's discovery, download, SHA-256 check and
     atomic install passed with isolated files. Upgrading the installed AppImage to the
-    next published release is still unverified.
+    next published release is still unverified. A gap found 2026-11-17: the 0.x updater also accepted
+    prereleases; fixed in the 0.3.8 development branch and covered by tests.
 - [x] ~~Keep a maintained copy of the GSR engine source in the Linux branch and bundle
   its build with Shadowless, without a separate GSR installation or graphical interface.~~
   - Linux: done. GSR 6.1.7 and its matching helper are bundled; build, provenance,

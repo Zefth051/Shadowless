@@ -10,9 +10,8 @@ Follows `docs/PRODUCT_PHILOSOPHY.md`: normal users stay on stable releases witho
 - Windows (`src/Shadowless/Distribution/UpdateService.cs`): considers only non-draft, non-prerelease releases whose tag is
   `vX.Y.Z`; Linux tags (`linux-vX.Y.Z`) never match.
 - Linux (`linux/app/update_service.cpp`): considers only `linux-vX.Y.Z` tags and the matching AppImage with a valid
-  digest. **Known gap:** it currently accepts prereleases when the installed version starts with `0.`, so an
-  experimental Linux prerelease would be offered to ordinary 0.x installs. Fix this when the Beta option is added:
-  prereleases must be considered only when Beta testing is enabled.
+  digest. Prereleases are ignored on every version (fixed in 0.3.8 development; earlier builds accepted them on `0.x`).
+  Prereleases must be considered only when Beta testing is enabled.
 
 ## Requirement
 
