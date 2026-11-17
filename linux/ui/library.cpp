@@ -1,5 +1,6 @@
 #include "library.h"
 #include "clip_label.h"
+#include "../overlays/input/core/input_timeline.h"
 #include <QDir>
 #include <QDirIterator>
 #include <QSet>
@@ -110,6 +111,8 @@ Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::fi
             m_deleteError->setText("Could not move the clip to Trash: " + clip.errorString());
             m_deleteError->show(); return;
         }
+        QFile sidecar(Input::InputTimeline::sidecarPath(path));   // the input events belong to the clip
+        if (sidecar.exists()) sidecar.moveToTrash();
         m_deleteError->hide();
         refresh(m_directory);
     });

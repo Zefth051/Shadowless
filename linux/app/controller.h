@@ -5,6 +5,8 @@
 #include "../platform/hyprland/shortcuts.h"
 #include <QSystemTrayIcon>
 #include <optional>
+#include "../overlays/input/source/evdev_source.h"
+#include "../overlays/input/source/input_recorder.h"
 #include <QFutureWatcher>
 #include <QSoundEffect>
 #include <functional>
@@ -29,6 +31,21 @@ private:
     GsrOptions m_options;
     OverlayScene m_scene, m_applying;
     std::optional<OverlayScene> m_pending;
+    std::optional<GsrOptions> m_deferredOptions; // saved while capture was stopping
+    // Peripheral overlay input. One source, started only while something needs it (Settings preview, sidecar).
+    Input::EvdevInputSource m_input;
+    Input::InputState m_inputState;
+    QString m_inputPreviewLayout;
+    QSet<Input::InputId> m_inputAllowlist;
+    void updateInputSource();
+    // Optional sidecar (<clip>.inputs.json): allowlisted events of the selected layout, timed against the clip.
+    std::unique_ptr<Input::InputRecorder> m_recorder;
+    QString m_recorderLayout;
+    qint64 m_captureStartMs = 0, m_clipRequestMs = 0, m_recordingStartMs = 0, m_recordingStopMs = 0;
+    QHash<QString, QSet<Input::InputId>> m_allowlists; // parsed once per built-in layout
+    QSet<Input::InputId> allowlistFor(const QString &layoutId);
+    bool m_recordingPausedOnce = false;
+    void writeInputSidecar(const QString &clip, bool recording);
     GsrCapture m_engine;
     OverlayClient m_overlays;
     Shortcuts m_shortcuts;

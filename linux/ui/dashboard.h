@@ -2,6 +2,7 @@
 #include "../capture/gsr_capture.h"
 #include "../overlays/layer.h"
 #include <QKeySequence>
+#include "../settings/settings.h"
 #include <QWidget>
 class QAction;
 class QBoxLayout;
@@ -25,6 +26,7 @@ public:
     void setAccent(const QString &name);
     explicit Dashboard(const GsrCapabilities &caps);
     SettingsPage *settingsPage() const { return m_settings; }
+    void setInputOverlay(const InputOverlaySettings &settings); // applies to the clip player overlay
     OverlayEditor *overlayEditor() const { return m_editor; }
     void updateState(const GsrOptions &options, const OverlayScene &scene, bool active, bool ready, bool saving, bool stopping,
                      bool replayRecording = false, bool busy = false, bool paused = false,
