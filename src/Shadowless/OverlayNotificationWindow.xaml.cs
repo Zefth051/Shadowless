@@ -268,12 +268,13 @@ public partial class OverlayNotificationWindow : Window
                       (styles & WsExNoActivate) != 0 &&
                       _topmostTimer.IsEnabled &&
                       _targetMonitor != 0 &&
-                      aboveFullscreen && hitTestTransparent;
+                      aboveFullscreen && hitTestTransparent && !IsHitTestVisible && !Focusable;
         details = $"hwnd={hwnd != 0}, topmost={(styles & WsExTopmost) != 0}, " +
                   $"transparent={(styles & WsExTransparent) != 0}, " +
                   $"noActivate={(styles & WsExNoActivate) != 0}, " +
                   $"timer={_topmostTimer.IsEnabled}, monitor={_targetMonitor != 0}, " +
-                  $"aboveFullscreen={aboveFullscreen}, hitTestTransparent={hitTestTransparent}";
+                  $"aboveFullscreen={aboveFullscreen}, hitTestTransparent={hitTestTransparent}, " +
+                  $"wpfClickThrough={!IsHitTestVisible}, nonFocusable={!Focusable}";
         return passed;
     }
 

@@ -85,7 +85,9 @@ public static class ReplayPaths
         name = name.Trim(' ', '.');
         if (name.Length > 80)
             name = name[..80].TrimEnd(' ', '.');
-        if (name.Length == 0 || ReservedNames.Contains(name))
+        // Windows device names remain reserved with any extension.
+        string deviceName = name.Split('.')[0];
+        if (name.Length == 0 || ReservedNames.Contains(deviceName))
             return "Game";
         return name;
     }
