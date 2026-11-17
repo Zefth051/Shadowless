@@ -1,0 +1,103 @@
+#include "evdev_keymap.h"
+#include <linux/input-event-codes.h>
+
+namespace Shadowless::Input::Evdev {
+InputId keyId(unsigned int code) {
+    switch (code) {
+    case KEY_A: return QStringLiteral("key.a");
+    case KEY_B: return QStringLiteral("key.b");
+    case KEY_C: return QStringLiteral("key.c");
+    case KEY_D: return QStringLiteral("key.d");
+    case KEY_E: return QStringLiteral("key.e");
+    case KEY_F: return QStringLiteral("key.f");
+    case KEY_G: return QStringLiteral("key.g");
+    case KEY_H: return QStringLiteral("key.h");
+    case KEY_I: return QStringLiteral("key.i");
+    case KEY_J: return QStringLiteral("key.j");
+    case KEY_K: return QStringLiteral("key.k");
+    case KEY_L: return QStringLiteral("key.l");
+    case KEY_M: return QStringLiteral("key.m");
+    case KEY_N: return QStringLiteral("key.n");
+    case KEY_O: return QStringLiteral("key.o");
+    case KEY_P: return QStringLiteral("key.p");
+    case KEY_Q: return QStringLiteral("key.q");
+    case KEY_R: return QStringLiteral("key.r");
+    case KEY_S: return QStringLiteral("key.s");
+    case KEY_T: return QStringLiteral("key.t");
+    case KEY_U: return QStringLiteral("key.u");
+    case KEY_V: return QStringLiteral("key.v");
+    case KEY_W: return QStringLiteral("key.w");
+    case KEY_X: return QStringLiteral("key.x");
+    case KEY_Y: return QStringLiteral("key.y");
+    case KEY_Z: return QStringLiteral("key.z");
+    case KEY_0: return QStringLiteral("key.0");
+    case KEY_1: return QStringLiteral("key.1");
+    case KEY_2: return QStringLiteral("key.2");
+    case KEY_3: return QStringLiteral("key.3");
+    case KEY_4: return QStringLiteral("key.4");
+    case KEY_5: return QStringLiteral("key.5");
+    case KEY_6: return QStringLiteral("key.6");
+    case KEY_7: return QStringLiteral("key.7");
+    case KEY_8: return QStringLiteral("key.8");
+    case KEY_9: return QStringLiteral("key.9");
+    case KEY_F1: return QStringLiteral("key.f1");
+    case KEY_F2: return QStringLiteral("key.f2");
+    case KEY_F3: return QStringLiteral("key.f3");
+    case KEY_F4: return QStringLiteral("key.f4");
+    case KEY_F5: return QStringLiteral("key.f5");
+    case KEY_F6: return QStringLiteral("key.f6");
+    case KEY_F7: return QStringLiteral("key.f7");
+    case KEY_F8: return QStringLiteral("key.f8");
+    case KEY_F9: return QStringLiteral("key.f9");
+    case KEY_F10: return QStringLiteral("key.f10");
+    case KEY_F11: return QStringLiteral("key.f11");
+    case KEY_F12: return QStringLiteral("key.f12");
+    case KEY_ESC: return QStringLiteral("key.esc");
+    case KEY_TAB: return QStringLiteral("key.tab");
+    case KEY_CAPSLOCK: return QStringLiteral("key.caps");
+    case KEY_ENTER: return QStringLiteral("key.enter");
+    case KEY_SPACE: return QStringLiteral("key.space");
+    case KEY_BACKSPACE: return QStringLiteral("key.backspace");
+    case KEY_GRAVE: return QStringLiteral("key.grave");
+    case KEY_MINUS: return QStringLiteral("key.minus");
+    case KEY_EQUAL: return QStringLiteral("key.equal");
+    case KEY_LEFTBRACE: return QStringLiteral("key.lbracket");
+    case KEY_RIGHTBRACE: return QStringLiteral("key.rbracket");
+    case KEY_BACKSLASH: return QStringLiteral("key.backslash");
+    case KEY_SEMICOLON: return QStringLiteral("key.semicolon");
+    case KEY_APOSTROPHE: return QStringLiteral("key.apostrophe");
+    case KEY_COMMA: return QStringLiteral("key.comma");
+    case KEY_DOT: return QStringLiteral("key.period");
+    case KEY_SLASH: return QStringLiteral("key.slash");
+    case KEY_LEFTSHIFT: return QStringLiteral("key.lshift");
+    case KEY_RIGHTSHIFT: return QStringLiteral("key.rshift");
+    case KEY_LEFTCTRL: return QStringLiteral("key.lctrl");
+    case KEY_RIGHTCTRL: return QStringLiteral("key.rctrl");
+    case KEY_LEFTALT: return QStringLiteral("key.lalt");
+    case KEY_RIGHTALT: return QStringLiteral("key.ralt");
+    case KEY_UP: return QStringLiteral("key.up");
+    case KEY_DOWN: return QStringLiteral("key.down");
+    case KEY_LEFT: return QStringLiteral("key.left");
+    case KEY_RIGHT: return QStringLiteral("key.right");
+    case BTN_LEFT: return QStringLiteral("mouse.left");
+    case BTN_RIGHT: return QStringLiteral("mouse.right");
+    case BTN_MIDDLE: return QStringLiteral("mouse.middle");
+    case BTN_SIDE: return QStringLiteral("mouse.back");
+    case BTN_EXTRA: return QStringLiteral("mouse.forward");
+    case BTN_SOUTH: return QStringLiteral("pad.south");
+    case BTN_EAST: return QStringLiteral("pad.east");
+    case BTN_WEST: return QStringLiteral("pad.west");
+    case BTN_NORTH: return QStringLiteral("pad.north");
+    case BTN_TL: return QStringLiteral("pad.l1");
+    case BTN_TR: return QStringLiteral("pad.r1");
+    case BTN_TL2: return QStringLiteral("pad.l2");
+    case BTN_TR2: return QStringLiteral("pad.r2");
+    case BTN_THUMBL: return QStringLiteral("pad.l3");
+    case BTN_THUMBR: return QStringLiteral("pad.r3");
+    case BTN_SELECT: return QStringLiteral("pad.select");
+    case BTN_START: return QStringLiteral("pad.start");
+    case BTN_MODE: return QStringLiteral("pad.mode");
+    default: return {};
+    }
+}
+}
