@@ -125,6 +125,7 @@ private slots:
         QCOMPARE(groups[0].asClass(AccessDevice::Mouse).triple(), QString("1234:abcd:mouse"));
     }
     void groupReadabilityRequiresEveryNodeOfTheChosenClass() {
+        if (::geteuid() == 0) QSKIP("root can read every node, so permission checks are meaningless here");
         QTemporaryDir t; const QString sys = t.filePath("sys"), dev = t.filePath("dev");
         node(sys, dev, 16, "Some Mouse", "373b", "111a", keyCaps({272}), true);
         node(sys, dev, 22, "Some Mouse", "373b", "111a", keyCaps({272}), false);
