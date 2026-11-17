@@ -81,7 +81,7 @@ QVector<AccessDevice> InputAccess::enumerate(const QString &sysRoot, const QStri
         else if (repeats && hasKey(keys, kKeyA) && hasKey(keys, kKeyZ) && hasKey(keys, kKeyEnter)) device.cls = AccessDevice::Keyboard;
         else if (pointer && hasKey(keys, kBtnLeft)) device.cls = AccessDevice::Mouse;
         else continue;
-        if (!validTriple(device.triple())) continue;               // virtual or oddly identified devices cannot be granted
+        if (!validTriple(device.triple()) || (device.vendor == "0000" && device.product == "0000")) continue;   // virtual or anonymous devices: a rule would match every one of them
         device.readable = ::access(QFile::encodeName(device.node).constData(), R_OK) == 0;
         devices.append(device);
     }

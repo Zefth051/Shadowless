@@ -114,6 +114,28 @@ private slots:
         QCOMPARE(groups[2].triple(), QString("054c:0ce6:gamepad"));
         QCOMPARE(InputAccess::triples(groups).size(), 3);                // exactly one grant per physical device
     }
+    void otherMachinesAreClassifiedFromCapabilitiesNotFromKnownNames() {
+        QTemporaryDir t; const QString sys = t.filePath("sys"), dev = t.filePath("dev");
+        const QString kb = keyCaps({28, 30, 44, 57}), ms = keyCaps({272, 273});
+        // Laptop: built-in keyboard (i8042), touchpad (absolute axes), trackpoint (relative axes), lid switch
+        node(sys, dev, 3, "AT Translated Set 2 keyboard", "0001", "0001", kb, true, "120013", "0");
+        node(sys, dev, 5, "SynPS/2 Synaptics TouchPad", "0002", "0007", ms, true, "b", "0");
+        node(sys, dev, 6, "TPPS/2 IBM TrackPoint", "0002", "000a", ms, true, "7", "3");
+        // Bluetooth keyboard and a gaming mouse that exposes extra macro interfaces
+        node(sys, dev, 7, "Keychron K8 Pro", "05ac", "024f", kb, true, "120013", "0");
+        node(sys, dev, 8, "Razer Viper Ultimate", "1532", "0078", ms, true, "17", "1943");
+        node(sys, dev, 9, "Razer Viper Ultimate Keyboard", "1532", "0078", kb, true, "120013", "0");
+        node(sys, dev, 10, "Razer Viper Ultimate", "1532", "0078", ms, true, "17", "1943");
+        // Xbox pad plus a virtual device without ids (uinput) that must never be granted
+        node(sys, dev, 11, "Xbox Wireless Controller", "045e", "0b13", keyCaps({304, 305}), true, "b", "0");
+        node(sys, dev, 12, "virtual-keyboard", "0000", "0000", kb, true, "120013", "0");
+        const auto groups = InputAccess::groupDevices(InputAccess::enumerate(sys, dev));
+        QStringList triples;
+        for (const auto &g : groups) triples << g.triple();
+        triples.sort();
+        QCOMPARE(triples, (QStringList{"0001:0001:keyboard", "0002:000a:mouse", "045e:0b13:gamepad", "05ac:024f:keyboard", "1532:0078:mouse"}));
+        for (const auto &g : groups) if (g.vendor == "1532") QVERIFY(g.alternatives.isEmpty());   // two pointer nodes outweigh one keyboard interface: no question asked
+    }
     void trueHybridsKeepTheirAlternativeAvailable() {
         QTemporaryDir t; const QString sys = t.filePath("sys"), dev = t.filePath("dev");
         node(sys, dev, 1, "Acme Combo", "1234", "abcd", keyCaps({28, 30, 44}), true, "120013", "0");
