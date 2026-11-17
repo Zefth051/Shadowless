@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/shadowless">
+    <file alias="game-catalog.json">../../../src/Shadowless/Assets/GameCatalog.json</file>
+  </qresource>
+</RCC>
