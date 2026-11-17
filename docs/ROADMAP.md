@@ -128,6 +128,8 @@ Reconciled on 2026-11-17 against both branches' changelogs and logs.
   synchronization, permissions and platform support before choosing the capture path.
   - Linux: open (design). Windows: open.
 
+- **Beta testing update channel (planned, not implemented):** Settings → Updates option, off by default, on Windows and Linux. Requirements: `docs/BETA_TESTING_CHANNEL.md`.
+
 ## Proposed delivery order
 
 1. Finish and validate the immediate distribution work.
