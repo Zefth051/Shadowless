@@ -44,14 +44,12 @@ def layout(id_, name, scope, elements):
             "elements": elements}
 
 G = 1.1  # key pitch: 1 unit key + .1 gap -> we simply offset by pitch below
-def scale(els, k=1.1, ky=1.2):
-    """Keys keep a 0.1 horizontal gap but are taller than wide (ky) so they read as keycaps with body."""
+def scale(els, k=1.1):
     out = []
     for e in els:
         e = dict(e)
-        e["x"] = round(e["x"] * k, 3); e["y"] = round(e["y"] * ky, 3)
-        e["w"] = round(e["w"] * k - (k - 1), 3)
-        e["h"] = round(e["h"] * ky - 0.1, 3)
+        for f in ("x", "y"): e[f] = round(e[f] * k, 3)
+        for f in ("w", "h"): e[f] = round(e[f] * k - (k - 1), 3)  # keep a (k-1) gap between neighbours
         out.append(e)
     return out
 
@@ -80,7 +78,6 @@ def full(azerty=False):
     els += row(["caps"] + list("asdfghjkl") + ["semicolon", "apostrophe", "enter"], 0, 3.25, {"caps": 1.75, "enter": 2.25}, S)
     els += row(["lshift"] + list("zxcvbnm") + ["comma", "period", "slash", "rshift"], 0, 4.25, {"lshift": 2.25, "rshift": 2.75}, S)
     els += row(["lctrl", "lalt", "space", "ralt", "rctrl"], 0, 5.25, {"lctrl": 1.25, "lalt": 1.25, "space": 6.25, "ralt": 1.25, "rctrl": 1.25}, S)
-    els += arrows(15.5, 4.25)
     return els
 
 def arrows(x, y):
@@ -113,10 +110,24 @@ def mouse_with(els, gap=1.0):
     els = [dict(e, y=round(e["y"] - top + shift_kb, 3)) for e in els]
     return els + mouse(round(w + gap, 3), round(shift_mouse, 3))
 
+def full_with_side_column(gap=.8):
+    """Full keyboard with mouse stacked above the arrow cluster in one right-hand column, so the silhouette
+    stays compact (about 3:1) instead of a long strip; the column is centred on the keyboard's height."""
+    kb = scale(full())
+    w = max(e["x"] + e["w"] for e in kb); h = max(e["y"] + e["h"] for e in kb)
+    arr = scale(arrows(0, 0))                      # 3.3 x 2.2
+    aw = max(e["x"] + e["w"] for e in arr); ah = max(e["y"] + e["h"] for e in arr)
+    colw = max(3.0, aw); stack = 4.4 + .5 + ah
+    top = (h - stack) / 2 if h > stack else 0
+    x0 = w + gap
+    out = kb + mouse(round(x0 + (colw - 3.0) / 2, 3), round(top, 3))
+    out += [dict(e, x=round(e["x"] + x0 + (colw - aw) / 2, 3), y=round(e["y"] + top + 4.4 + .5, 3)) for e in arr]
+    return out
+
 OUT = os.path.dirname(os.path.abspath(__file__))
 SETS = [
     layout("qwerty", "QWERTY Keyboard + Mouse", "gameplay", mouse_with(scale(compact()))),
-    layout("qwerty-full", "QWERTY Keyboard + Mouse (Full)", "full", mouse_with(scale(full()), .8)),
+    layout("qwerty-full", "QWERTY Keyboard + Mouse (Full)", "full", full_with_side_column()),
     layout("arrows", "Arrow Keys + Mouse", "gameplay", mouse_with(scale(arrows(0, 1.1)), 1.0)),
     layout("azerty", "AZERTY Keyboard + Mouse", "gameplay", mouse_with(scale(compact(True)))),
     layout("dualsense", "Dualsense Controller (placeholder)", "pad", dualsense()),

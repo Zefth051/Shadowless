@@ -46,27 +46,14 @@ QImage renderInputOverlay(const Layout &layout, const InputState &state, const Q
         const QPainterPath path = shapePath(e, r);
         const bool down = e.interactive() && state.isDown(e.id);
         p.setPen(QPen(style.outline, qMax(1., scale * .06)));
-        // Keyboard keys are drawn as keycaps: a dark base with a lighter top face and a visible lower lip.
-        const bool keycap = e.interactive() && e.shape == QLatin1String("round") && layout.scope() != QLatin1String("pad") && e.rect.width() >= .9;
-        QRectF face = r;
-        if (keycap) {
-            const double radius = qMin(r.width(), r.height()) * .24;
-            p.setBrush(down ? style.accent.darker(170) : style.idle);
-            p.drawRoundedRect(r, radius, radius);
-            face = QRectF(r.left() + r.width() * .07, r.top() + r.height() * .06, r.width() * .86, r.height() * .70);
-            p.setPen(QPen(QColor(255, 255, 255, 55), qMax(1., scale * .04)));
-            p.setBrush(down ? style.accent : style.face);
-            p.drawRoundedRect(face, radius * .8, radius * .8);
-        } else {
-            p.setBrush(!e.interactive() ? QBrush(Qt::NoBrush) : QBrush(down ? style.accent : style.idle));
-            p.drawPath(path);
-        }
+        p.setBrush(!e.interactive() ? QBrush(Qt::NoBrush) : QBrush(down ? style.accent : style.idle));
+        p.drawPath(path);
         if (e.label.isEmpty()) continue;
-        font.setPixelSize(qMax(6, int(qMin(face.height() * .58, face.width() * .85 / qMax<qsizetype>(1, e.label.size()) * 1.6))));
+        font.setPixelSize(qMax(6, int(qMin(r.height() * .5, r.width() * .8 / qMax<qsizetype>(1, e.label.size()) * 1.6))));
         font.setWeight(QFont::DemiBold);
         p.setFont(font);
         p.setPen(down ? QColor(255, 255, 255) : style.text);
-        p.drawText(face, Qt::AlignCenter, e.label);
+        p.drawText(r, Qt::AlignCenter, e.label);
     }
     return image;
 }
@@ -83,7 +70,7 @@ InputState demoState(const Layout &layout) {
 }
 
 double defaultWidthFraction(const QString &scope) {
-    return scope == QLatin1String("pad") ? .18 : scope == QLatin1String("full") ? .40 : .30;
+    return scope == QLatin1String("pad") ? .18 : scope == QLatin1String("full") ? .36 : .30;
 }
 
 QRect overlayRect(const QRect &video, const QSizeF &units, const QString &corner, int scalePercent, const QString &scope) {
