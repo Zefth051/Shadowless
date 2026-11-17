@@ -48,9 +48,21 @@ until you remove the access.
 * If every needed device is already readable the overlay goes LIVE immediately and nothing is asked.
 * Persistence: the rule lives in `/etc/udev/rules.d`, so it survives reboots and reconnects, and
   matches by vendor/product, not by `eventN`. **Remove input access** runs `remove`.
-* Packaging: AppImage bundles the helper. Because pkexec needs a root-readable path, the launcher
-  copies it to a private 0700 directory, as the bundled GSR KMS helper already does. Distro
-  packages may install it under `libexec` and ship a polkit action; both paths use the same CLI.
+* Packaging and the AppImage problem: pkexec cannot read a FUSE-mounted AppImage, and running a user-owned copy as
+  root is unsafe (any process of the same user can swap it between authorization and execution; a 0700 directory
+  does not prevent that). So:
+  * A helper that root fully controls (system package under `/usr/libexec/shadowless/`, plus the polkit policy in
+    `packaging/polkit/`) is run in place by pkexec.
+  * Otherwise pkexec runs a fixed root-owned `/usr/bin/sh` script. The helper bytes are streamed on stdin, written by
+    root into a root-only directory under `/run`, and must match the SHA-256 given in argv (argv of a root process
+    cannot be changed by the user). Nothing user-controlled is executed as root, and a tampered stream fails.
+  * Cost: the system dialog names `sh -c …` instead of the helper (distro packages avoid this with the policy file).
+* Devices are grouped per physical device (vendor:product) and classified from verified capabilities (autorepeat for
+  keyboards, REL_X/REL_Y for mice, gamepad buttons) and the device name, so a keyboard's vendor mouse interface or a
+  mouse's keyboard-style interface is not offered. Only a true tie shows a one-click choice.
+* **Remove** deletes the rule, reloads udev, waits for it to settle and removes the user's ACL from nodes of the
+  removed devices that no other rule still tags `uaccess`, so access ends immediately (without it, logind keeps ACLs
+  until reconnect). Reconnected devices get a new node and, with no rule, no ACL.
 * Distributions: any systemd/udev + polkit system (Arch/CachyOS, Fedora, Ubuntu, openSUSE).
   Without `pkexec` the panel falls back to showing the exact rule and commands (manual path).
 
@@ -64,15 +76,14 @@ is rejected when running under pkexec, no passwords or secrets handled by Shadow
 
 1. **Capture overlays → Peripheral overlay**, pick an overlay. If the devices are already readable the status goes
    LIVE immediately; nothing is asked.
-2. If not: status PERMISSION DENIED and a button **Enable input access…**. It lists the detected keyboards and mice
-   (main device of each preselected), explains what changes, and has **Not now**.
+2. If not: status PERMISSION DENIED and a button **Enable input access…**. It shows an inline card (not a separate window, so it cannot open behind the overlay editor) with one row
+   per detected device, preselected, explains what changes, and has **Not now**.
 3. **Continue** opens the system authorization dialog (pkexec). Cancelling it changes nothing and Shadowless keeps working.
 4. On success the overlay goes LIVE without restarting. **Remove input access** undoes it.
 5. Some desktops (notably Hyprland without `hyprpolkitagent`) run no polkit authentication agent, so the system cannot show its dialog.
    Shadowless detects that (`pkexec` exit 127 + "No authentication agent") and says so, shows the manual steps, and names the agents to start.
 6. No polkit/pkexec or no helper (unusual builds): the panel shows the manual steps from `LINUX_INPUT_OVERLAY.md`.
 
-Known limits: a helper staged from an AppImage lives in a user-owned 0700 directory until pkexec returns (same model as the
-bundled GSR KMS helper); distro packages should install it under `/usr/libexec/shadowless/`, where it is run in place.
+Known limits: `/run` must allow executing files (default on mainstream distributions) for the AppImage path.
 Wayland sessions on non-systemd distributions without logind will not apply `uaccess` ACLs; the panel then keeps
 reporting PERMISSION DENIED.
