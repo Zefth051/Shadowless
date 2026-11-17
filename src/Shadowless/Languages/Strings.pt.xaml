@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">Monitor de captura não encontrado.</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">Falha ao iniciar o subsistema de vídeo: código {0}.</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">O subsistema de áudio não pôde ser iniciado.</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">O roteamento avançado de áudio por aplicativo requer o Windows 10 versão 2004 ou posterior.</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">O roteamento de áudio por aplicativo requer o Windows build 20348 ou posterior (Windows 11 ou Windows Server 2022).</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">A fonte avançada de áudio de aplicativos não está disponível. Reinstale ou atualize o Shadowless.</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">Nenhum codificador de vídeo de hardware compatível encontrado. Atualize o driver gráfico.</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">{0} não está disponível em {1}; selecionado {2}.</sys:String>
@@ -420,7 +420,7 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">Selecione um aplicativo ou ative o microfone.</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">{0} processos</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">Áudio dos aplicativos</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Selecione um aplicativo ou ative o microfone antes de salvar.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Ative o áudio do sistema, selecione um aplicativo ou ative o microfone antes de salvar.</sys:String>
   <sys:String x:Key="L.Library.AllGames">Todos os jogos</sys:String>
   <sys:String x:Key="L.Library.NoGame">Sem jogo</sys:String>
   <sys:String x:Key="L.Library.AllModes">Todos os modos</sys:String>
@@ -484,4 +484,11 @@
   <sys:String x:Key="L.Settings.Capture">Opções de captura</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Presença rica do Discord</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">Mostra o jogo reconhecido no Discord apenas durante a captura. O tempo decorrido não é partilhado.</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">Ativar clipe instantâneo</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">Desativar clipe instantâneo</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">Ações de gravação</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">Pausar/retomar gravação</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">Sistema + apps selecionados</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">Sistema grava todo o áudio exceto os aplicativos selecionados, na primeira faixa livre (1–6).</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">As seis faixas de áudio estão em uso. Altere a atribuição de um aplicativo ou microfone para liberar uma faixa, ou desative o áudio do sistema.</sys:String>
 </ResourceDictionary>

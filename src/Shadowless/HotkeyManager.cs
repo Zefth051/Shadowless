@@ -49,6 +49,7 @@ public sealed class HotkeyManager : IDisposable
     private const int SaveHotkeyId = 1;
     private const int ToggleHotkeyId = 2;
     private const int OverlayHotkeyId = 3;
+    private const int PauseHotkeyId = 4;
     private const uint MOD_ALT = 0x0001;
     private const uint MOD_CONTROL = 0x0002;
     private const uint MOD_SHIFT = 0x0004;
@@ -63,6 +64,8 @@ public sealed class HotkeyManager : IDisposable
     private (uint Modifiers, uint Vk)? _saveBinding;
     private (uint Modifiers, uint Vk)? _toggleBinding;
     private (uint Modifiers, uint Vk)? _overlayBinding;
+    private (uint Modifiers, uint Vk)? _pauseBinding;
+    private bool _pausePressed;
     private nint _keyboardHook;
     private bool _savePressed;
     private bool _togglePressed;
@@ -71,9 +74,10 @@ public sealed class HotkeyManager : IDisposable
     public event Action? SaveRequested;
     public event Action? ToggleRequested;
     public event Action? OverlayRequested;
+    public event Action? PauseRecordingRequested;
     public bool OverlayHotkeyAvailable { get; private set; }
 
-    public HotkeyManager(string saveHotkey, string toggleHotkey, string overlayHotkey = "Alt+Z")
+    public HotkeyManager(string saveHotkey, string toggleHotkey, string overlayHotkey = "Alt+Z", string pauseHotkey = "Ctrl+Shift+F8")
     {
         _keyboardHookProc = KeyboardHookCallback;
         _source = new HwndSource(new HwndSourceParameters("ShadowlessHotkeys")
@@ -83,24 +87,34 @@ public sealed class HotkeyManager : IDisposable
             WindowStyle = 0,
             HwndSourceHook = WndProc,
         });
-        Rebind(saveHotkey, toggleHotkey, overlayHotkey);
+        try
+        {
+            Rebind(saveHotkey, toggleHotkey, overlayHotkey, pauseHotkey);
+        }
+        catch
+        {
+            Dispose();
+            throw;
+        }
     }
 
-    public void Rebind(string saveHotkey, string toggleHotkey, string overlayHotkey = "Alt+Z")
+    public void Rebind(string saveHotkey, string toggleHotkey, string overlayHotkey = "Alt+Z", string pauseHotkey = "Ctrl+Shift+F8")
     {
         var newSave = Parse(saveHotkey);
         var newToggle = Parse(toggleHotkey);
         var newOverlay = Parse(overlayHotkey);
-        if (newSave == newToggle)
+        var newPause = Parse(pauseHotkey);
+        if (newSave == newToggle || newPause == newSave || newPause == newToggle || newPause == newOverlay)
             throw new InvalidOperationException(
                 Localization.Text("L.Hotkey.MustDiffer"));
 
-        if (_saveBinding == newSave && _toggleBinding == newToggle && _overlayBinding == newOverlay)
+        if (_saveBinding == newSave && _toggleBinding == newToggle && _overlayBinding == newOverlay && _pauseBinding == newPause)
             return;
 
         var oldSave = _saveBinding;
         var oldToggle = _toggleBinding;
         var oldOverlay = _overlayBinding;
+        var oldPause = _pauseBinding;
         UnregisterCurrent();
 
         try
@@ -115,6 +129,9 @@ public sealed class HotkeyManager : IDisposable
                     Localization.Format("L.Hotkey.Occupied", toggleHotkey));
 
             _toggleBinding = newToggle;
+            if (!RegisterBinding(PauseHotkeyId, newPause))
+                throw new InvalidOperationException(Localization.Format("L.Hotkey.Occupied", pauseHotkey));
+            _pauseBinding = newPause;
             _overlayBinding = newOverlay;
             RegisterOverlayBinding();
             if (!OverlayHotkeyAvailable && oldOverlay != null && oldOverlay != newOverlay)
@@ -125,7 +142,7 @@ public sealed class HotkeyManager : IDisposable
         catch
         {
             UnregisterCurrent();
-            Restore(oldSave, oldToggle, oldOverlay);
+            Restore(oldSave, oldToggle, oldOverlay, oldPause);
             throw;
         }
     }
@@ -158,7 +175,8 @@ public sealed class HotkeyManager : IDisposable
     private void Restore(
         (uint Modifiers, uint Vk)? save,
         (uint Modifiers, uint Vk)? toggle,
-        (uint Modifiers, uint Vk)? overlay)
+        (uint Modifiers, uint Vk)? overlay,
+        (uint Modifiers, uint Vk)? pause)
     {
         if (save is { } saveBinding &&
             RegisterBinding(SaveHotkeyId, saveBinding))
@@ -171,6 +189,9 @@ public sealed class HotkeyManager : IDisposable
         {
             _toggleBinding = toggleBinding;
         }
+
+        if (pause is { } pauseBinding && RegisterBinding(PauseHotkeyId, pauseBinding))
+            _pauseBinding = pauseBinding;
 
         try
         {
@@ -193,6 +214,8 @@ public sealed class HotkeyManager : IDisposable
             UnregisterHotKey(_source.Handle, SaveHotkeyId);
         if (_toggleBinding is { } toggle && !IsExtendedFunctionKey(toggle.Vk))
             UnregisterHotKey(_source.Handle, ToggleHotkeyId);
+        if (_pauseBinding is { } pause && !IsExtendedFunctionKey(pause.Vk))
+            UnregisterHotKey(_source.Handle, PauseHotkeyId);
         if (_keyboardHook != 0)
         {
             UnhookWindowsHookEx(_keyboardHook);
@@ -201,6 +224,8 @@ public sealed class HotkeyManager : IDisposable
         _saveBinding = null;
         _toggleBinding = null;
         _overlayBinding = null;
+        _pauseBinding = null;
+        _pausePressed = false;
         _savePressed = false;
         _togglePressed = false;
         _overlayPressed = false;
@@ -208,12 +233,12 @@ public sealed class HotkeyManager : IDisposable
 
     private bool RegisterBinding(int id, (uint Modifiers, uint Vk) binding) =>
         IsExtendedFunctionKey(binding.Vk) ||
-        RegisterHotKey(_source.Handle, id, binding.Modifiers, binding.Vk);
+        RegisterHotKey(_source.Handle, id, binding.Modifiers | (id == PauseHotkeyId ? 0x4000u : 0u), binding.Vk);
 
     private void RegisterOverlayBinding()
     {
         OverlayHotkeyAvailable = _overlayBinding is { } binding &&
-            _saveBinding != binding && _toggleBinding != binding &&
+            _saveBinding != binding && _toggleBinding != binding && _pauseBinding != binding &&
             (IsExtendedFunctionKey(binding.Vk) ||
              RegisterHotKey(_source.Handle, OverlayHotkeyId, binding.Modifiers | 0x4000, binding.Vk));
         if (!OverlayHotkeyAvailable)
@@ -223,6 +248,7 @@ public sealed class HotkeyManager : IDisposable
     private void EnsureKeyboardHook()
     {
         bool needed =
+            (_pauseBinding is { } pause && IsExtendedFunctionKey(pause.Vk)) ||
             (_saveBinding is { } save && IsExtendedFunctionKey(save.Vk)) ||
             (_toggleBinding is { } toggle && IsExtendedFunctionKey(toggle.Vk)) ||
             (OverlayHotkeyAvailable && _overlayBinding is { } overlay && IsExtendedFunctionKey(overlay.Vk));
@@ -306,6 +332,17 @@ public sealed class HotkeyManager : IDisposable
             }
         }
 
+        if (_pauseBinding is { } pause && IsExtendedFunctionKey(pause.Vk) && virtualKey == pause.Vk)
+        {
+            if (!isDown)
+                _pausePressed = false;
+            else if (!_pausePressed && modifiers == pause.Modifiers)
+            {
+                _pausePressed = true;
+                PauseRecordingRequested?.Invoke();
+                handled = true;
+            }
+        }
         return handled;
     }
 
@@ -333,10 +370,12 @@ public sealed class HotkeyManager : IDisposable
         int saveCount = 0;
         int toggleCount = 0;
         int overlayCount = 0;
+        int pauseCount = 0;
         using var manager = new HotkeyManager("F23", "Ctrl+F24");
         manager.SaveRequested += () => saveCount++;
         manager.ToggleRequested += () => toggleCount++;
         manager.OverlayRequested += () => overlayCount++;
+        manager.PauseRecordingRequested += () => pauseCount++;
         manager.Rebind("F23", "Ctrl+F24", "Shift+F22");
         manager.ProcessLowLevelKey(0x85, 0, isDown: true);
         manager.ProcessLowLevelKey(0x85, 0, isDown: false);
@@ -362,7 +401,24 @@ public sealed class HotkeyManager : IDisposable
         manager.ProcessLowLevelKey(0x87, MOD_CONTROL, isDown: true);
         manager.ProcessLowLevelKey(0x87, MOD_CONTROL, isDown: false);
 
-        bool passed = manager._keyboardHook != 0 &&
+        manager.Rebind("F23", "Ctrl+F24", "Shift+F21", "Shift+F20");
+        manager.ProcessLowLevelKey(0x83, 0, isDown: true);
+        manager.ProcessLowLevelKey(0x83, 0, isDown: false);
+        manager.ProcessLowLevelKey(0x83, MOD_SHIFT, isDown: true);
+        manager.ProcessLowLevelKey(0x83, MOD_SHIFT, isDown: true);
+        manager.ProcessLowLevelKey(0x83, MOD_SHIFT, isDown: false);
+        bool conflictRejected = false;
+        try { manager.Rebind("F23", "Ctrl+F24", "Shift+F21", "F23"); }
+        catch (InvalidOperationException) { conflictRejected = true; }
+        manager.ProcessLowLevelKey(0x83, MOD_SHIFT, isDown: true);
+        manager.ProcessLowLevelKey(0x83, MOD_SHIFT, isDown: false);
+        manager.Rebind("F23", "Ctrl+F24", "Shift+F21", "Shift+F19");
+        manager.ProcessLowLevelKey(0x83, MOD_SHIFT, isDown: true);
+        manager.ProcessLowLevelKey(0x83, MOD_SHIFT, isDown: false);
+        manager.ProcessLowLevelKey(0x82, MOD_SHIFT, isDown: true);
+        manager.ProcessLowLevelKey(0x82, MOD_SHIFT, isDown: false);
+
+        bool passed = conflictRejected && pauseCount == 3 && manager._keyboardHook != 0 &&
                       manager._saveBinding?.Vk == 0x86 &&
                       manager._toggleBinding?.Vk == 0x87 &&
                       manager.OverlayHotkeyAvailable &&
@@ -370,7 +426,7 @@ public sealed class HotkeyManager : IDisposable
         details = $"hook={manager._keyboardHook != 0}, " +
                   $"saveVk=0x{manager._saveBinding?.Vk:X2}, " +
                   $"toggleVk=0x{manager._toggleBinding?.Vk:X2}, " +
-                  $"saveCount={saveCount}, toggleCount={toggleCount}, overlayCount={overlayCount}";
+                  $"saveCount={saveCount}, toggleCount={toggleCount}, overlayCount={overlayCount}, pauseCount={pauseCount}, conflictRejected={conflictRejected}";
         return passed;
     }
 #endif
@@ -417,6 +473,8 @@ public sealed class HotkeyManager : IDisposable
             SaveRequested?.Invoke();
         else if (wParam == ToggleHotkeyId)
             ToggleRequested?.Invoke();
+        else if (wParam == PauseHotkeyId)
+            PauseRecordingRequested?.Invoke();
         else if (wParam == OverlayHotkeyId)
             OverlayRequested?.Invoke();
         else

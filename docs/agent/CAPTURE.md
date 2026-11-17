@@ -7,10 +7,24 @@ capabilities, output lifecycle, recovery, and capture notifications.
 
 ## Flow and seams
 
-- `Config.CaptureMode` selects `replay` or `recording`.
+- `Config.CaptureMode` identifies replay-only or continuous recording capture;
+  `InstantClipEnabled` independently controls the replay output. `ReplayEnabled`
+  remains the overall capture/recovery preference.
 - `App.xaml.cs` owns start/stop/restart policy and serializes pipeline work.
 - `SingleThreadTaskScheduler` isolates OBS graph mutations.
 - `ObsReplayEngine` builds one graph from normalized `Config`.
+- Advanced System audio remains independently selectable (default on), with
+  persisted gain/mute. It uses the first track in 1–6 unused by enabled app
+  routes and the microphone; existing assignments are unchanged. Settings,
+  dashboard toggles, and engine startup reject an exhausted allocation with a
+  localized error. Replay and recording share these same mixers/encoders.
+- Advanced System is the complement of enabled application process trees:
+  native process loopback excluding the first selected tree (Shadowless when
+  none are running), minus inverted captures of remaining independent selected
+  trees. A single selected tree uses native exclusion directly. The reconciler handles restarts, PID
+  reuse, and overlapping trees. System gain/mute applies equally to the base
+  and subtraction sources; application tracks remain independent. System is
+  held silent while its clients are starting or report failure at reconciliation.
 - `Config.GpuPreference` selects the OBS graphics adapter through DXGI GPU
   preferences: `high-performance` (default, prefers discrete graphics) or
   `power-saving` (prefers integrated graphics). The selected adapter is resolved
@@ -41,7 +55,10 @@ capabilities, output lifecycle, recovery, and capture notifications.
   duration/seek compatibility; continuous recordings retain fragmented MP4.
 - Recording mode keeps the replay buffer and a continuous file output on the
   same capture graph and encoders. Save action/hotkey always saves a replay;
-  start/stop controls keep their capture-mode role.
+  recording tile menu actions attach/finalize only the recording output,
+  preserving an existing replay buffer. Instant Clip can release/recreate its
+  output while recording continues. Pause/resume has a configurable hotkey
+  (Ctrl+Shift+F8 by default), validated against the other three bindings.
 - Recording pause pauses the shared encoded stream. Clip saving is disabled
   until resume, which continues the same file. Stop finalizes the recording
   output before releasing replay and the shared encoders. Forced or failed
@@ -86,6 +103,15 @@ dotnet build .\Shadowless.sln -c Release --no-restore
 
 Use relevant `--qa-game-*`, `--qa-replay-*`, or recording QA entry points for
 runtime changes. Real Game Capture changes require a real game test.
+Advanced System requires real Windows audio verification: play independent
+tones from two selected apps and one unselected app, check isolation in both
+replay clips and continuous recordings (AAC and Opus), then test no selected
+apps, System off/on, volume/mute persistence, process restarts, and all six
+tracks occupied. Check for cancellation residue and startup/recovery gaps;
+sample cancellation relies on Windows loopback timestamps and OBS alignment.
+`--qa-advanced-audio=app.exe:2 --qa-audio-tracks` now includes System in capture QA.
+`tools/ProcessAudioFoundationQa/ComplementSamplesQa.cpp` is a portable sample
+arithmetic check; it does not validate Windows timing or device behavior.
 CaptureSelectionQa is a portable policy fixture; it does not exercise native
 DXGI enumeration or establish that hybrid laptop recordings contain video.
 

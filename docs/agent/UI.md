@@ -46,8 +46,10 @@ overlay notifications, and recording indicator.
 - Settings apply failures name the failing option or operation and retain the
   original error. Capture restart failures list the changed capture options when
   the encoder cannot identify a single cause. File write failures identify the config file.
-- Main replay/recording selector applies immediately and shows only controls
-  relevant to the selected mode.
+- Dashboard Instant Clip opens an enable/disable and save menu. Recording opens
+  a menu with start, pause, resume and stop actions; both outputs can run
+  together. Menu availability follows active outputs and paused state. Enter or
+  Space opens each menu; arrow keys and Escape use native WPF menu navigation.
 - Dashboard audio icons mute/unmute without disabling capture or resetting the
   buffer. Adjacent labels/percentages open live volume sliders; microphone controls
   also remain available in advanced mode. Enabling a disabled source still rebuilds capture.

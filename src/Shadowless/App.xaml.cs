@@ -69,6 +69,7 @@ public partial class App : Application
     private readonly SingleThreadTaskScheduler _obsTaskScheduler =
         new("Shadowless OBS");
     private ProcessAudioMonitor? _processAudioMonitor;
+    private AudioDeviceNotifications? _audioDeviceNotifications;
     private AdvancedProcessAudioAvailability _processAudioAvailability =
         AdvancedProcessAudioAvailability.SourceUnavailable;
     private volatile bool _replayRunning;
@@ -1340,7 +1341,7 @@ public partial class App : Application
                     Codec = codec,
                     AudioCodec = audioCodec,
                     CaptureSource = "desktop",
-                    CaptureSystemAudio = !advancedAudio && audioTracks,
+                    CaptureSystemAudio = audioTracks,
                     SystemAudioVolume = audioTracks ? 37 : 100,
                     CaptureMicrophone = advancedAudio
                         ? advancedMicrophoneTrack > 0
@@ -1797,7 +1798,8 @@ public partial class App : Application
             _hotkeys = new HotkeyManager(
                 _config.Hotkey,
                 _config.ToggleReplayHotkey,
-                _config.OverlayHotkey);
+                _config.OverlayHotkey,
+                _config.PauseRecordingHotkey);
             SubscribeHotkeys();
         }
         catch (Exception exception)
@@ -1817,6 +1819,11 @@ public partial class App : Application
         _hotkeys!.SaveRequested += SaveReplay;
         _hotkeys.ToggleRequested += ToggleReplayFromHotkey;
         _hotkeys.OverlayRequested += ToggleControlOverlay;
+        _hotkeys.PauseRecordingRequested += async () =>
+        {
+            if (_obs?.IsContinuousRecording == true && IsReplayRunning)
+                await SetRecordingPausedAsync(_obs.IsRecordingPaused != true);
+        };
     }
 
     private void ToggleControlOverlay()
@@ -1956,6 +1963,16 @@ public partial class App : Application
             _obs = engine;
             _replayRunning = true;
             _captureDescription = description;
+            try
+            {
+                _audioDeviceNotifications = new AudioDeviceNotifications(
+                    () => OnAudioDevicesChanged(engine));
+                await RunOnObsThreadAsync(engine.RefreshMicrophoneDevice);
+            }
+            catch (Exception exception)
+            {
+                Log.Write($"Microphone device notifications unavailable: {exception.Message}");
+            }
             _capabilities = engine.Capabilities;
             _processAudioAvailability = engine.ProcessAudioAvailability;
             if (engine.RequiresProcessAudioMonitoring)
@@ -2127,10 +2144,32 @@ public partial class App : Application
 
     private async Task StopProcessAudioMonitorAsync()
     {
+        var notifications = _audioDeviceNotifications;
+        _audioDeviceNotifications = null;
+        try
+        {
+            notifications?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Microphone device notification cleanup failed: {exception.Message}");
+        }
         ProcessAudioMonitor? monitor = _processAudioMonitor;
         _processAudioMonitor = null;
         if (monitor is not null)
             await monitor.DisposeAsync();
+    }
+
+    private async void OnAudioDevicesChanged(ObsReplayEngine engine)
+    {
+        try
+        {
+            await RunOnObsThreadAsync(engine.RefreshMicrophoneDevice);
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Microphone device update failed: {exception.Message}");
+        }
     }
 
     private static int? ParseCaptureRecoveryParent(IEnumerable<string> args)
@@ -2900,7 +2939,7 @@ public partial class App : Application
             _config!,
             IsReplayRunning,
             SaveReplay,
-            SetReplayEnabledAsync,
+            SetInstantClipEnabledAsync,
             SetAudioSourcesAsync,
             SetAdvancedAudioSourceEnabledAsync,
             ApplySettingsAsync,
@@ -2911,6 +2950,7 @@ public partial class App : Application
         _settingsWindow.CaptureOverlayEditorRequested = OpenCaptureOverlayEditor;
         _settingsWindow.SetAudioLevels = SetAudioLevelsAsync;
         _settingsWindow.SetRecordingPaused = SetRecordingPausedAsync;
+        _settingsWindow.SetRecordingEnabled = SetRecordingEnabledAsync;
         _settingsWindow.SetCaptureOverlaysEnabled = enabled =>
             ApplyCaptureOverlaysAsync(enabled, _config!.CaptureOverlays);
         _settingsWindow.Closed += (_, _) =>
@@ -3066,13 +3106,106 @@ public partial class App : Application
         }
     }
 
+    private async Task<bool> SetRecordingEnabledAsync(bool enabled)
+    {
+        await _pipelineGate.WaitAsync();
+        try
+        {
+            if (Volatile.Read(ref _exiting) != 0 || Volatile.Read(ref _saving) != 0)
+                return _obs?.IsContinuousRecording == true;
+            if (enabled)
+            {
+                if (IsReplayRunning && _obs is { } engine)
+                    await RunOnObsThreadAsync(engine.StartRecording);
+                else
+                {
+                    _config!.CaptureMode = "recording";
+                    if (!await TryStartPipelineCoreAsync(showError: true))
+                    {
+                        _config.CaptureMode = "replay";
+                        return false;
+                    }
+                }
+                _config!.CaptureMode = "recording";
+                _config.ReplayEnabled = true;
+            }
+            else
+            {
+                if (_obs?.IsContinuousRecording == true)
+                {
+                    ObsReplayEngine engine = _obs;
+                    await RunOnObsThreadAsync(engine.StopRecording);
+                }
+                _config!.CaptureMode = "replay";
+                if (!_config.InstantClipEnabled)
+                    await StopPipelineCoreAsync();
+                _config.ReplayEnabled = IsReplayRunning;
+            }
+            _config.Save();
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Recording output change failed: {exception}");
+            _config!.CaptureMode = _obs?.IsContinuousRecording == true ? "recording" : "replay";
+            if (_obs is { IsContinuousRecording: false, IsReplayBufferEnabled: false })
+                await StopPipelineCoreAsync();
+            _config.ReplayEnabled = IsReplayRunning;
+            SaveRollbackConfig("recording output");
+            _settingsWindow?.ShowError(Localization.Text("L.Error.Attention"), exception.Message);
+        }
+        finally
+        {
+            _pipelineGate.Release();
+            UpdateUiState();
+        }
+        return IsReplayRunning && _obs?.IsContinuousRecording == true;
+    }
+
+    private async Task<bool> SetInstantClipEnabledAsync(bool enabled)
+    {
+        await _pipelineGate.WaitAsync();
+        bool previous = _config!.InstantClipEnabled;
+        try
+        {
+            if (Volatile.Read(ref _exiting) != 0 || Volatile.Read(ref _saving) != 0)
+                return IsReplayRunning;
+            if (IsReplayRunning && _obs?.IsContinuousRecording == true)
+            {
+                ObsReplayEngine engine = _obs;
+                await RunOnObsThreadAsync(() => engine.SetReplayBufferEnabled(enabled));
+                _config.InstantClipEnabled = enabled;
+                _config.Save();
+            }
+            else
+            {
+                _config.InstantClipEnabled = enabled;
+                _config.CaptureMode = "replay";
+                await SetReplayEnabledCoreAsync(enabled);
+            }
+        }
+        catch (Exception exception)
+        {
+            _config.InstantClipEnabled = _obs?.IsReplayBufferEnabled ?? previous;
+            SaveRollbackConfig("instant clip output");
+            Log.Write($"Instant Clip output change failed: {exception}");
+            _settingsWindow?.ShowError(Localization.Text("L.Error.Attention"), exception.Message);
+        }
+        finally
+        {
+            _pipelineGate.Release();
+            UpdateUiState();
+        }
+        return IsReplayRunning;
+    }
+
     private async Task<bool> SetRecordingPausedAsync(bool paused)
     {
         await _pipelineGate.WaitAsync();
         try
         {
-            if (_obs is null || !IsReplayRunning || Volatile.Read(ref _exiting) != 0)
-                return false;
+            if (_obs is null || !_obs.IsContinuousRecording || !IsReplayRunning ||
+                Volatile.Read(ref _exiting) != 0 || Volatile.Read(ref _saving) != 0)
+                return _obs?.IsRecordingPaused == true;
             ObsReplayEngine engine = _obs;
             await RunOnObsThreadAsync(() => engine.SetRecordingPaused(paused));
         }
@@ -3089,9 +3222,6 @@ public partial class App : Application
         }
         return _obs?.IsRecordingPaused == true;
     }
-
-    private Task<bool> SetReplayEnabledAsync(bool enabled) =>
-        SetReplayEnabledGuardedAsync(enabled);
 
     private async Task<bool> SetReplayEnabledGuardedAsync(bool? requestedState)
     {
@@ -3128,6 +3258,8 @@ public partial class App : Application
     {
         if (enabled)
         {
+            if (_config!.CaptureMode == "replay")
+                _config.InstantClipEnabled = true;
             bool started = await TryStartPipelineCoreAsync(showError: true);
             if (started)
             {
@@ -3587,12 +3719,12 @@ public partial class App : Application
     {
         if (_hotkeys is null)
         {
-            _hotkeys = new HotkeyManager(config.Hotkey, config.ToggleReplayHotkey, config.OverlayHotkey);
+            _hotkeys = new HotkeyManager(config.Hotkey, config.ToggleReplayHotkey, config.OverlayHotkey, config.PauseRecordingHotkey);
             SubscribeHotkeys();
         }
         else
         {
-            _hotkeys.Rebind(config.Hotkey, config.ToggleReplayHotkey, config.OverlayHotkey);
+            _hotkeys.Rebind(config.Hotkey, config.ToggleReplayHotkey, config.OverlayHotkey, config.PauseRecordingHotkey);
         }
         _boundHotkey = config.Hotkey;
         _boundToggleHotkey = config.ToggleReplayHotkey;
@@ -3671,7 +3803,7 @@ public partial class App : Application
         {
             _saveMenuItem.Header = Localization.Text("L.Tray.Save");
             _saveMenuItem.InputGestureText = _config?.Hotkey ?? "";
-            _saveMenuItem.IsEnabled = active && _obs?.IsRecordingPaused != true && availableReplaySeconds > 0;
+            _saveMenuItem.IsEnabled = active && _config?.InstantClipEnabled == true && _obs?.IsRecordingPaused != true && availableReplaySeconds > 0;
         }
         if (_toggleMenuItem is not null)
         {
@@ -3682,6 +3814,7 @@ public partial class App : Application
         {
             _pauseRecordingMenuItem.Visibility = recordingMode ? Visibility.Visible : Visibility.Collapsed;
             _pauseRecordingMenuItem.IsEnabled = active;
+            _pauseRecordingMenuItem.InputGestureText = _config?.PauseRecordingHotkey ?? "";
             _pauseRecordingMenuItem.Header = Localization.Text(_obs?.IsRecordingPaused == true
                 ? "L.Capture.ResumeRecording" : "L.Capture.PauseRecording");
         }
@@ -3758,7 +3891,7 @@ public partial class App : Application
                 Localization.Text("L.Capture.PausedHint"), OverlayTone.Warning);
             return;
         }
-        if (engine is null || !IsReplayRunning ||
+        if (engine is null || !IsReplayRunning || !engine.IsReplayBufferEnabled ||
             Volatile.Read(ref _exiting) != 0)
         {
             ShowOverlayNotification(

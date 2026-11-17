@@ -22,6 +22,8 @@ public sealed class Config
     public int BitrateMbps { get; set; }
     public string Hotkey { get; set; } = "Ctrl+Shift+F10";
     public string ToggleReplayHotkey { get; set; } = "Ctrl+Shift+F9";
+    public string PauseRecordingHotkey { get; set; } = "Ctrl+Shift+F8";
+    public bool InstantClipEnabled { get; set; } = true;
     public string OverlayHotkey { get; set; } = "Alt+Z";
     /// <summary>"replay" or "recording".</summary>
     public string CaptureMode { get; set; } = "replay";
@@ -71,6 +73,12 @@ public sealed class Config
     public string AudioRoutingMode { get; set; } = "simple";
     public List<ProcessAudioRoute> ProcessAudioRoutes { get; set; } = [];
     public int AdvancedMicrophoneTrack { get; set; } = 1;
+
+    // Keep existing app/microphone assignments; zero means disabled or all six tracks are occupied.
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal int AdvancedSystemAudioTrack => !CaptureSystemAudio ? 0 : Enumerable.Range(1, 6)
+        .FirstOrDefault(track => (!CaptureMicrophone || track != AdvancedMicrophoneTrack) &&
+            !ProcessAudioRoutes.Any(route => route.Enabled && route.Track == track));
 
     public string OutputDirectory { get; set; } =
         DefaultOutputDirectory;
@@ -187,7 +195,10 @@ public sealed class Config
     {
         ReplayEnabled = StartReplayOnLaunch;
         if (StartReplayOnLaunch)
+        {
             CaptureMode = "replay";
+            InstantClipEnabled = true;
+        }
         // A capture-recovery process reloads the effective state from disk.
         Save();
     }
@@ -203,6 +214,8 @@ public sealed class Config
         Hotkey = source.Hotkey;
         ToggleReplayHotkey = source.ToggleReplayHotkey;
         OverlayHotkey = source.OverlayHotkey;
+        PauseRecordingHotkey = source.PauseRecordingHotkey;
+        InstantClipEnabled = source.InstantClipEnabled;
         CaptureMode = source.CaptureMode;
         ReplayEnabled = source.ReplayEnabled;
         StartReplayOnLaunch = source.StartReplayOnLaunch;
@@ -252,6 +265,7 @@ public sealed class Config
         CaptureSource == "desktop" && AudioRoutingMode == "simple" && !SeparateAudioTracks;
 
     public bool PipelineEquals(Config other) =>
+        InstantClipEnabled == other.InstantClipEnabled &&
         string.Equals(CaptureMode, other.CaptureMode, StringComparison.Ordinal) &&
         BufferSeconds == other.BufferSeconds &&
         MaxReplaySizeMb == other.MaxReplaySizeMb &&
@@ -280,6 +294,8 @@ public sealed class Config
         CaptureOverlays = CaptureOverlay.Normalize(CaptureOverlays);
         Language = NormalizeLanguage(Language);
         CaptureMode = AllowedText(CaptureMode, ["replay", "recording"], "replay");
+        if (ReplayEnabled && CaptureMode == "replay")
+            InstantClipEnabled = true;
         BufferSeconds = AllowedValue(BufferSeconds, [15, 30, 60, 120, 300, 600, 900], 300);
         MaxReplaySizeMb = AllowedValue(MaxReplaySizeMb, [0, 250, 500, 1000, 2000, 5000, 10000], 0);
         FrameRate = AllowedValue(FrameRate, [30, 60, 120, 144, 240], 60);
@@ -295,6 +311,16 @@ public sealed class Config
             !HotkeyManager.AreDistinct(Hotkey, ToggleReplayHotkey))
         {
             ToggleReplayHotkey = "Ctrl+Shift+F9";
+        }
+        PauseRecordingHotkey = NormalizeHotkey(PauseRecordingHotkey, "Ctrl+Shift+F8");
+        if (!HotkeyManager.IsValid(PauseRecordingHotkey) ||
+            new[] { Hotkey, ToggleReplayHotkey, OverlayHotkey }.Any(
+                binding => !HotkeyManager.AreDistinct(binding, PauseRecordingHotkey)))
+        {
+            PauseRecordingHotkey = Enumerable.Range(1, 24)
+                .Select(key => $"Ctrl+Shift+F{key}")
+                .First(binding => new[] { Hotkey, ToggleReplayHotkey, OverlayHotkey }
+                    .All(other => HotkeyManager.AreDistinct(binding, other)));
         }
         Codec = AllowedText(Codec, ["h264", "hevc", "av1"], "h264");
         MonitorIndex = Math.Clamp(MonitorIndex, 0, 63);

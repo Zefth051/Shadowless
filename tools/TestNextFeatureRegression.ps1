@@ -96,17 +96,22 @@ Require $engine 'ffmpeg_muxer' `
 Require $engine `
     'ResetObsVideo\(\s*IsGameCapture\s*&&\s*!IsContinuousRecording\s*\?\s*GameCaptureIdleFrameRate\s*:\s*_config\.FrameRate' `
     "Continuous Game Capture recording must use the configured frame rate instead of the idle detector rate."
-Require $settingsXaml 'x:Name="DashboardCaptureModeOptions"' `
-    "Dashboard is missing Replay/Recording mode selector."
-Require $settings 'DashboardCaptureMode_Click' `
-    "Dashboard mode selector is not connected to runtime settings apply."
-$modeSwitch = [regex]::Match(
-    $settings,
-    'DashboardCaptureMode_Click(?<body>[\s\S]*?)\n\s*private async void SourceChip_Click').Groups['body'].Value
-Require $modeSwitch 'candidate\.ReplayEnabled\s*=\s*false' `
-    "Switching Replay/Recording mode must always leave capture disabled."
-Require $modeSwitch 'UpdateRuntimeState\(false\)' `
-    "Mode switch must immediately render the disabled runtime state."
+Require $settingsXaml 'x:Name="DashboardRecordingModeButton"[\s\S]*?Click="CaptureMenu_Click"' `
+    "Dashboard recording tile must open its action menu."
+Require $settingsXaml 'x:Name="SaveReplayMenuItem"' `
+    "Instant Clip menu must offer Save replay."
+Require $settings 'ChangeRecordingEnabled' `
+    "Dashboard recording actions are not connected."
+Require $app 'RunOnObsThreadAsync\(engine\.StartRecording\)' `
+    "Starting recording must reuse the existing capture graph."
+Require $app 'RunOnObsThreadAsync\(engine\.StopRecording\)' `
+    "Stopping recording must release only the recording output."
+Require $settingsXaml 'x:Name="EnableInstantClipMenuItem"' `
+    "Instant Clip needs an enable/disable menu."
+Require $config 'PauseRecordingHotkey' `
+    "Recording pause hotkey is not persisted."
+Require $settingsXaml 'x:Name="PauseHotkeyButton"' `
+    "Recording pause hotkey is missing from settings."
 Reject $settingsXaml 'x:Name="CaptureModeBox"' `
     "Capture mode selector must not remain buried in Settings."
 Reject $settings 'CaptureModeBox' `
@@ -117,8 +122,10 @@ Require $settingsXaml 'x:Name="ReplayToggleHotkeySettings"' `
     "Capture start/stop hotkey settings must remain available alongside clip saving."
 Require $settings 'ReplayOnlySettings\.Visibility\s*=\s*Visibility\.Visible' `
     "Recording mode needs replay-buffer duration and size settings."
-Require $settingsXaml 'x:Name="PauseRecordingButton"' `
-    "Continuous recording needs a pause/resume button."
+Require $settingsXaml 'x:Name="PauseRecordingMenuItem"' `
+    "Continuous recording needs a pause action."
+Require $settingsXaml 'x:Name="ResumeRecordingMenuItem"' `
+    "Continuous recording needs a resume action."
 Require $engine 'CreateReplayBuffer\(\);[\s\S]{0,100}CreateRecordingOutput\(\);' `
     "Continuous recording must retain the shared replay output."
 Reject $engine 'ReplayUnavailableWhileRecording' `

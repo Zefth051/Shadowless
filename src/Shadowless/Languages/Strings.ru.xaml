@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">Монитор для захвата не найден.</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">Видеоподсистема не запустилась: код {0}.</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">Аудиоподсистема не запустилась.</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">Для расширенной маршрутизации звука приложений требуется Windows 10 версии 2004 или новее.</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">Для маршрутизации звука приложений требуется сборка Windows 20348 или новее (Windows 11 или Windows Server 2022).</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">Источник расширенного звука приложений недоступен. Переустановите или обновите Shadowless.</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">Совместимый аппаратный видеокодировщик не найден. Обновите драйвер видеокарты.</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">Кодек {0} недоступен на {1}; выбран {2}.</sys:String>
@@ -374,7 +374,7 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">Выберите приложение или включите микрофон.</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">Процессов: {0}</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">Звук приложений</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Перед сохранением выберите приложение или включите микрофон.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Перед сохранением включите системный звук, выберите приложение или включите микрофон.</sys:String>
 
 
   <sys:String x:Key="L.Capture.Mode">Режим захвата</sys:String>
@@ -485,4 +485,11 @@
   <sys:String x:Key="L.Settings.Capture">Настройки захвата</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Статус игры в Discord</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">Показывать распознанную игру в Discord только во время захвата. Время захвата не передаётся.</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">Включить мгновенный повтор</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">Выключить мгновенный повтор</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">Действия с записью</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">Пауза/продолжение записи</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">Система + выбранные приложения</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">Система записывает весь звук, кроме выбранных приложений, на первую свободную дорожку (1–6).</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">Все шесть звуковых дорожек заняты. Измените дорожку приложения или микрофона, чтобы освободить дорожку, или отключите системный звук.</sys:String>
 </ResourceDictionary>

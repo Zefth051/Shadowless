@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">Capture monitor not found.</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">Video subsystem failed to start: code {0}.</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">Audio subsystem failed to start.</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">Advanced application audio routing requires Windows 10 version 2004 or newer.</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">Application audio routing requires Windows build 20348 or newer (Windows 11 or Windows Server 2022).</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">Advanced application audio source is unavailable. Reinstall or update Shadowless.</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">No compatible hardware video encoder found. Update graphics driver.</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">{0} is unavailable on {1}; selected {2}.</sys:String>
@@ -374,12 +374,12 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">Select at least one app or enable microphone.</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">{0} processes</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">Application audio</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Select at least one app or enable microphone before saving.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Enable System audio, select an app, or enable the microphone before saving.</sys:String>
 
 
   <sys:String x:Key="L.Capture.Mode">Capture mode</sys:String>
   <sys:String x:Key="L.Capture.ModeHint">Choose Instant Replay or continuous recording</sys:String>
-  <sys:String x:Key="L.Capture.Replay">Instant Replay</sys:String>
+  <sys:String x:Key="L.Capture.Replay">Instant Clip</sys:String>
   <sys:String x:Key="L.Capture.Recording">Recording</sys:String>
   <sys:String x:Key="L.Capture.RecordingEnabled">Recording is on</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">Start recording</sys:String>
@@ -485,4 +485,11 @@
   <sys:String x:Key="L.Settings.Capture">Capture settings</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Discord Rich Presence</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">Show the recognized game on Discord only while capturing. No elapsed timer is shared.</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">Enable Instant Clip</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">Disable Instant Clip</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">Recording actions</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">Pause/resume recording</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">System + selected apps</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">System records all audio except the selected applications, on the first unused track (1–6).</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">All six audio tracks are in use. Free a track by changing an application or microphone assignment, or disable System audio.</sys:String>
 </ResourceDictionary>
