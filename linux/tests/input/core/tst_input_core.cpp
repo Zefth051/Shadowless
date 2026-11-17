@@ -150,6 +150,22 @@ private slots:
         QVERIFY(f.open(QIODevice::WriteOnly)); f.write("not json"); f.close();
         QVERIFY(!InputTimeline::load(path, &t, &error));
     }
+    void clipWindowsAlignWithTheSavedVideo() {
+        // Replay buffer of 30 s, capture running for 100 s: the clip is the last 30 s before the request.
+        auto w = replayClipWindow(200000, 30000, 100000);
+        QVERIFY(w.valid); QCOMPARE(w.startMs, qint64(170000)); QCOMPARE(w.endMs, qint64(200000));
+        // Capture started only 12 s ago: the clip is shorter than the buffer.
+        w = replayClipWindow(112000, 30000, 100000);
+        QVERIFY(w.valid); QCOMPARE(w.startMs, qint64(100000)); QCOMPARE(w.endMs - w.startMs, qint64(12000));
+        QVERIFY(!replayClipWindow(0, 30000, 100000).valid);        // no save request recorded
+        QVERIFY(!replayClipWindow(90000, 30000, 100000).valid);    // request before capture start
+        QVERIFY(!replayClipWindow(200000, 0, 100000).valid);
+        auto r = recordingClipWindow(1000, 61000, false);
+        QVERIFY(r.valid); QCOMPARE(r.endMs - r.startMs, qint64(60000));
+        QVERIFY(!recordingClipWindow(1000, 61000, true).valid);    // paused recordings cannot be aligned
+        QVERIFY(!recordingClipWindow(0, 61000, false).valid);
+        QVERIFY(!recordingClipWindow(5000, 1000, false).valid);
+    }
     void fakeSourceEnforcesAllowlistAndReleasesOnStop() {
         qRegisterMetaType<InputEvent>(); qRegisterMetaType<InputStatus>();
         FakeInputSource src;

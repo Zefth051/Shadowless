@@ -1,5 +1,6 @@
 #include "controller.h"
 #include "../overlays/input/core/layout.h"
+#include "../overlays/input/core/input_timeline.h"
 #include "desktop_entry.h"
 #include "../ui/dashboard.h"
 #include "../ui/settings_page.h"
@@ -172,6 +173,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     connect(editor, &OverlayEditor::inputOverlayChanged, this, [this](const InputOverlaySettings &value) {
         m_settings.setInputOverlay(value);                 // saved as soon as it changes, like the layer list
         m_dashboard->setInputOverlay(m_settings.inputOverlay());
+        updateInputSource();
     });
     connect(&m_input, &Input::InputSource::inputChanged, this, [this](const Input::InputEvent &event) {
         m_inputState.apply(event);
@@ -204,6 +206,8 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_shortcutApproval = pending; updateDesktopPrompt();
     });
     connect(&m_engine, &GsrCapture::started, this, [this] {
+        m_captureStartMs = Input::monotonicMs();
+        if (m_options.continuousRecording) { m_recordingStartMs = m_captureStartMs; m_recordingPausedOnce = false; }
         refresh(); const auto scene = m_pending.value_or(m_scene); m_pending.reset(); apply(scene);
     });
     connect(&m_engine, &GsrCapture::diagnostic, this, [](const QString &message) {
@@ -221,13 +225,17 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_saving = false; m_recordingSave = false; m_dashboard->notice(message); refresh();
     });
     connect(&m_engine, &GsrCapture::recordingChanged, this, [this] { refresh(); });
-    connect(&m_engine, &GsrCapture::recordingPauseChanged, this, [this] { refresh(); });
+    connect(&m_engine, &GsrCapture::recordingPauseChanged, this, [this] {
+        if (m_engine.recordingPaused()) m_recordingPausedOnce = true; // paused time is cut from the video, so the sidecar would drift
+        refresh();
+    });
     connect(&m_engine, &GsrCapture::clipSaved, this, [this](const QString &path, bool recording) {
         QString error;
         const auto saved = m_options.organizeByGame ? routeClip(m_options.outputDirectory, path,
             recording ? m_recordingGame : m_clipGame, &error) : path;
         if (recording) m_recordingSave = false;
         else m_saving = false;
+        writeInputSidecar(saved, recording);
         m_indicator->saved();
         if (!m_quitting) {
             m_savedSound.play();
@@ -287,6 +295,7 @@ void Controller::command(const QString &command) {
     else if (command == "capture") toggleCapture(); else if (command == "quit") quit();
 }
 void Controller::refresh() {
+    updateInputSource();
     m_dashboard->overlayEditor()->setPreviewSocket(m_engine.running() && !m_stopping ? m_engine.overlaySocketPath() + ".preview" : QString());
     m_dashboard->setOverlayBusy(m_validating || m_overlays.busy() || m_pending.has_value() || m_stopping);
     m_dashboard->settingsPage()->setCaptureActive((m_engine.active() && !m_stopping) || bool(m_afterGame));
@@ -339,6 +348,7 @@ void Controller::saveReplay() {
     identifyGame([this](const QString &game) {
         m_clipGame = game;
         if (!m_engine.running() || m_stopping) { m_saving = false; m_notification->dismiss(); refresh(); return; }
+        m_clipRequestMs = Input::monotonicMs();
         m_engine.saveReplay(m_options.bufferSeconds); refresh();
     });
     refresh();
@@ -358,7 +368,7 @@ void Controller::toggleReplayRecording() {
     if (!m_engine.running() || m_engine.busy() || m_afterGame || m_saving || m_stopping || m_options.continuousRecording) return;
     if (m_engine.replayRecording()) {
         m_recordingSave = true; m_notification->present("Saving recording…", {}, 30000, ClipNotification::Saving); m_engine.stopReplayRecording();
-    } else identifyGame([this](const QString &game) { m_recordingGame = game; m_engine.startReplayRecording(); refresh(); });
+    } else identifyGame([this](const QString &game) { m_recordingGame = game; m_recordingStartMs = Input::monotonicMs(); m_recordingPausedOnce = false; m_engine.startReplayRecording(); refresh(); });
     refresh();
 }
 void Controller::updateAudioLevels() {
@@ -414,12 +424,35 @@ bool Controller::persist(QString *result) {
     if (result) *result = error;
     return ok;
 }
+// Writes `<clip>.inputs.json` when the sidecar is enabled. A replay clip covers the buffer window that ended
+// when the save was requested; a recording covers everything since it started. Recordings that were paused
+// are skipped: paused time is cut from the video and the events could no longer be aligned. Failures never
+// affect the clip.
+void Controller::writeInputSidecar(const QString &clip, bool recording) {
+    if (!m_recorder) return;
+    const qint64 now = Input::monotonicMs();
+    const auto window = recording ? Input::recordingClipWindow(m_recordingStartMs, now, m_recordingPausedOnce)
+        : Input::replayClipWindow(m_clipRequestMs > 0 ? m_clipRequestMs : now, qint64(m_options.bufferSeconds) * 1000, m_captureStartMs);
+    if (!window.valid) return;
+    QString error;
+    if (!m_recorder->writeWindow(clip, window.startMs, window.endMs, &error)) qWarning().noquote() << "Input events were not saved:" << error;
+}
 // Starts, restarts or stops the single input source so it reads only what is needed right now: the layout
-// previewed in the Capture overlays editor. Nothing is read while no overlay is selected or the editor is closed.
+// previewed in the Capture overlays editor, and the stored layout while capture runs with saved events on.
+// Nothing is read while neither applies.
 void Controller::updateInputSource() {
+    const auto config = m_settings.inputOverlay();
+    const bool recording = config.sidecar && config.enabled() && m_engine.active();
+    if (!recording && m_recorder) { m_recorder->stop(); m_recorder.reset(); m_recorderLayout.clear(); }
+    if (recording && (!m_recorder || m_recorderLayout != config.layout)) {
+        m_recorder = std::make_unique<Input::InputRecorder>(&m_input, config.layout, 0);
+        m_recorderLayout = config.layout;
+        m_recorder->start();
+    }
     QSet<Input::InputId> wanted;
     Input::Layout layout; QString error;
     if (!m_inputPreviewLayout.isEmpty() && Input::Layout::builtin(m_inputPreviewLayout, &layout, &error)) wanted = layout.allowlist();
+    if (recording && Input::Layout::builtin(config.layout, &layout, &error)) wanted.unite(layout.allowlist());
     if (wanted == m_inputAllowlist && (wanted.isEmpty() == (m_input.status() == Input::InputStatus::Stopped))) return;
     m_input.stop();
     m_inputState.clear();
@@ -431,12 +464,13 @@ void Controller::quit() {
     if (m_quitting) return;
     m_dashboard->overlayEditor()->flush();
     if (m_saveLevels.isActive()) { m_saveLevels.stop(); persist(); }
-    m_inputPreviewLayout.clear(); m_input.stop();
+    m_inputPreviewLayout.clear(); // the recorder, if any, stays until the engine has saved its last clip
     m_quitting = true; m_compressor.setBusy(true); m_presence.stop(); m_dashboard->hide(); m_indicator->hide();
     m_notification->dismiss();
     if (m_options.continuousRecording || m_engine.replayRecording()) m_recordingSave = true;
     if (m_engine.active()) { m_stopping = true; m_engine.stop(); }
     else { drainPending(); finishQuitIfReady(); }
+    updateInputSource();
 }
 void Controller::finishQuitIfReady() {
     if (m_quitting && !m_engine.active() && !m_overlays.busy() && !m_validating && !m_pending && !m_afterGame) QCoreApplication::quit();

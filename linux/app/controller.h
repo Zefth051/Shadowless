@@ -6,6 +6,7 @@
 #include <QSystemTrayIcon>
 #include <optional>
 #include "../overlays/input/source/evdev_source.h"
+#include "../overlays/input/source/input_recorder.h"
 #include <QFutureWatcher>
 #include <QSoundEffect>
 #include <functional>
@@ -37,6 +38,12 @@ private:
     QString m_inputPreviewLayout;
     QSet<Input::InputId> m_inputAllowlist;
     void updateInputSource();
+    // Optional sidecar (<clip>.inputs.json): allowlisted events of the selected layout, timed against the clip.
+    std::unique_ptr<Input::InputRecorder> m_recorder;
+    QString m_recorderLayout;
+    qint64 m_captureStartMs = 0, m_clipRequestMs = 0, m_recordingStartMs = 0;
+    bool m_recordingPausedOnce = false;
+    void writeInputSidecar(const QString &clip, bool recording);
     GsrCapture m_engine;
     OverlayClient m_overlays;
     Shortcuts m_shortcuts;
