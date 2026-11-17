@@ -8,7 +8,9 @@
 namespace Shadowless::Input {
 struct RenderStyle {
     QColor accent{"#8b5cf6"}; // pressed fill
-    QColor idle{18, 18, 20, 215};
+    QColor idle{10, 10, 13, 225};   // keycap base (the visible lip) and non-key shapes
+    QColor face{40, 42, 49, 235};   // keycap top face
+
     QColor outline{255, 255, 255, 110};
     QColor text{235, 235, 240};
     double opacity = 1.0;     // 0..1 applied to the whole image

@@ -44,12 +44,14 @@ def layout(id_, name, scope, elements):
             "elements": elements}
 
 G = 1.1  # key pitch: 1 unit key + .1 gap -> we simply offset by pitch below
-def scale(els, k=1.1):
+def scale(els, k=1.1, ky=1.2):
+    """Keys keep a 0.1 horizontal gap but are taller than wide (ky) so they read as keycaps with body."""
     out = []
     for e in els:
         e = dict(e)
-        for f in ("x", "y"): e[f] = round(e[f] * k, 3)
-        for f in ("w", "h"): e[f] = round(e[f] * k - (k - 1), 3)  # keep a (k-1) gap between neighbours
+        e["x"] = round(e["x"] * k, 3); e["y"] = round(e["y"] * ky, 3)
+        e["w"] = round(e["w"] * k - (k - 1), 3)
+        e["h"] = round(e["h"] * ky - 0.1, 3)
         out.append(e)
     return out
 
