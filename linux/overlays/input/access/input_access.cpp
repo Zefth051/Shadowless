@@ -194,7 +194,7 @@ QString InputAccess::messageFor(Result result, int exitCode, const QString &outp
         return QStringLiteral("Your system would not let the setup tool run (for example a read-only or no-execute mount). "
                               "Use the manual steps below. Shadowless works normally without input capture.");
     case Result::AppliedNeedsReload:
-        return QStringLiteral("The access was saved, but your system has not applied it yet. Reconnect the devices, or sign out and back in.");
+        return QStringLiteral("The change was saved, but your system has not applied it yet. Reconnect the devices, or sign out and back in.");
     case Result::Unavailable: return QStringLiteral("Automatic setup is not available on this system.");
     case Result::Failed: break;
     }
