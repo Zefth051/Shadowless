@@ -72,6 +72,25 @@ No shell, no `system()`, absolute paths for `udevadm`, cleared environment, stri
 validation, template-only output, refuses symlinked or unexpected targets, `--root` (tests only)
 is rejected when running under pkexec, no passwords or secrets handled by Shadowless.
 
+## Security review (Linux 0.3.8 development)
+
+Scope: `linux/helper/input_setup/`, the pkexec delivery in `InputAccess::run`, and the polkit policy. Reviewed by reading the
+code and extending the tests; no external audit. Threat model: a local attacker who runs code as the same unprivileged user
+(including a swapped AppImage) tries to get root, or to make the user grant more than they intended.
+
+| # | Finding | Severity | Disposition |
+| --- | --- | --- | --- |
+| 1 | Remove skipped the ACL revocation when the udev reload failed, so the user's ACLs stayed on already-connected devices although the rule was gone and the UI said access was removed. | Low | **Fixed.** The helper now revokes ACLs first and reports the reload failure (exit 4) afterwards. Test: `removeStillRevokesAclsWhenTheUdevReloadFails`. |
+| 2 | pkexec exit 127 was shown as "cancelled", hiding real failures (not authorized, polkit missing, helper blocked). | Low (honesty) | **Fixed** in `InputAccess`: each class has its own result and plain message; technical detail only in `diagnostics()` and the log. |
+| 3 | A noexec `/run` makes the staged helper fail (sh exit 126), which looked like a dismissed dialog. | Low | **Fixed** by the same classification (`HelperBlocked`, manual steps offered). |
+| 4 | AppImage path: the polkit prompt authorizes the generic `/usr/bin/sh -c <script>`, and the helper hash arrives in argv from the same user. The hash protects against swapping the bytes **after** the user starts the flow, not against a malicious initiator. Any same-user process can already run `pkexec sh -c …` and ask for the password; this path adds no capability, but the dialog is less informative than a packaged helper's. | Residual, design-level | **Accepted and documented.** An AppImage is user-writable, so nothing inside it can be trusted against the same user. Distribution packages should ship the root-owned helper and the polkit policy (clear prompt, exec path annotation); the AppImage keeps the staged path as the fallback. |
+| 5 | `--root` and `--no-reload` are test options. `--root` is rejected when `PKEXEC_UID` is set (always the case under pkexec), so a user cannot redirect root writes. | None | Verified; covered by existing tests. |
+| 6 | Rule text is generated from a fixed template from validated `vvvv:pppp:class` triples; existing files are re-validated line by line before replace; symlinks, hard links, `..` and non-regular files are refused; writes use `O_EXCL|O_NOFOLLOW` and `renameat` in a pinned directory; the environment of child processes is empty and programs are absolute paths. | None | Verified by reading and by `unsafeTargets`/`unexpectedContents`. |
+| 7 | Staging directory is created by root with `mktemp -d` under `/run` and removed by `trap`; a SIGKILL could leave a root-only directory until reboot. | Negligible | Accepted. |
+
+Residual risk stated to users: while a device is granted, any program running as the user can read it. Removing access ends
+it immediately. A hostile device that spoofs a granted vendor:product only receives the same user-level access.
+
 ## What the user sees
 
 1. **Capture overlays → Peripheral overlay**, pick an overlay. If the devices are already readable the status goes

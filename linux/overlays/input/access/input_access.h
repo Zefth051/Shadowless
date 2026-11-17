@@ -27,7 +27,11 @@ struct AccessDevice {
 class InputAccess : public QObject {
     Q_OBJECT
 public:
-    enum class Result { Granted, Cancelled, Failed, Unavailable, NoAgent }; // NoAgent: no polkit authentication agent runs in this session
+    // Cancelled: the user dismissed the system dialog (the only case that is not a problem).
+    // NoAgent: no polkit authentication agent runs in this session. NotAuthorized: authentication was refused or the user is
+    // not allowed. PolkitUnavailable: polkit/pkexec itself is missing or broken. HelperBlocked: the system would not run the
+    // setup tool (for example a noexec mount). AppliedNeedsReload: the access rule was written but udev did not apply it yet.
+    enum class Result { Granted, Cancelled, Failed, Unavailable, NoAgent, NotAuthorized, PolkitUnavailable, HelperBlocked, AppliedNeedsReload };
     Q_ENUM(Result)
     explicit InputAccess(QObject *parent = nullptr);
     ~InputAccess() override;
@@ -45,7 +49,10 @@ public:
     static bool validTriple(const QString &triple);
     // True when root controls the file and all its parent directories (safe to authorize in place).
     static bool rootControlled(const QString &path);
-    static Result resultForExit(int exitCode, QProcess::ExitStatus status);
+    // pkexec exits 126 when the dialog is dismissed and 127 for every other refusal or error, so the merged stdout/stderr is
+    // needed to tell them apart. Helper exit codes: 2 invalid request, 3 I/O error, 4 rule written but udev reload failed.
+    static Result resultForExit(int exitCode, QProcess::ExitStatus status, const QString &output = QString());
+    static QString messageFor(Result result, int exitCode, const QString &output);
 
     QString helperPath() const;                  // empty when no helper ships with this build
     bool available() const;                      // pkexec and a helper are both present
@@ -56,12 +63,13 @@ public:
     void grant(const QVector<AccessDevice> &devices);   // asynchronous; emits finished()
     void revoke();                                       // removes the rule through the same helper
     bool busy() const { return m_process != nullptr; }
+    QString diagnostics() const { return m_diagnostics; }   // technical detail of the last run (exit code and tool output) for support, not for the main message
 
 signals:
     void finished(Shadowless::Input::InputAccess::Result result, const QString &message);
 
 private:
-    QString m_launcher, m_helper, m_ruleFile;
+    QString m_launcher, m_helper, m_ruleFile, m_diagnostics;
     QProcess *m_process = nullptr;
     QString m_stagingBase = QStringLiteral("/run");
     void run(const QStringList &helperArguments);

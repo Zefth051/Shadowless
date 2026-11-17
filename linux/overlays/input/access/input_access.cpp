@@ -1,5 +1,6 @@
 #include "input_access.h"
 #include <QCoreApplication>
+#include <QDebug>
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
@@ -157,11 +158,53 @@ bool InputAccess::allReadable(const QVector<AccessDevice> &devices) {
     return std::all_of(devices.cbegin(), devices.cend(), [](const AccessDevice &d) { return d.readable; });
 }
 
-InputAccess::Result InputAccess::resultForExit(int exitCode, QProcess::ExitStatus status) {
+InputAccess::Result InputAccess::resultForExit(int exitCode, QProcess::ExitStatus status, const QString &output) {
     if (status != QProcess::NormalExit) return Result::Failed;
     if (exitCode == 0) return Result::Granted;
-    if (exitCode == 126 || exitCode == 127) return Result::Cancelled; // pkexec: dialog dismissed or not authorized
+    const auto has = [&output](const char *text) { return output.contains(QLatin1String(text), Qt::CaseInsensitive); };
+    if (exitCode == 126 || exitCode == 127) {
+        // pkexec: 126 = the dialog was dismissed. 127 = everything else (not authorized, no agent, polkit missing, exec failure).
+        // sh also returns 126 when it cannot execute the staged helper, so the tool output decides.
+        if (has("authentication agent")) return Result::NoAgent;
+        if (has("not authorized") || has("authentication failed") || has("authentication error")) return Result::NotAuthorized;
+        if (has("error getting authority") || has("must be setuid root") || has("polkit") || has("pkexec: command not found")) return Result::PolkitUnavailable;
+        if (has("permission denied") || has("not executable") || has("noexec") || has("operation not permitted") || has("no such file") || has("not found") || has("sha256"))
+            return Result::HelperBlocked;
+        if (exitCode == 126) return Result::Cancelled;   // dismissed (pkexec prints "Request dismissed" or nothing)
+        return Result::Failed;
+    }
+    if (exitCode == 4) return Result::AppliedNeedsReload;
     return Result::Failed;
+}
+
+QString InputAccess::messageFor(Result result, int exitCode, const QString &output) {
+    switch (result) {
+    case Result::Granted: return QStringLiteral("Input access enabled.");
+    case Result::Cancelled: return QStringLiteral("Authorization was cancelled. Shadowless works normally without input capture.");
+    case Result::NoAgent:
+        return QStringLiteral("Your desktop has no authentication agent, so the system cannot show its password dialog. "
+                              "Start one (Hyprland: hyprpolkitagent; others: polkit-kde-agent, polkit-gnome) or use the manual steps below.");
+    case Result::NotAuthorized:
+        return QStringLiteral("Your system did not authorize the change (wrong password, or this account is not allowed to administer the system). "
+                              "Try again, or ask an administrator. Shadowless works normally without input capture.");
+    case Result::PolkitUnavailable:
+        return QStringLiteral("The system authorization service (polkit) is not available, so the access cannot be set up here. "
+                              "Install or start polkit, or use the manual steps below. Shadowless works normally without input capture.");
+    case Result::HelperBlocked:
+        return QStringLiteral("Your system would not let the setup tool run (for example a read-only or no-execute mount). "
+                              "Use the manual steps below. Shadowless works normally without input capture.");
+    case Result::AppliedNeedsReload:
+        return QStringLiteral("The change was saved, but your system has not applied it yet. Reconnect the devices, or sign out and back in.");
+    case Result::Unavailable: return QStringLiteral("Automatic setup is not available on this system.");
+    case Result::Failed: break;
+    }
+    switch (exitCode) {
+    case 2: return QStringLiteral("The setup tool rejected the request, so nothing was changed. This is a bug in Shadowless; the manual steps below still work.");
+    case 3: return QStringLiteral("Could not save the access rule (the system rules folder may be read-only). Nothing was changed. Use the manual steps below.");
+    default: break;
+    }
+    Q_UNUSED(output)
+    return QStringLiteral("The setup did not finish (error %1). Nothing was changed; Shadowless works normally without input capture.").arg(exitCode);
 }
 
 InputAccess::InputAccess(QObject *parent) : QObject(parent), m_ruleFile(kRuleFile) {
@@ -228,15 +271,12 @@ void InputAccess::run(const QStringList &helperArguments) {
     });
     connect(m_process, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
         auto *p = std::exchange(m_process, nullptr);
-        const QString output = QString::fromUtf8(p->readAll()).trimmed().left(300);
+        const QString output = QString::fromUtf8(p->readAll()).trimmed().left(600);
         p->deleteLater();
-        Result result = resultForExit(code, status);
-        if (code == 127 && output.contains("authentication agent", Qt::CaseInsensitive)) result = Result::NoAgent;
-        emit finished(result, result == Result::Granted ? QString("Input access enabled.")
-                              : result == Result::NoAgent ? QString("Your desktop has no authentication agent, so the system cannot show its password dialog. "
-                                    "Start one (Hyprland: hyprpolkitagent; others: polkit-kde-agent, polkit-gnome) or use the manual steps below.")
-                              : result == Result::Cancelled ? QString("Authorization was cancelled. Shadowless works normally without input capture.")
-                              : output.isEmpty() ? QString("The setup failed (exit code %1).").arg(code) : output);
+        const Result result = resultForExit(code, status, output);
+        m_diagnostics = QStringLiteral("exit code %1, %2\n%3").arg(code).arg(status == QProcess::NormalExit ? "normal exit" : "crashed", output);
+        if (result != Result::Granted && result != Result::Cancelled) qWarning().noquote() << "Input access setup:" << m_diagnostics;
+        emit finished(result, messageFor(result, code, output));
     });
     m_process->start(m_launcher, arguments);
     if (!payload.isEmpty()) m_process->write(payload);

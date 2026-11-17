@@ -244,12 +244,20 @@ int main(int argc, char **argv) {
             installed = false;
             if (fsync(dir.value) != 0) io();
         }
-        if (operation != "status" && !noReload) reload();
+        // For remove, a failed reload must not leave the user's ACLs behind: the rule is already gone, so end access first and
+        // report the reload failure afterwards.
+        const Failure *reloadFailure = nullptr;
+        Failure reloadError{0, ""};
+        if (operation != "status" && !noReload) {
+            try { reload(); }
+            catch (const Failure &f) { if (operation != "remove") throw; reloadError = f; reloadFailure = &reloadError; }
+        }
         if (operation == "remove") {
-            if (!noReload) command({"udevadm", "settle", "--timeout=5"});
+            if (!noReload && !reloadFailure) command({"udevadm", "settle", "--timeout=5"});
             const char *uid = std::getenv(root == "/" ? "PKEXEC_UID" : "INPUT_SETUP_TEST_UID");
             revokeAcls(root, uid ? uid : "", devices);
         }
+        if (reloadFailure) throw reloadError;
         std::cout << "{\"ok\":true,\"installed\":" << (installed ? "true" : "false");
         if (operation == "status") {
             std::cout << ",\"devices\":[";

@@ -15,6 +15,17 @@ extern "C" ssize_t __wrap_write(int fd, const void *buffer, size_t size) {
 }
 
 extern "C" int __wrap_execve(const char *path, char *const argv[], char *const env[]) {
+    // The ACL revoke step runs <root>/usr/bin/setfacl with an empty environment; record it instead of executing anything.
+    const size_t length = std::strlen(path), suffix = std::strlen("/usr/bin/setfacl");
+    if (env != nullptr && env[0] == nullptr && length > suffix && std::strcmp(path + length - suffix, "/usr/bin/setfacl") == 0) {
+        std::string invocation;
+        for (int i = 1; argv[i]; ++i) invocation += std::string(i > 1 ? " " : "") + argv[i];
+        invocation += '\n';
+        const int log = open("setfacl.log", O_WRONLY | O_CREAT | O_APPEND, 0600);
+        if (log < 0 || write(log, invocation.data(), invocation.size()) != static_cast<ssize_t>(invocation.size())) _exit(94);
+        close(log);
+        _exit(0);
+    }
     if (env == nullptr || env[0] != nullptr ||
         (std::strcmp(path, "/usr/bin/udevadm") != 0 && std::strcmp(path, "/bin/udevadm") != 0)) _exit(91);
     if (access("fallback", F_OK) == 0 && std::strcmp(path, "/usr/bin/udevadm") == 0) {

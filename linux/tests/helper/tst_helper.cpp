@@ -184,6 +184,26 @@ private slots:
         QCOMPARE(read(rules(dir)), previous);
         QCOMPARE(QDir(QFileInfo(rules(dir)).path()).entryList(QDir::Files | QDir::Hidden | QDir::NoDotAndDotDot).size(), 1);
     }
+    void removeStillRevokesAclsWhenTheUdevReloadFails() {
+        const QString fixture = qEnvironmentVariable("INPUT_SETUP_RELOAD_HELPER");
+        QVERIFY2(QFileInfo::exists(fixture), "Set INPUT_SETUP_RELOAD_HELPER to the reload fixture");
+        QScopedValueRollback<QString> binary(helper, fixture);
+        QTemporaryDir dir;
+        const QString r = dir.path();
+        const QStringList base = {"--root", r};
+        QCOMPARE(run(base + QStringList{"install", "--no-reload", "41e4:211a:keyboard"}), 0);
+        put(r + "/sys/class/input/event10/device/id/vendor", "41e4\n");
+        put(r + "/sys/class/input/event10/device/id/product", "211a\n");
+        put(r + "/sys/class/input/event10/dev", "13:74\n");
+        put(r + "/run/udev/data/c13:74", "I:1\nQ:seat\n");
+        QFile fail(r + "/fail-reload");
+        QVERIFY(fail.open(QIODevice::WriteOnly)); fail.close();
+        qputenv("INPUT_SETUP_TEST_UID", "1000");
+        QCOMPARE(run(base + QStringList{"remove"}), 4);                    // the reload failure is still reported...
+        qunsetenv("INPUT_SETUP_TEST_UID");
+        QVERIFY(!QFileInfo::exists(rules(dir)));
+        QCOMPARE(read(r + "/setfacl.log").trimmed(), QByteArray("-x u:1000 ") + r.toUtf8() + "/dev/input/event10");   // ...but access has ended
+    }
     void unexpectedContents() {
         QTemporaryDir dir;
         const QStringList base = {"--root", dir.path(), "--no-reload"};
