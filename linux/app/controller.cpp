@@ -169,6 +169,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     auto *editor = m_dashboard->overlayEditor();
     connect(editor, &OverlayEditor::inputPreviewWanted, this, [this](const QString &layout) {
         m_inputPreviewLayout = layout; updateInputSource();
+        if (!layout.isEmpty()) m_input.retryInaccessible(); // picks up permission changes that sent no device event
     });
     connect(editor, &OverlayEditor::inputOverlayChanged, this, [this](const InputOverlaySettings &value) {
         m_settings.setInputOverlay(value);                 // saved as soon as it changes, like the layer list
@@ -357,7 +358,7 @@ void Controller::saveReplay() {
     identifyGame([this](const QString &game) {
         m_clipGame = game;
         if (!m_engine.running() || m_stopping) { m_saving = false; m_notification->dismiss(); refresh(); return; }
-        m_sidecar.replaySaveRequested();
+        m_sidecar.replaySaveRequested(qint64(m_options.bufferSeconds) * 1000);
         m_engine.saveReplay(m_options.bufferSeconds); refresh();
     });
     refresh();
