@@ -45,6 +45,8 @@ public partial class App : Application
     private CancellationTokenSource? _activationServerCts;
     private string _activationPipeName = "";
     private string? _pendingUiError;
+    private string? _lastStartupError;
+    private AdvancedProcessAudioAvailability? _notifiedAudioFallback;
     private DispatcherTimer? _healthTimer;
     private DispatcherTimer? _captureStateTimer;
     private DateTime _pipelineStartedUtc;
@@ -1995,7 +1997,9 @@ public partial class App : Application
             _pipelineStartedUtc = DateTime.UtcNow;
             _nextRecoveryUtc = DateTime.MinValue;
             _recoveryFailures = 0;
+            _lastStartupError = null;
             Log.Write($"OBS pipeline started in {stopwatch.ElapsedMilliseconds} ms.");
+            NotifyAudioRoutingFallback(engine.AudioRoutingFallback);
             UpdateUiState();
             return true;
         }
@@ -2025,6 +2029,7 @@ public partial class App : Application
             Log.Write(
                 $"OBS pipeline startup failed after {stopwatch.ElapsedMilliseconds} ms: " +
                 exception);
+            _lastStartupError = exception.Message;
             if (throwOnError)
             {
                 UpdateUiState();
@@ -2045,6 +2050,24 @@ public partial class App : Application
             UpdateUiState();
             return false;
         }
+    }
+
+    private void NotifyAudioRoutingFallback(
+        AdvancedProcessAudioAvailability? availability)
+    {
+        // One non-blocking notice per reason and session; restarts stay quiet.
+        if (availability is null || _notifiedAudioFallback == availability)
+            return;
+        _notifiedAudioFallback = availability;
+        ShowOverlayNotification(
+            "!",
+            Localization.Text("L.Notify.AudioFallbackTitle"),
+            Localization.Text(
+                availability == AdvancedProcessAudioAvailability.UnsupportedWindowsVersion
+                    ? "L.Notify.AudioFallbackUnsupported"
+                    : "L.Notify.AudioFallbackSource"),
+            OverlayTone.Warning,
+            8000);
     }
 
     private Task<bool> PrepareWindowsGraphicsCaptureAsync()
@@ -2686,8 +2709,9 @@ public partial class App : Application
             ObsReplayEngine? engine = _obs;
             if (engine is null)
             {
-                recoveryReason = Localization.Text(
-                    "L.Recovery.ModuleStopped");
+                recoveryReason = RecoveryCause.Describe(
+                    _lastStartupError,
+                    Localization.Text("L.Recovery.ModuleStopped"));
             }
             else
             {
@@ -2806,7 +2830,7 @@ public partial class App : Application
             _nextRecoveryUtc = DateTime.UtcNow.AddSeconds(delaySeconds);
             string message = Localization.Format(
                 "L.Notify.ReasonRetry",
-                reason,
+                RecoveryCause.Describe(_lastStartupError, reason),
                 delaySeconds);
             _pendingUiError = message;
             _settingsWindow?.UpdateRecoveryState(

@@ -4,6 +4,16 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Capture failed to start on Windows 10 after updating to 0.3.3:** Saved Advanced audio routing or separate audio tracks need per-application capture, which 0.3.3 limits to Windows build 20348 or newer. Instead of failing, Shadowless now captures mixed audio, shows a non-blocking notice, and keeps your saved audio settings so they apply again on a capable system. Instant Replay and Recording are not blocked.
+- **Recovery messages show the real cause:** When capture cannot start, the retry notice now reports the startup error instead of the generic "Recording module stopped."
+- **Settings:** A saved Advanced audio choice no longer prevents saving other settings on Windows builds that cannot route audio per application.
+
+### Added
+
+- **Startup diagnostics:** `packaging/DiagnoseStartup.ps1` writes a sanitized report (Windows build, capture and audio options, runtime DLL load checks, recent startup errors).
+
 ## [0.3.3] - 2026-11-17
 
 ### Added

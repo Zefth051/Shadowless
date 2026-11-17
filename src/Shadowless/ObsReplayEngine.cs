@@ -163,8 +163,17 @@ public sealed partial class ObsReplayEngine : IDisposable
     } = AdvancedProcessAudioAvailability.SourceUnavailable;
     internal bool RequiresProcessAudioMonitoring =>
         ShouldMonitorProcessAudio(
-            _config,
+            RoutingConfig,
             ProcessAudioAvailability);
+    // Set when saved advanced/separate audio cannot run on this system and the
+    // engine captures mixed audio instead. The user's saved config is untouched.
+    internal AdvancedProcessAudioAvailability? AudioRoutingFallback
+    {
+        get;
+        private set;
+    }
+    private Config? _routingConfig;
+    private Config RoutingConfig => _routingConfig ?? _config;
     public bool IsGameCapture { get; }
     public bool IsAutomaticCapture { get; }
     public bool IsContinuousRecording { get; private set; }
@@ -664,10 +673,18 @@ public sealed partial class ObsReplayEngine : IDisposable
             ProcessAudioAvailability = DetectProcessAudioAvailability(
                 Environment.OSVersion.Version,
                 HasInputType("shadowless_process_audio_capture"));
-            if (!IsAudioRoutingAvailable(_config, ProcessAudioAvailability))
+            Config routing = ResolveAudioRoutingConfig(
+                _config,
+                ProcessAudioAvailability,
+                out bool audioRoutingFallback);
+            if (audioRoutingFallback)
             {
-                throw new AdvancedProcessAudioUnavailableException(
-                    ProcessAudioAvailability);
+                _routingConfig = routing;
+                AudioRoutingFallback = ProcessAudioAvailability;
+                Log.Write(
+                    "Audio routing unavailable (" + ProcessAudioAvailability +
+                    ", Windows build " + Environment.OSVersion.Version.Build +
+                    "); capturing mixed audio. Saved audio settings are kept.");
             }
             EnsureConfiguredCodecIsSupported();
             if (IsAdvancedAudioRouting && _config.CaptureSystemAudio && _config.AdvancedSystemAudioTrack == 0)
@@ -1197,9 +1214,9 @@ public sealed partial class ObsReplayEngine : IDisposable
         ApplyCaptureOverlays(_config.CaptureOverlaysEnabled, _config.CaptureOverlays);
 
         bool usesDetectedGameAudio = UsesDetectedGameAudio(
-            _config,
+            RoutingConfig,
             ProcessAudioAvailability);
-        if (UsesSeparateGameAudio(_config) &&
+        if (UsesSeparateGameAudio(RoutingConfig) &&
             ProcessAudioAvailability != AdvancedProcessAudioAvailability.Available)
             throw new AdvancedProcessAudioUnavailableException(ProcessAudioAvailability);
         if (IsAdvancedAudioRouting || usesDetectedGameAudio)
@@ -1216,7 +1233,7 @@ public sealed partial class ObsReplayEngine : IDisposable
             ObsNative.obs_set_output_source(1, sceneSource);
             if (usesDetectedGameAudio)
                 Log.Write("Detected game audio routing enabled.");
-            if (UsesSeparateGameAudio(_config))
+            if (UsesSeparateGameAudio(RoutingConfig))
             {
                 ReconcileSeparateSystemAudio(null);
             }
@@ -1244,7 +1261,7 @@ public sealed partial class ObsReplayEngine : IDisposable
         {
             uint micMix = IsAdvancedAudioRouting
                 ? MixerBit(_config.AdvancedMicrophoneTrack)
-                : _config.SeparateAudioTracks && _config.CaptureSystemAudio
+                : RoutingConfig.SeparateAudioTracks && _config.CaptureSystemAudio
                     ? MixerBit(3)
                     : 1u;
             string deviceId = AudioDevices.ResolveMicrophone(_config.MicrophoneDeviceId);
@@ -1450,7 +1467,7 @@ public sealed partial class ObsReplayEngine : IDisposable
                 _config.CaptureMicrophone, AudioDevices.ResolveMicrophone(_config.MicrophoneDeviceId),
                 "wasapi_input_capture", "Shadowless Microphone", 2, MicrophoneGain);
             if (_audioEncoders.Count > 0)
-                ObsNative.obs_encoder_set_name(_audioEncoders[0], BuildAudioTrackName(_config, 1));
+                ObsNative.obs_encoder_set_name(_audioEncoders[0], BuildAudioTrackName(RoutingConfig, 1));
         }
         ApplyAudioLevels();
     }
@@ -1521,7 +1538,7 @@ public sealed partial class ObsReplayEngine : IDisposable
             foreach (nint source in _advancedSystemSources)
                 ObsNative.obs_source_set_volume(source, systemVolume);
         }
-        if (UsesDetectedGameAudio(_config, ProcessAudioAvailability))
+        if (UsesDetectedGameAudio(RoutingConfig, ProcessAudioAvailability))
         {
             foreach (nint source in _processAudioSceneItems.Keys)
                 ObsNative.obs_source_set_volume(source, systemVolume);
@@ -1560,8 +1577,8 @@ public sealed partial class ObsReplayEngine : IDisposable
             Log.Write,
             ReadProcessAudioStatus);
         IReadOnlyList<ProcessAudioTarget> targets = BuildProcessAudioTargets(
-            _config, _activeGameExecutable, ProcessAudioAvailability);
-        if (UsesSeparateGameAudio(_config))
+            RoutingConfig, _activeGameExecutable, ProcessAudioAvailability);
+        if (UsesSeparateGameAudio(RoutingConfig))
         {
             // Use the same independent root for inclusion and exclusion. Multiple
             // same-name instances must never duplicate audio between tracks.
@@ -1675,7 +1692,7 @@ public sealed partial class ObsReplayEngine : IDisposable
             }
 
             ObsNative.obs_source_set_audio_mixers(source, MixerBit(track));
-            if (UsesDetectedGameAudio(_config, ProcessAudioAvailability) || excludeTarget || invert)
+            if (UsesDetectedGameAudio(RoutingConfig, ProcessAudioAvailability) || excludeTarget || invert)
             {
                 ObsNative.obs_source_set_volume(
                     source,
@@ -1856,7 +1873,7 @@ public sealed partial class ObsReplayEngine : IDisposable
                     audioSettings,
                     "bitrate",
                     _config.AudioBitrateKbps);
-                string encoderName = BuildAudioTrackName(_config, index + 1);
+                string encoderName = BuildAudioTrackName(RoutingConfig, index + 1);
                 nint encoder = ObsNative.obs_audio_encoder_create(
                     audioEncoderId,
                     encoderName,
@@ -2447,7 +2464,7 @@ public sealed partial class ObsReplayEngine : IDisposable
     }
 
     private int AudioTrackCount()
-        => AudioTrackCount(_config);
+        => AudioTrackCount(RoutingConfig);
 
     internal static uint MixerBit(int track)
     {
@@ -2609,6 +2626,18 @@ public sealed partial class ObsReplayEngine : IDisposable
             : AdvancedProcessAudioAvailability.SourceUnavailable;
     }
 
+    // Returns the config the engine should capture with. Never mutates `config`;
+    // the saved preference survives so it works again on a capable system.
+    internal static Config ResolveAudioRoutingConfig(
+        Config config,
+        AdvancedProcessAudioAvailability processAudioAvailability,
+        out bool fellBackToMixedAudio)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        fellBackToMixedAudio = !IsAudioRoutingAvailable(config, processAudioAvailability);
+        return fellBackToMixedAudio ? config.WithMixedAudio() : config;
+    }
+
     internal static bool IsAudioRoutingAvailable(
         Config config,
         AdvancedProcessAudioAvailability processAudioAvailability)
@@ -2622,7 +2651,7 @@ public sealed partial class ObsReplayEngine : IDisposable
     }
 
     private bool IsAdvancedAudioRouting => string.Equals(
-        _config.AudioRoutingMode,
+        RoutingConfig.AudioRoutingMode,
         "advanced",
         StringComparison.OrdinalIgnoreCase);
 

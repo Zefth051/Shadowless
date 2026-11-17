@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">Globalny skrót klawiszowy niedostępny</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">Sterownik wideo jest tymczasowo niedostępny. Ponowna próba za {0} sek.</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">Moduł nagrywający zatrzymany.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">Routing dźwięku niedostępny</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Ta wersja systemu Windows nie obsługuje routingu dźwięku dla aplikacji. Przechwytywanie trwa z dźwiękiem mieszanym; ustawienia zostały zachowane.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">Brakuje składnika dźwięku aplikacji. Przechwytywanie trwa z dźwiękiem mieszanym; ustawienia zostały zachowane.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Nie otrzymano nowych ramek.</sys:String>
   <sys:String x:Key="L.App.StartError">Nie można uruchomić Shadowless:
 {0}</sys:String>

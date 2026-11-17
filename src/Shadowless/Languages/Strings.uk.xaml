@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">Глобальна гаряча клавіша недоступна</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">Відеодрайвер тимчасово недоступний. Повторна спроба через {0} с.</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">Модуль запису зупинено.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">Маршрутизація звуку недоступна</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Ця версія Windows не підтримує маршрутизацію звуку за програмами. Захоплення триває зі змішаним звуком; ваші налаштування збережено.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">Відсутній компонент звуку програм. Захоплення триває зі змішаним звуком; ваші налаштування збережено.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Немає нових кадрів.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless не вдалося запустити:
 {0}</sys:String>

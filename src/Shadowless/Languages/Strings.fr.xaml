@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">Raccourci global indisponible</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">Le pilote vidéo est temporairement indisponible. Nouvelle tentative dans {0} secondes.</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">Module d'enregistrement arrêté.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">Routage audio indisponible</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Cette version de Windows ne peut pas router l'audio par application. La capture continue avec l'audio mixte ; vos réglages sont conservés.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">Le composant audio par application est absent. La capture continue avec l'audio mixte ; vos réglages sont conservés.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Aucune nouvelle trame reçue.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless n'a pas pu démarrer :
 {0}</sys:String>

@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">全局快捷键不可用</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">视频驱动程序暂时不可用。将在 {0} 秒后重试。</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">录制模块已停止。</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">音频路由不可用</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">此版本的 Windows 无法按应用路由音频。将继续使用混合音频捕获；您的设置已保留。</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">缺少应用音频组件。将继续使用混合音频捕获；您的设置已保留。</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">未收到新帧。</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless 无法启动：
 {0}</sys:String>

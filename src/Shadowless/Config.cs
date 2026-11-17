@@ -184,6 +184,16 @@ public sealed class Config
         }
     }
 
+    // Copy that captures mixed audio. Used when advanced or separate audio cannot
+    // run on this system; the original keeps the user's saved choice.
+    internal Config WithMixedAudio()
+    {
+        Config mixed = Clone();
+        mixed.AudioRoutingMode = "simple";
+        mixed.SeparateAudioTracks = false;
+        return mixed;
+    }
+
     public Config Clone()
     {
         var clone = new Config();

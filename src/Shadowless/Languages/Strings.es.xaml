@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">Tecla de acceso rápido global no disponible</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">El controlador de vídeo no está disponible temporalmente. Reintentando en {0} seg.</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">El módulo de grabación se detuvo.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">Enrutado de audio no disponible</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Esta versión de Windows no puede enrutar el audio por aplicación. La captura continúa con audio mezclado; tus ajustes se conservan.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">Falta el componente de audio por aplicación. La captura continúa con audio mezclado; tus ajustes se conservan.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">No se recibieron nuevos fotogramas.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless no pudo iniciar:
 {0}</sys:String>

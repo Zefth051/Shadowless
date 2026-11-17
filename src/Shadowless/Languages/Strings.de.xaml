@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">Globaler Hotkey nicht verfügbar</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">Der Grafiktreiber ist vorübergehend nicht verfügbar. Wiederholen Sie den Versuch in {0} Sek.</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">Aufzeichnungsmodul gestoppt.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">Audio-Routing nicht verfügbar</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Diese Windows-Version kann Audio nicht pro Anwendung routen. Die Aufnahme läuft mit gemischtem Audio weiter; Ihre Einstellungen bleiben erhalten.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">Die Komponente für Anwendungsaudio fehlt. Die Aufnahme läuft mit gemischtem Audio weiter; Ihre Einstellungen bleiben erhalten.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Es wurden keine neuen Frames empfangen.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless konnte nicht gestartet werden:
 {0}</sys:String>

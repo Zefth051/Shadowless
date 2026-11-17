@@ -140,6 +140,8 @@ internal static class Program
             Run("process audio health notifications", ProcessAudioHealthNotifications);
             Run("advanced capability model", AdvancedCapabilityModel);
             Run("advanced unavailable reasons", AdvancedUnavailableReasons);
+            Run("Windows 10 audio routing falls back to mixed audio", Windows10AudioRoutingFallback);
+            Run("recovery reports the real startup error", RecoveryReportsRealStartupError);
             Run("advanced diagnostics privacy", AdvancedDiagnosticsPrivacy);
             Run("audio routing format limits", AudioRoutingFormatLimits);
             Run("audio process group priority", AudioProcessGroupPriority);
@@ -1121,6 +1123,88 @@ internal static class Program
             throw new InvalidOperationException(
                 "Advanced audio availability reasons were collapsed into one message.");
         }
+    }
+
+    private static void Windows10AudioRoutingFallback()
+    {
+        // Windows 10 22H2 is build 19045; Windows 11 23H2 is build 22631.
+        var windows10 = new Version(10, 0, 19045);
+        var windows11 = new Version(10, 0, 22631);
+        AdvancedProcessAudioAvailability onWindows10 =
+            ObsReplayEngine.DetectProcessAudioAvailability(windows10, sourceRegistered: true);
+        AdvancedProcessAudioAvailability onWindows11 =
+            ObsReplayEngine.DetectProcessAudioAvailability(windows11, sourceRegistered: true);
+        Equal(AdvancedProcessAudioAvailability.UnsupportedWindowsVersion, onWindows10);
+        Equal(AdvancedProcessAudioAvailability.Available, onWindows11);
+
+        var advanced = new Config
+        {
+            AudioRoutingMode = "advanced",
+            CaptureSystemAudio = true,
+            CaptureMicrophone = true,
+            ProcessAudioRoutes = [new ProcessAudioRoute { Executable = "game.exe", Track = 2, Enabled = true }],
+        };
+        var separate = new Config
+        {
+            AudioRoutingMode = "simple",
+            SeparateAudioTracks = true,
+            CaptureSystemAudio = true,
+            CaptureMicrophone = true,
+        };
+
+        foreach (Config saved in new[] { advanced, separate })
+        {
+            string mode = saved.AudioRoutingMode;
+            bool tracks = saved.SeparateAudioTracks;
+            Config effective = ObsReplayEngine.ResolveAudioRoutingConfig(
+                saved, onWindows10, out bool fellBack);
+            Equal(true, fellBack);
+            // Capture is mixed: one track, no per-app capture, no process monitoring.
+            Equal("simple", effective.AudioRoutingMode);
+            Equal(false, effective.SeparateAudioTracks);
+            Equal(1, ObsReplayEngine.AudioTrackCount(effective));
+            Equal(false, ObsReplayEngine.UsesSeparateGameAudio(effective));
+            Equal(false, ObsReplayEngine.ShouldMonitorProcessAudio(effective, onWindows10));
+            Equal(true, ObsReplayEngine.IsAudioRoutingAvailable(effective, onWindows10));
+            // The user's saved preference is never modified.
+            Equal(mode, saved.AudioRoutingMode);
+            Equal(tracks, saved.SeparateAudioTracks);
+            Equal(true, saved.CaptureSystemAudio);
+            Equal(true, saved.CaptureMicrophone);
+            Equal(false, ReferenceEquals(saved, effective));
+
+            // Same saved config on Windows 11: preference is honored, no fallback.
+            Config capable = ObsReplayEngine.ResolveAudioRoutingConfig(
+                saved, onWindows11, out bool capableFellBack);
+            Equal(false, capableFellBack);
+            Equal(true, ReferenceEquals(saved, capable));
+        }
+        Equal(2, ObsReplayEngine.AudioTrackCount(
+            new Config { SeparateAudioTracks = true, CaptureSystemAudio = true, CaptureMicrophone = false }));
+
+        // Mixed audio on Windows 10 was already valid and must stay untouched.
+        var mixed = new Config { CaptureSystemAudio = true, CaptureMicrophone = true };
+        Config unchanged = ObsReplayEngine.ResolveAudioRoutingConfig(mixed, onWindows10, out bool mixedFellBack);
+        Equal(false, mixedFellBack);
+        Equal(true, ReferenceEquals(mixed, unchanged));
+
+        // Missing process-audio plugin also falls back instead of blocking capture.
+        ObsReplayEngine.ResolveAudioRoutingConfig(
+            advanced,
+            ObsReplayEngine.DetectProcessAudioAvailability(windows11, sourceRegistered: false),
+            out bool missingPluginFellBack);
+        Equal(true, missingPluginFellBack);
+    }
+
+    private static void RecoveryReportsRealStartupError()
+    {
+        Equal("Recording module stopped.", RecoveryCause.Describe(null, "Recording module stopped."));
+        Equal("Recording module stopped.", RecoveryCause.Describe("  ", "Recording module stopped."));
+        Equal(
+            "Application audio routing requires Windows build 20348 or newer.",
+            RecoveryCause.Describe(
+                "Application audio routing requires Windows build 20348 or newer.",
+                "Recording module stopped."));
     }
 
     private static void AdvancedDiagnosticsPrivacy()

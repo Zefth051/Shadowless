@@ -2513,7 +2513,10 @@ public partial class SettingsWindow : Window
         string audioTrackMode = GetSelectedTag(AudioTrackModeBox, "mixed");
         bool separateAudioTracks = audioTrackMode == "separate";
         bool advancedAudio = audioTrackMode == "advanced";
+        // A saved advanced choice stays selectable (capture falls back to mixed
+        // audio at runtime); only choosing it anew is blocked when unavailable.
         if (advancedAudio &&
+            !string.Equals(_config.AudioRoutingMode, "advanced", StringComparison.OrdinalIgnoreCase) &&
             _processAudioAvailability != AdvancedProcessAudioAvailability.Available)
         {
             ShowError(

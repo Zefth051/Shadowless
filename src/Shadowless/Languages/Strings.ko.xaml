@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">글로벌 단축키를 사용할 수 없습니다.</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">비디오 드라이버를 일시적으로 사용할 수 없습니다. {0}초 후에 다시 시도합니다.</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">녹화 모듈이 중지되었습니다.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">오디오 라우팅을 사용할 수 없음</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">이 Windows 버전은 앱별 오디오 라우팅을 지원하지 않습니다. 혼합 오디오로 캡처를 계속하며 설정은 유지됩니다.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">앱별 오디오 구성 요소가 없습니다. 혼합 오디오로 캡처를 계속하며 설정은 유지됩니다.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">새 프레임이 수신되지 않았습니다.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless을 시작할 수 없습니다:
 {0}</sys:String>

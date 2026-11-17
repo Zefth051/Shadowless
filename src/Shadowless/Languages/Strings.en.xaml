@@ -303,6 +303,9 @@
   <sys:String x:Key="L.Notify.HotkeyUnavailableTitle">Global hotkey unavailable</sys:String>
   <sys:String x:Key="L.Notify.DriverUnavailable">Video driver is temporarily unavailable. Retrying in {0} sec.</sys:String>
   <sys:String x:Key="L.Recovery.ModuleStopped">Recording module stopped.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackTitle">Audio routing unavailable</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackUnsupported">This version of Windows cannot route audio per application. Capture continues with mixed audio; your settings are kept.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackSource">The application audio component is missing. Capture continues with mixed audio; your settings are kept.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">No new frames received.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless could not start:
 {0}</sys:String>
