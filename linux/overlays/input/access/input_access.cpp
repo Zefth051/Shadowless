@@ -153,8 +153,11 @@ void InputAccess::run(const QStringList &helperArguments) {
         auto *p = std::exchange(m_process, nullptr);
         const QString output = QString::fromUtf8(p->readAll()).trimmed().left(300);
         p->deleteLater(); cleanup();
-        const Result result = resultForExit(code, status);
+        Result result = resultForExit(code, status);
+        if (code == 127 && output.contains("authentication agent", Qt::CaseInsensitive)) result = Result::NoAgent;
         emit finished(result, result == Result::Granted ? QString("Input access enabled.")
+                              : result == Result::NoAgent ? QString("Your desktop has no authentication agent, so the system cannot show its password dialog. "
+                                    "Start one (Hyprland: hyprpolkitagent; others: polkit-kde-agent, polkit-gnome) or use the manual steps below.")
                               : result == Result::Cancelled ? QString("Authorization was cancelled. Shadowless works normally without input capture.")
                               : output.isEmpty() ? QString("The setup failed (exit code %1).").arg(code) : output);
     });

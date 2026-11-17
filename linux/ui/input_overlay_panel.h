@@ -41,6 +41,7 @@ private:
     QLabel *m_notice, *m_access, *m_setup, *m_badge, *m_placeholder, *m_accessResult;
     QPushButton *m_enableAccess, *m_removeAccess;
     Input::InputAccess *m_setupTool;
+    bool m_noAgent = false;
     void enableAccess();
     void accessFinished(Input::InputAccess::Result result, const QString &message);
     Input::InputStatus m_status = Input::InputStatus::Stopped;

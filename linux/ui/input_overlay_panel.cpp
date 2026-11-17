@@ -162,7 +162,7 @@ void InputOverlayPanel::refresh() {
     m_enableAccess->setEnabled(!m_setupTool->busy());
     m_removeAccess->setVisible(enabled && automatic && m_setupTool->ruleInstalled());
     m_removeAccess->setEnabled(!m_setupTool->busy());
-    m_setup->setVisible(enabled && denied && !automatic);   // manual steps only when automatic setup cannot work (no pkexec / helper)
+    m_setup->setVisible(enabled && denied && (!automatic || m_noAgent));   // manual steps only when automatic setup cannot work (no pkexec / helper)
     m_access->setText(denied ? (automatic ? QString("Shadowless cannot read your input devices yet, so the overlay stays empty. Use the button below to allow it; you can skip this and keep using Shadowless without input capture.")
                                           : QString("Shadowless cannot read your input devices yet, so the overlay will stay empty. Setup steps are below."))
                       : failed ? (m_statusDetail.isEmpty() ? QString("Input devices could not be read.") : m_statusDetail)
@@ -207,6 +207,7 @@ void InputOverlayPanel::enableAccess() {
 }
 void InputOverlayPanel::accessFinished(Input::InputAccess::Result result, const QString &message) {
     m_accessResult->setText(message); m_accessResult->setVisible(!message.isEmpty());
+    if (result == Input::InputAccess::Result::NoAgent) m_noAgent = true;   // the dialog cannot appear here: show the manual steps
     refresh();
     if (result == Input::InputAccess::Result::Cancelled || result == Input::InputAccess::Result::Unavailable) return;
     emit accessChanged();                                  // udev applies the new ACLs asynchronously: probe again shortly after as well

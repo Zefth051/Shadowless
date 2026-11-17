@@ -24,7 +24,7 @@ struct AccessDevice {
 class InputAccess : public QObject {
     Q_OBJECT
 public:
-    enum class Result { Granted, Cancelled, Failed, Unavailable };
+    enum class Result { Granted, Cancelled, Failed, Unavailable, NoAgent }; // NoAgent: no polkit authentication agent runs in this session
     Q_ENUM(Result)
     explicit InputAccess(QObject *parent = nullptr);
     ~InputAccess() override;

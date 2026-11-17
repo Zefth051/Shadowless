@@ -68,7 +68,9 @@ is rejected when running under pkexec, no passwords or secrets handled by Shadow
    (main device of each preselected), explains what changes, and has **Not now**.
 3. **Continue** opens the system authorization dialog (pkexec). Cancelling it changes nothing and Shadowless keeps working.
 4. On success the overlay goes LIVE without restarting. **Remove input access** undoes it.
-5. No polkit/pkexec or no helper (unusual builds): the panel shows the manual steps from `LINUX_INPUT_OVERLAY.md`.
+5. Some desktops (notably Hyprland without `hyprpolkitagent`) run no polkit authentication agent, so the system cannot show its dialog.
+   Shadowless detects that (`pkexec` exit 127 + "No authentication agent") and says so, shows the manual steps, and names the agents to start.
+6. No polkit/pkexec or no helper (unusual builds): the panel shows the manual steps from `LINUX_INPUT_OVERLAY.md`.
 
 Known limits: a helper staged from an AppImage lives in a user-owned 0700 directory until pkexec returns (same model as the
 bundled GSR KMS helper); distro packages should install it under `/usr/libexec/shadowless/`, where it is run in place.

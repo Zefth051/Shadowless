@@ -120,6 +120,18 @@ private slots:
         QCOMPARE(done[0][0].value<InputAccess::Result>(), InputAccess::Result::Cancelled);
         QVERIFY(done[0][1].toString().contains("works normally"));
     }
+    void missingAuthenticationAgentIsReportedClearly() {
+        QTemporaryDir t;
+        const QString launcher = script(t.path(), "pkexec", "echo 'Error executing command as another user: No authentication agent found.' >&2; exit 127");
+        const QString helper = script(t.path(), "helper", "exit 0");
+        InputAccess access; access.configureForTesting(launcher, helper, t.filePath("rules"));
+        AccessDevice d; d.vendor = "1111"; d.product = "2222"; d.cls = AccessDevice::Mouse;
+        QSignalSpy done(&access, &InputAccess::finished);
+        access.grant({d});
+        QTRY_COMPARE_WITH_TIMEOUT(done.size(), 1, 10000);
+        QCOMPARE(done[0][0].value<InputAccess::Result>(), InputAccess::Result::NoAgent);
+        QVERIFY(done[0][1].toString().contains("hyprpolkitagent"));
+    }
     void helperFailureSurfacesItsMessageAndRecovers() {
         QTemporaryDir t;
         const QString launcher = script(t.path(), "pkexec", "exec \"$@\"");
