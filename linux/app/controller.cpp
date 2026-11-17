@@ -171,6 +171,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_inputPreviewLayout = layout; updateInputSource();
         if (!layout.isEmpty()) m_input.retryInaccessible(); // picks up permission changes that sent no device event
     });
+    connect(editor, &OverlayEditor::inputAccessChanged, this, [this] { m_input.retryInaccessible(); }); // new udev permissions: probe devices again
     connect(editor, &OverlayEditor::inputOverlayChanged, this, [this](const InputOverlaySettings &value) {
         m_settings.setInputOverlay(value);                 // saved as soon as it changes, like the layer list
         m_dashboard->setInputOverlay(m_settings.inputOverlay());

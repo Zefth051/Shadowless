@@ -1,0 +1,10 @@
+QT += core testlib
+QT -= gui
+CONFIG += console testcase c++17
+CONFIG -= app_bundle
+TARGET = tst_input_access
+SOURCE = ../../../overlays/input/access
+INCLUDEPATH += $$SOURCE
+HEADERS += $$SOURCE/input_access.h
+SOURCES += tst_input_access.cpp $$SOURCE/input_access.cpp
+QMAKE_CXXFLAGS += -Wall -Wextra -Werror

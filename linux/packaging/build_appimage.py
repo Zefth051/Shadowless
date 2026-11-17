@@ -58,16 +58,21 @@ def acquire_tools(cache):
 
 def stage_appdir(build, appdir):
     required = [build / "app/shadowless", build / "plugins/libshadowless-overlay.so"]
+    input_setup = build / "helper/input_setup/shadowless-input-setup"
     engine_required = [build / "engine" / name for name in [
         "gpu-screen-recorder", "gpu-screen-recorder.bin", "gsr-kms-server", "helper-libs/libdrm.so.2", "GSR_PROVENANCE.md"]]
-    for path in required + engine_required:
+    for path in required + engine_required + [input_setup]:
         if not path.is_file():
-            raise FileNotFoundError(f"Build the Linux application and plugin first: {path.name}")
+            raise FileNotFoundError(f"Run linux/build.sh first. Missing build output: {path}")
     appdir.mkdir()  # Never merge or clean a caller's existing directory.
     for directory in ["usr/bin", "usr/plugins", "usr/share/doc/shadowless", "usr/libexec/shadowless-host"]:
         (appdir / directory).mkdir(parents=True)
     for source, target in zip(required, ["usr/bin/shadowless", "usr/plugins/libshadowless-overlay.so"]):
         shutil.copy2(source, appdir / target)
+    input_setup_target = appdir / "usr/libexec/shadowless" / input_setup.name
+    input_setup_target.parent.mkdir(parents=True)
+    shutil.copy2(input_setup, input_setup_target)
+    input_setup_target.chmod(0o755)
     shutil.copytree(build / "engine", appdir / "usr/engine")
     docs = appdir / "usr/share/doc/shadowless"
     shutil.copytree(REPO / "linux/third_party/gpu-screen-recorder", docs / "gsr-source")

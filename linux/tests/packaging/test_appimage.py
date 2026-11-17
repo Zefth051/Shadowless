@@ -1,6 +1,7 @@
 import importlib.util
 import os
 from pathlib import Path
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -20,6 +21,11 @@ class AppImageTests(unittest.TestCase):
         (self.build / "plugins").mkdir()
         (self.build / "app/shadowless").write_text("app")
         (self.build / "plugins/libshadowless-overlay.so").write_text("plugin")
+        self.helper = self.build / "helper/input_setup/shadowless-input-setup"
+        self.helper.parent.mkdir(parents=True)
+        self.helper.write_text("input setup helper")
+        self.helper.chmod(0o700)
+        self.helper.with_name("main.o").write_text("build output")
         (self.build / "engine/helper-libs").mkdir(parents=True)
         for name in ["gpu-screen-recorder", "gpu-screen-recorder.bin", "gsr-kms-server", "GSR_PROVENANCE.md", "helper-libs/libdrm.so.2"]:
             (self.build / "engine" / name).write_text("engine")
@@ -85,6 +91,22 @@ class AppImageTests(unittest.TestCase):
         self.assertTrue((appdir / "io.github.zefth051.Shadowless.png").is_file())
         self.assertTrue((appdir / "usr/engine/gpu-screen-recorder.bin").is_file())
         self.assertTrue((appdir / "usr/share/doc/shadowless/gsr-source/LICENSE").is_file())
+
+    def test_staging_bundles_only_input_setup_helper_with_executable_mode(self):
+        appdir = self.root / "AppDir"
+        self.module.stage_appdir(self.build, appdir)
+        directory = appdir / "usr/libexec/shadowless"
+        helper = directory / self.helper.name
+        self.assertEqual(list(directory.iterdir()), [helper])
+        self.assertEqual(helper.read_text(), "input setup helper")
+        self.assertEqual(stat.S_IMODE(helper.stat().st_mode), 0o755)
+
+    def test_missing_input_setup_helper_does_not_create_partial_appdir(self):
+        self.helper.unlink()
+        appdir = self.root / "AppDir"
+        with self.assertRaisesRegex(FileNotFoundError, self.helper.name):
+            self.module.stage_appdir(self.build, appdir)
+        self.assertFalse(appdir.exists())
 
     def test_missing_managed_recorder_does_not_create_partial_appdir(self):
         (self.build / "engine/gpu-screen-recorder.bin").unlink()

@@ -1,5 +1,6 @@
 #include "input_overlay_panel.h"
 #include "input_overlay_preview.h"
+#include "input_access_dialog.h"
 #include "value_controls.h"
 #include "../overlays/input/core/layout.h"
 #include <QCheckBox>
@@ -9,6 +10,8 @@
 #include <QFormLayout>
 #include <QHideEvent>
 #include <QLabel>
+#include <QPushButton>
+#include <QTimer>
 #include <QShowEvent>
 #include <QSpinBox>
 #include <QVBoxLayout>
@@ -82,7 +85,19 @@ InputOverlayPanel::InputOverlayPanel(QWidget *parent) : QWidget(parent) {
     m_setup->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_placeholder = note("Temporary placeholder layout: the controller artwork will be replaced by a proper DualSense / Xbox model.");
     m_placeholder->setObjectName("inputOverlayPlaceholder");
-    for (auto *label : {m_notice, m_access, m_setup, m_placeholder}) layout->addWidget(label);
+    m_setupTool = new Input::InputAccess(this);
+    m_enableAccess = new QPushButton("Enable input access…");
+    m_enableAccess->setObjectName("inputOverlayEnableAccess");
+    m_enableAccess->setToolTip("Asks your system for permission to read the keyboard and mouse you choose. No terminal needed.");
+    m_removeAccess = new QPushButton("Remove input access");
+    m_removeAccess->setObjectName("inputOverlayRemoveAccess");
+    m_accessResult = note({}); m_accessResult->setObjectName("inputOverlayAccessResult"); m_accessResult->hide();
+    for (auto *label : {m_notice, m_access, m_accessResult}) layout->addWidget(label);
+    layout->addWidget(m_enableAccess); layout->addWidget(m_removeAccess);
+    layout->addWidget(m_setup); layout->addWidget(m_placeholder);
+    connect(m_enableAccess, &QPushButton::clicked, this, [this] { enableAccess(); });
+    connect(m_removeAccess, &QPushButton::clicked, this, [this] { m_accessResult->hide(); m_enableAccess->setEnabled(false); m_removeAccess->setEnabled(false); m_setupTool->revoke(); });
+    connect(m_setupTool, &Input::InputAccess::finished, this, [this](Input::InputAccess::Result r, const QString &m) { accessFinished(r, m); });
     connect(m_layout, &QComboBox::currentIndexChanged, this, [this] { edited(); });
     connect(m_corner, &QComboBox::currentIndexChanged, this, [this] { edited(); });
     connect(m_scale, &QSpinBox::valueChanged, this, [this] { edited(); });
@@ -142,8 +157,14 @@ void InputOverlayPanel::refresh() {
     const bool empty = m_status == InputStatus::NoDevices || !present;
     const bool failed = m_status == InputStatus::Error;
     m_access->setVisible(enabled && (denied || empty || failed));
-    m_setup->setVisible(enabled && denied);
-    m_access->setText(denied ? "Shadowless cannot read your input devices yet, so the overlay will stay empty. Setup steps are below."
+    const bool automatic = m_setupTool->available();
+    m_enableAccess->setVisible(enabled && denied && automatic && !m_consent);
+    m_enableAccess->setEnabled(!m_setupTool->busy());
+    m_removeAccess->setVisible(enabled && automatic && m_setupTool->ruleInstalled());
+    m_removeAccess->setEnabled(!m_setupTool->busy());
+    m_setup->setVisible(enabled && denied && (!automatic || m_noAgent));   // manual steps only when automatic setup cannot work (no pkexec / helper)
+    m_access->setText(denied ? (automatic ? QString("Shadowless cannot read your input devices yet, so the overlay stays empty. Use the button below to allow it; you can skip this and keep using Shadowless without input capture.")
+                                          : QString("Shadowless cannot read your input devices yet, so the overlay will stay empty. Setup steps are below."))
                       : failed ? (m_statusDetail.isEmpty() ? QString("Input devices could not be read.") : m_statusDetail)
                                : "No keyboard, mouse or gamepad was found.");
     m_placeholder->setVisible(enabled && layout.isValid() && layout.scope() == "pad");
@@ -171,6 +192,36 @@ QString InputOverlayPanel::statusBadge() const {
         if (::access(QFile::encodeName("/dev/input/" + name).constData(), R_OK) == 0) { readable = true; break; }
     }
     return !present ? "DISCONNECTED" : !readable ? "PERMISSION DENIED" : "IDLE";
+}
+void InputOverlayPanel::enableAccess() {
+    m_accessResult->hide();
+    if (m_consent) return;
+    const auto groups = Input::InputAccess::groupDevices(Input::InputAccess::enumerate());
+    bool missing = false;
+    for (const auto &g : groups) missing = missing || !g.readable;
+    if (groups.isEmpty()) { m_accessResult->setText("No keyboard, mouse or controller was found."); m_accessResult->show(); return; }
+    if (!missing) { m_accessResult->setText("Your input devices are already readable."); m_accessResult->show(); emit accessChanged(); return; }
+    // Inline card in the panel: a separate window would open behind the layer-shell editor.
+    m_consent = new InputAccessDialog(groups, this);
+    static_cast<QVBoxLayout *>(layout())->insertWidget(layout()->indexOf(m_enableAccess), m_consent);
+    m_enableAccess->hide();
+    auto close = [this] { if (m_consent) { m_consent->hide(); m_consent->deleteLater(); m_consent = nullptr; } refresh(); };
+    connect(m_consent, &InputAccessDialog::rejected, this, close);
+    connect(m_consent, &InputAccessDialog::accepted, this, [this, close] {
+        const auto chosen = m_consent->selected();
+        close();
+        if (chosen.isEmpty()) return;
+        m_enableAccess->setEnabled(false); m_removeAccess->setEnabled(false);
+        m_setupTool->grant(chosen);
+    });
+}
+void InputOverlayPanel::accessFinished(Input::InputAccess::Result result, const QString &message) {
+    m_accessResult->setText(message); m_accessResult->setVisible(!message.isEmpty());
+    if (result == Input::InputAccess::Result::NoAgent) m_noAgent = true;   // the dialog cannot appear here: show the manual steps
+    refresh();
+    if (result == Input::InputAccess::Result::Cancelled || result == Input::InputAccess::Result::Unavailable) return;
+    emit accessChanged();                                  // udev applies the new ACLs asynchronously: probe again shortly after as well
+    QTimer::singleShot(1200, this, [this] { emit accessChanged(); });
 }
 void InputOverlayPanel::announce() {
     const QString id = m_layout->currentData().toString();

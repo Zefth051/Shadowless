@@ -75,6 +75,7 @@ public:
 signals:
     void inputOverlayChanged(const Shadowless::InputOverlaySettings &settings);
     void inputPreviewWanted(const QString &layoutId);
+    void inputAccessChanged();
     void changed(const Shadowless::OverlayScene &scene);
     void back();
 private:
