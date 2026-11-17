@@ -1,8 +1,6 @@
 #include "settings_page.h"
 #include "value_controls.h"
 #include "theme.h"
-#include "input_overlay_preview.h"
-#include "../overlays/input/core/layout.h"
 #include "../platform/hyprland/bindings.h"
 #include <QCheckBox>
 #include <QComboBox>
@@ -26,11 +24,6 @@
 #include <QRegularExpressionValidator>
 #include <QtConcurrentRun>
 #include <QPainter>
-#include <QShowEvent>
-#include <QHideEvent>
-#include <QDir>
-#include <QFile>
-#include <unistd.h>
 
 namespace Shadowless {
 namespace {
@@ -359,56 +352,6 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     overlay->addRow("Indicator position", m_indicatorPosition);
     overlay->addRow(note("The indicator is experimental and lets mouse and keyboard input pass through."));
 
-    auto *peripheral = section(bodyLayout, "PERIPHERAL OVERLAY");
-    m_inputPreview = new InputOverlayPreview;
-    peripheral->addRow(m_inputPreview);
-    m_inputLayout = new ClickToAdjust<QComboBox>;
-    m_inputLayout->setObjectName("inputOverlayLayout");
-    m_inputLayout->setAccessibleName("Peripheral overlay");
-    m_inputLayout->addItem("None", "none");
-    for (const QString &id : Input::Layout::builtinIds()) {
-        Input::Layout layout; QString error;
-        m_inputLayout->addItem(Input::Layout::builtin(id, &layout, &error) ? layout.name() : id, id);
-    }
-    peripheral->addRow("Peripheral overlay", m_inputLayout);
-    m_inputCorner = new ClickToAdjust<QComboBox>;
-    m_inputCorner->setObjectName("inputOverlayCorner");
-    m_inputCorner->addItem("Left down", "bottom-left");
-    m_inputCorner->addItem("Right down", "bottom-right");
-    m_inputCorner->addItem("Left up", "top-left");
-    m_inputCorner->addItem("Right up", "top-right");
-    peripheral->addRow("Position", m_inputCorner);
-    m_inputScale = new ClickToAdjust<QSpinBox>;
-    m_inputScale->setObjectName("inputOverlayScale");
-    m_inputScale->setRange(50, 200); m_inputScale->setSingleStep(10); m_inputScale->setSuffix(" %"); m_inputScale->setValue(100);
-    peripheral->addRow("Size", m_inputScale);
-    m_inputOpacity = new ClickToAdjust<QSpinBox>;
-    m_inputOpacity->setObjectName("inputOverlayOpacity");
-    m_inputOpacity->setRange(20, 100); m_inputOpacity->setSingleStep(10); m_inputOpacity->setSuffix(" %"); m_inputOpacity->setValue(100);
-    peripheral->addRow("Opacity", m_inputOpacity);
-    m_inputSidecar = new SettingsSwitch("Save input events next to each clip for the editor overlay");
-    m_inputSidecar->setObjectName("inputOverlaySidecar");
-    peripheral->addRow(m_inputSidecar);
-    m_inputNotice = note({});
-    m_inputNotice->setObjectName("inputOverlayNotice");
-    peripheral->addRow(m_inputNotice);
-    m_inputAccess = note({});
-    m_inputAccess->setObjectName("inputOverlayAccess");
-    peripheral->addRow(m_inputAccess);
-    m_inputSetup = note(
-        "Shadowless never changes permissions and does not need the \"input\" group. To allow reading only the device classes you need, "
-        "create /etc/udev/rules.d/70-shadowless-input.rules with one line per class, for example:\n"
-        "SUBSYSTEM==\"input\", KERNEL==\"event*\", ENV{ID_INPUT_MOUSE}==\"1\", TAG+=\"uaccess\"\n"
-        "(ID_INPUT_KEYBOARD and ID_INPUT_JOYSTICK work the same way), then run: sudo udevadm control --reload && sudo udevadm trigger -s input. "
-        "Details: docs/LINUX_INPUT_OVERLAY.md.");
-    m_inputSetup->setObjectName("inputOverlaySetup");
-    m_inputSetup->setTextFormat(Qt::PlainText);
-    m_inputSetup->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    peripheral->addRow(m_inputSetup);
-    connect(m_inputLayout, &QComboBox::currentIndexChanged, this, [this] { updateInputOverlay(); });
-    connect(m_inputOpacity, &QSpinBox::valueChanged, this, [this] { updateInputOverlay(); });
-    updateInputOverlay();
-
     auto *shortcuts = section(bodyLayout, "GLOBAL SHORTCUTS");
     for (const auto &label : {"Show / hide overlay", "Save replay", "Start / stop capture", "Pause / resume recording"}) {
         auto *edit = new QKeySequenceEdit;
@@ -546,69 +489,8 @@ void SettingsPage::edit(const GsrOptions &o, bool indicator, bool active, const 
     populateAudio(o.audioOutput, o.audioInput, o.applicationTracks);
     refreshAudio();
     setCaptureActive(active); m_error->clear();
-    updateInputOverlay();
     for (int i = 0; i < m_keys.size(); ++i) m_keys[i]->setKeySequence(QKeySequence(keys.value(i)));
 }
-InputOverlaySettings SettingsPage::inputOverlay() const {
-    InputOverlaySettings v;
-    v.layout = m_inputLayout->currentData().toString();
-    v.sidecar = m_inputSidecar->isChecked();
-    v.corner = m_inputCorner->currentData().toString();
-    v.scale = m_inputScale->value(); v.opacity = m_inputOpacity->value();
-    return v.sanitized();
-}
-void SettingsPage::setInputOverlay(const InputOverlaySettings &value) {
-    const auto v = value.sanitized();
-    m_inputLayout->setCurrentIndex(qMax(0, m_inputLayout->findData(v.layout)));
-    m_inputCorner->setCurrentIndex(qMax(0, m_inputCorner->findData(v.corner)));
-    m_inputScale->setValue(v.scale); m_inputOpacity->setValue(v.opacity);
-    m_inputSidecar->setChecked(v.sidecar);
-    updateInputOverlay();
-}
-// Reflects the selected layout: preview, which controls apply, privacy wording and device access.
-void SettingsPage::updateInputOverlay() {
-    const QString id = m_inputLayout->currentData().toString();
-    const bool enabled = id != Input::Layout::none();
-    m_inputPreview->setLayoutId(id);
-    m_inputPreview->setOpacity(m_inputOpacity->value());
-    for (QWidget *w : QList<QWidget *>{m_inputCorner, m_inputScale, m_inputOpacity, m_inputSidecar}) w->setEnabled(enabled);
-    if (!enabled) m_inputSidecar->setChecked(false);
-    Input::Layout layout; QString error;
-    const bool typing = enabled && Input::Layout::builtin(id, &layout, &error) && layout.recordsTypingKeys();
-    m_inputNotice->setText(!enabled ? "Off. No keyboard, mouse or gamepad input is read until you choose an overlay."
-        : typing ? "This layout includes every letter key. The timing of key presses could be used to reconstruct typed text, "
-                   "so enable the saved events only if you accept that. Prefer a gameplay layout."
-                 : "Only the keys and buttons shown above are read. Nothing is logged or stored unless saved events are on, "
-                   "and then only those keys with their timing, never text.");
-    // Prefer the real source status; before the source runs fall back to a read-permission probe (no device is opened).
-    bool readable = false, present = false;
-    for (const QString &name : QDir("/dev/input").entryList({"event*"}, QDir::System | QDir::Files | QDir::NoDotAndDotDot)) {
-        present = true;
-        if (::access(QFile::encodeName("/dev/input/" + name).constData(), R_OK) == 0) { readable = true; break; }
-    }
-    using Input::InputStatus;
-    const bool denied = m_inputStatus == InputStatus::PermissionDenied || (m_inputStatus == InputStatus::Stopped && present && !readable);
-    const bool empty = m_inputStatus == InputStatus::NoDevices || !present;
-    const bool failed = m_inputStatus == InputStatus::Error;
-    m_inputAccess->setVisible(enabled && (denied || empty || failed));
-    m_inputSetup->setVisible(enabled && denied);
-    m_inputAccess->setText(denied ? "Shadowless cannot read your input devices yet, so the overlay will stay empty. Setup steps are below."
-                           : failed ? (m_inputStatusDetail.isEmpty() ? QString("Input devices could not be read.") : m_inputStatusDetail)
-                                    : "No keyboard, mouse or gamepad was found.");
-    announceInputPreview();
-}
-void SettingsPage::announceInputPreview() {
-    const QString id = m_inputLayout->currentData().toString();
-    emit inputPreviewWanted(isVisible() && id != Input::Layout::none() ? id : QString());
-}
-void SettingsPage::setInputLive(const Input::InputState &state) { m_inputPreview->setLiveState(state); }
-void SettingsPage::setInputStatus(Input::InputStatus status, const QString &detail) {
-    m_inputStatus = status; m_inputStatusDetail = detail;
-    if (status != Input::InputStatus::Active) m_inputPreview->clearLiveState();
-    updateInputOverlay();
-}
-void SettingsPage::showEvent(QShowEvent *event) { QWidget::showEvent(event); announceInputPreview(); }
-void SettingsPage::hideEvent(QHideEvent *event) { QWidget::hideEvent(event); emit inputPreviewWanted(QString()); }
 void SettingsPage::showVideo() {
     focusSection(m_source);
 }

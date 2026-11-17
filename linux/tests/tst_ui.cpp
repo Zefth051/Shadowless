@@ -13,6 +13,7 @@
 #include "../ui/theme.h"
 #include "../ui/input_overlay_preview.h"
 #include "../ui/input_overlay_layer.h"
+#include "../ui/input_overlay_panel.h"
 #include <QCheckBox>
 #include <QTableWidget>
 #include <QComboBox>
@@ -231,40 +232,6 @@ private slots:
         QCOMPARE(cleaned.corner, QString("bottom-left"));
         QCOMPARE(cleaned.scale, 200); QCOMPARE(cleaned.opacity, 20);
     }
-    void inputOverlaySettingsRoundTripThroughThePage() {
-        SettingsPage page(caps); applyTheme(&page, "violet");
-        GsrOptions options; QTemporaryDir directory; options.outputDirectory = directory.path();
-        page.edit(options, false, false, keys);
-        auto *layout = page.findChild<QComboBox *>("inputOverlayLayout"); QVERIFY(layout);
-        auto *sidecar = page.findChild<QCheckBox *>("inputOverlaySidecar"); QVERIFY(sidecar);
-        auto *notice = page.findChild<QLabel *>("inputOverlayNotice"); QVERIFY(notice);
-        QCOMPARE(layout->itemData(0).toString(), QString("none"));
-        QCOMPARE(layout->count(), 6); // None + the five reference layouts
-        QVERIFY(!page.inputOverlay().enabled());
-        QVERIFY(!sidecar->isEnabled()); // nothing is read while None is selected
-        QVERIFY(notice->text().startsWith("Off."));
-        InputOverlaySettings value; value.layout = "azerty"; value.corner = "bottom-right"; value.scale = 80; value.opacity = 70; value.sidecar = true;
-        page.setInputOverlay(value);
-        QVERIFY(page.inputOverlay() == value);
-        QVERIFY(sidecar->isEnabled());
-        auto *preview = page.findChild<InputOverlayPreview *>("inputOverlayPreview"); QVERIFY(preview);
-        QCOMPARE(preview->layoutId(), QString("azerty"));
-        // Returning to None switches the sidecar off with it.
-        layout->setCurrentIndex(0);
-        QVERIFY(!sidecar->isChecked()); QVERIFY(!page.inputOverlay().sidecar);
-        // Editing again loads the stored state rather than keeping stale widget values.
-        page.setInputOverlay(value); page.edit(options, false, false, keys); page.setInputOverlay({});
-        QVERIFY(!page.inputOverlay().enabled());
-    }
-    void fullLayoutWarnsAboutTypedTextAndOthersDoNot() {
-        SettingsPage page(caps); applyTheme(&page, "violet");
-        auto *notice = page.findChild<QLabel *>("inputOverlayNotice"); QVERIFY(notice);
-        InputOverlaySettings value; value.layout = "qwerty-full"; page.setInputOverlay(value);
-        QVERIFY(notice->text().contains("reconstruct typed text"));
-        value.layout = "qwerty"; page.setInputOverlay(value);
-        QVERIFY(!notice->text().contains("reconstruct"));
-        QVERIFY(notice->text().contains("never text"));
-    }
     void inputOverlayPreviewPaintsLayoutOrEmptyState() {
         InputOverlayPreview preview; applyTheme(&preview, "violet");
         preview.resize(340, 190);
@@ -315,33 +282,86 @@ private slots:
         layer.clear();
         QVERIFY(!layer.hasTimeline() && !layer.isVisible());
     }
-    void inputIsOnlyRequestedWhileSettingsShowAnOverlay() {
+    void peripheralOverlayLivesInCaptureOverlaysNotGeneralSettings() {
         SettingsPage page(caps); applyTheme(&page, "violet");
-        GsrOptions options; QTemporaryDir directory; options.outputDirectory = directory.path();
-        page.edit(options, false, false, keys);
-        QSignalSpy wanted(&page, &SettingsPage::inputPreviewWanted);
-        page.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&page));
-        QVERIFY(!wanted.isEmpty() && wanted.last().first().toString().isEmpty()); // None selected: nothing is read
-        auto *layout = page.findChild<QComboBox *>("inputOverlayLayout"); QVERIFY(layout);
+        QVERIFY(!page.findChild<QComboBox *>("inputOverlayLayout")); // not in general Settings
+        QVERIFY(!page.findChild<QCheckBox *>("inputOverlaySidecar"));
+        OverlayEditor editor; applyTheme(&editor, "violet");
+        auto *layout = editor.findChild<QComboBox *>("inputOverlayLayout"); QVERIFY(layout);
+        QVERIFY(editor.findChild<QCheckBox *>("inputOverlaySidecar"));
+        QCOMPARE(layout->count(), 6); // None + the five reference layouts
+        QCOMPARE(layout->itemData(0).toString(), QString("none"));
+    }
+    void inputOverlaySettingsRoundTripThroughTheEditor() {
+        OverlayEditor editor; applyTheme(&editor, "violet");
+        auto *layout = editor.findChild<QComboBox *>("inputOverlayLayout"); QVERIFY(layout);
+        auto *sidecar = editor.findChild<QCheckBox *>("inputOverlaySidecar"); QVERIFY(sidecar);
+        auto *notice = editor.findChild<QLabel *>("inputOverlayNotice"); QVERIFY(notice);
+        QSignalSpy changed(&editor, &OverlayEditor::inputOverlayChanged);
+        editor.setInputOverlay({});
+        QVERIFY(!sidecar->isEnabled()); // nothing is read while None is selected
+        QVERIFY(notice->text().startsWith("Off."));
+        QCOMPARE(changed.size(), 0);    // loading values is not a user edit
+        InputOverlaySettings value; value.layout = "azerty"; value.corner = "bottom-right"; value.scale = 80; value.opacity = 70; value.sidecar = true;
+        editor.setInputOverlay(value);
+        QCOMPARE(changed.size(), 0);
+        QVERIFY(sidecar->isEnabled() && sidecar->isChecked());
+        layout->setCurrentIndex(layout->findData("qwerty"));   // a user edit emits the new value
+        QCOMPARE(changed.size(), 1);
+        const auto edited = changed.last().first().value<InputOverlaySettings>();
+        QCOMPARE(edited.layout, QString("qwerty")); QCOMPARE(edited.scale, 80); QVERIFY(edited.sidecar);
+        layout->setCurrentIndex(0);                            // back to None switches the sidecar off with it
+        QVERIFY(!sidecar->isChecked());
+        QVERIFY(!changed.last().first().value<InputOverlaySettings>().sidecar);
+    }
+    void fullLayoutWarnsAboutTypedTextAndOthersDoNot() {
+        OverlayEditor editor; applyTheme(&editor, "violet");
+        auto *notice = editor.findChild<QLabel *>("inputOverlayNotice"); QVERIFY(notice);
+        InputOverlaySettings value; value.layout = "qwerty-full"; editor.setInputOverlay(value);
+        QVERIFY(notice->text().contains("reconstruct typed text"));
+        value.layout = "qwerty"; editor.setInputOverlay(value);
+        QVERIFY(!notice->text().contains("reconstruct"));
+        QVERIFY(notice->text().contains("never text"));
+    }
+    void inputIsOnlyRequestedWhileTheEditorShowsAnOverlay() {
+        OverlayEditor editor; applyTheme(&editor, "violet"); editor.resize(1000, 700);
+        QSignalSpy wanted(&editor, &OverlayEditor::inputPreviewWanted);
+        editor.show(); QVERIFY(QTest::qWaitForWindowExposed(&editor));
+        QVERIFY(wanted.isEmpty() || wanted.last().first().toString().isEmpty()); // None: nothing is read
+        auto *layout = editor.findChild<QComboBox *>("inputOverlayLayout"); QVERIFY(layout);
         layout->setCurrentIndex(layout->findData("dualsense"));
         QCOMPARE(wanted.last().first().toString(), QString("dualsense"));
         layout->setCurrentIndex(0);
         QVERIFY(wanted.last().first().toString().isEmpty());
         layout->setCurrentIndex(layout->findData("qwerty"));
         QCOMPARE(wanted.last().first().toString(), QString("qwerty"));
-        page.hide();                                                          // leaving Settings stops reading
+        editor.hide();                                                       // leaving the editor stops reading
         QVERIFY(wanted.last().first().toString().isEmpty());
-        // Status from the source drives the help text; a live state replaces the demo presses.
-        page.show(); QVERIFY(QTest::qWaitForWindowExposed(&page));
-        auto *setup = page.findChild<QLabel *>("inputOverlaySetup"); QVERIFY(setup);
-        page.setInputStatus(Input::InputStatus::PermissionDenied, "denied");
+        editor.show(); QVERIFY(QTest::qWaitForWindowExposed(&editor));
+        QCOMPARE(wanted.last().first().toString(), QString("qwerty"));
+        auto *setup = editor.findChild<QLabel *>("inputOverlaySetup"); QVERIFY(setup);
+        editor.setInputStatus(Input::InputStatus::PermissionDenied, "denied");
         QVERIFY(!setup->isHidden());
         QVERIFY(setup->text().contains("never changes permissions"));
-        QVERIFY(!setup->text().contains("usermod"));                           // no instruction to join the input group
-        page.setInputStatus(Input::InputStatus::Active, {});
+        QVERIFY(!setup->text().contains("usermod"));                         // never tells users to join the input group
+        editor.setInputStatus(Input::InputStatus::Active, {});
         QVERIFY(setup->isHidden());
-        page.setInputLive(Input::InputState{});
+        editor.setInputLive(Input::InputState{});
+    }
+    void captureCanvasShowsWherePeripheralOverlayWillSit() {
+        OverlayCanvas canvas; applyTheme(&canvas, "violet"); canvas.resize(640, 360);
+        canvas.setCaptureVisible(false);
+        const QImage before = canvas.grab().toImage();
+        InputOverlaySettings value; value.layout = "qwerty"; value.corner = "bottom-right";
+        canvas.setInputOverlay(value);
+        const QImage after = canvas.grab().toImage();
+        QVERIFY(after != before);
+        bool leftHalfChanged = false, rightHalfChanged = false;
+        for (int y = 180; y < 360; ++y) for (int x = 0; x < 640; ++x)
+            if (after.pixel(x, y) != before.pixel(x, y)) (x < 320 ? leftHalfChanged : rightHalfChanged) = true;
+        QVERIFY(rightHalfChanged && !leftHalfChanged);                       // bottom-right corner only
+        canvas.setInputOverlay({});
+        QCOMPARE(canvas.grab().toImage(), before);
     }
     void failedStartupSavePreservesCurrentValues() {
         QTemporaryDir directory;

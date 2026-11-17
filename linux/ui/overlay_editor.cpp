@@ -1,5 +1,6 @@
 #include "overlay_editor.h"
 #include "value_controls.h"
+#include "input_overlay_panel.h"
 #include <QCheckBox>
 #include <QButtonGroup>
 #include <QDoubleSpinBox>
@@ -40,6 +41,13 @@ void OverlayCanvas::setCaptureVisible(bool visible) {
     m_captureVisible = visible;
     m_preview.setActive(isVisible() && visible);
     if (!visible) m_capture = {};
+    update();
+}
+void OverlayCanvas::setInputOverlay(const InputOverlaySettings &settings) {
+    m_input = settings.sanitized();
+    m_inputLayout = Input::Layout(); QString error;
+    if (m_input.enabled()) Input::Layout::builtin(m_input.layout, &m_inputLayout, &error);
+    m_inputState = Input::demoState(m_inputLayout);
     update();
 }
 QRectF OverlayCanvas::canvasRect() const {
@@ -85,6 +93,17 @@ void OverlayCanvas::paintEvent(QPaintEvent *) {
         painter.drawImage(rect, image);
     }
     painter.setOpacity(1.);
+    if (m_inputLayout.isValid()) {
+        // Keep clear of the status strip drawn along the bottom edge below.
+        const QRect area = canvas.toRect().adjusted(0, 0, 0, property("compactPreview").toBool() ? 0 : -38);
+        const QRect box = Input::overlayRect(area, m_inputLayout.size(), m_input.corner, m_input.scale);
+        Input::RenderStyle style;
+        style.accent = palette().color(QPalette::Accent); style.opacity = m_input.opacity / 100.;
+        const qreal ratio = devicePixelRatioF();
+        QImage image = Input::renderInputOverlay(m_inputLayout, m_inputState, box.size() * ratio, style);
+        image.setDevicePixelRatio(ratio);
+        painter.drawImage(box.topLeft(), image);
+    }
     if (m_selected >= 0 && m_selected < m_scene.layers.size()) {
         const auto &layer = m_scene.layers[m_selected];
         painter.setPen(QPen(palette().color(QPalette::Accent), 2, Qt::DashLine));
@@ -211,6 +230,13 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
     m_opacity->setSuffix(" %");
     form->addRow("Opacity", m_opacity);
     right->addWidget(m_fields);
+    auto *separator = new QFrame; separator->setFrameShape(QFrame::HLine); separator->setProperty("muted", true);
+    right->addSpacing(10); right->addWidget(separator); right->addSpacing(6);
+    m_inputPanel = new InputOverlayPanel;
+    right->addWidget(m_inputPanel);
+    connect(m_inputPanel, &InputOverlayPanel::previewChanged, m_canvas, &OverlayCanvas::setInputOverlay);
+    connect(m_inputPanel, &InputOverlayPanel::changed, this, &OverlayEditor::inputOverlayChanged);
+    connect(m_inputPanel, &InputOverlayPanel::previewWanted, this, &OverlayEditor::inputPreviewWanted);
     right->addStretch();
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
@@ -254,6 +280,9 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
         m_loading = false; schedule();
     });
 }
+void OverlayEditor::setInputOverlay(const InputOverlaySettings &settings) { m_inputPanel->setValue(settings); }
+void OverlayEditor::setInputLive(const Input::InputState &state) { m_inputPanel->setInputLive(state); }
+void OverlayEditor::setInputStatus(Input::InputStatus status, const QString &detail) { m_inputPanel->setInputStatus(status, detail); }
 void OverlayEditor::edit(const OverlayScene &scene) {
     m_pages->setCurrentIndex(0);
     m_debounce.stop(); m_scene = scene; m_loading = true; m_master->setChecked(scene.enabled); m_loading = false; refreshList(scene.layers.isEmpty() ? -1 : 0);

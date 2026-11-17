@@ -57,4 +57,26 @@ QImage renderInputOverlay(const Layout &layout, const InputState &state, const Q
     }
     return image;
 }
+
+InputState demoState(const Layout &layout) {
+    InputState state;
+    if (!layout.isValid()) return state;
+    const QSet<InputId> allowed = layout.allowlist();
+    for (const char *name : {"key.w", "mouse.left", "pad.south", "pad.r1", "key.up"}) {
+        const InputId id = QString::fromLatin1(name);
+        if (allowed.contains(id)) state.apply({id, true, 0});
+    }
+    return state;
+}
+
+QRect overlayRect(const QRect &video, const QSizeF &units, const QString &corner, int scalePercent) {
+    if (video.isEmpty() || units.isEmpty()) return {};
+    const int margin = 14;
+    int w = qBound(120, qRound(video.width() * .30 * scalePercent / 100.), qMax(120, int(video.width() * .9)));
+    int h = qRound(w * units.height() / units.width());
+    if (h > video.height() * .9) { h = int(video.height() * .9); w = qRound(h * units.width() / units.height()); }
+    const bool right = corner.endsWith("right"), bottom = corner.startsWith("bottom");
+    return QRect(right ? video.right() - margin - w + 1 : video.left() + margin,
+                 bottom ? video.bottom() - margin - h + 1 : video.top() + margin, w, h);
+}
 } // namespace Shadowless::Input

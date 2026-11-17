@@ -15,7 +15,7 @@ public:
     void setLiveState(const Input::InputState &state); // replaces the demo state
     void clearLiveState();
     bool hasLayout() const { return m_layout.isValid(); }
-    QSize sizeHint() const override { return {320, 190}; }
+    QSize sizeHint() const override { return {320, 150}; }
     QSize minimumSizeHint() const override { return {200, 120}; }
 protected:
     void paintEvent(QPaintEvent *) override;

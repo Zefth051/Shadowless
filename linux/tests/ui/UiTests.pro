@@ -42,6 +42,6 @@ HEADERS += ../../app/discord_presence.h ../../app/idle_compressor.h
 include(../../overlays/input/core/input.pri)
 SOURCES += $$PWD/../../ui/input_overlay_preview.cpp
 HEADERS += $$PWD/../../ui/input_overlay_preview.h
-SOURCES += $$PWD/../../ui/input_overlay_layer.cpp
-HEADERS += $$PWD/../../ui/input_overlay_layer.h
+SOURCES += $$PWD/../../ui/input_overlay_layer.cpp $$PWD/../../ui/input_overlay_panel.cpp
+HEADERS += $$PWD/../../ui/input_overlay_layer.h $$PWD/../../ui/input_overlay_panel.h
 include(../../overlays/input/source/evdev.pri)

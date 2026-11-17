@@ -3,6 +3,7 @@
 #include "layout.h"
 #include <QColor>
 #include <QImage>
+#include <QRect>
 
 namespace Shadowless::Input {
 struct RenderStyle {
@@ -15,4 +16,13 @@ struct RenderStyle {
 // Renders the layout fitted and centered into `size` on a transparent background. Pure and
 // stateless (no caching) so it is safe to call from preview, editor playback and, later, capture.
 QImage renderInputOverlay(const Layout &layout, const InputState &state, const QSize &size, const RenderStyle &style = {});
+} // namespace Shadowless::Input
+
+namespace Shadowless::Input {
+// Where an overlay of `layoutSize` (layout units) sits inside `video`: a corner
+// ("top-left" | "top-right" | "bottom-left" | "bottom-right"), `scalePercent` of 30% of the video width,
+// clamped so it never exceeds 90% of the video. Shared by the clip player and the overlay editor canvas.
+// A few representative inputs held down (W, left click, a face button...) for previews and screenshots.
+InputState demoState(const Layout &layout);
+QRect overlayRect(const QRect &video, const QSizeF &layoutSize, const QString &corner, int scalePercent);
 } // namespace Shadowless::Input

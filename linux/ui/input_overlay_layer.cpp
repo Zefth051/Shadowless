@@ -34,14 +34,7 @@ void InputOverlayLayer::setPositionMs(qint64 ms) {
 void InputOverlayLayer::place(const QRect &video) {
     m_video = video;
     if (!hasTimeline() || video.isEmpty()) return;
-    const QSizeF units = m_layout.size();
-    const int margin = 14;
-    int w = qBound(120, qRound(video.width() * .30 * m_settings.scale / 100.), qMax(120, int(video.width() * .9)));
-    int h = qRound(w * units.height() / units.width());
-    if (h > video.height() * .9) { h = int(video.height() * .9); w = qRound(h * units.width() / units.height()); }
-    const bool right = m_settings.corner.endsWith("right"), bottom = m_settings.corner.startsWith("bottom");
-    setGeometry(right ? video.right() - margin - w + 1 : video.left() + margin,
-                bottom ? video.bottom() - margin - h + 1 : video.top() + margin, w, h);
+    setGeometry(Input::overlayRect(video, m_layout.size(), m_settings.corner, m_settings.scale));
 }
 void InputOverlayLayer::paintEvent(QPaintEvent *) {
     if (!hasTimeline()) return;

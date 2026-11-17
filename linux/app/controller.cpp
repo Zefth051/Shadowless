@@ -134,13 +134,16 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence());
         m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression());
     });
-    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active() && !m_stopping, m_shortcutKeys, m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch()); m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence()); m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression()); m_dashboard->settingsPage()->setInputOverlay(m_settings.inputOverlay()); });
+    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active() && !m_stopping, m_shortcutKeys, m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch()); m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence()); m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression()); });
     connect(m_dashboard.get(), &Dashboard::overlayEnabled, this, [this](bool enabled) {
         auto scene = m_scene;
         scene.enabled = enabled;
         apply(scene);
     });
-    connect(m_dashboard.get(), &Dashboard::editorRequested, this, [this] { m_dashboard->overlayEditor()->edit(m_scene); });
+    connect(m_dashboard.get(), &Dashboard::editorRequested, this, [this] {
+        m_dashboard->overlayEditor()->setInputOverlay(m_settings.inputOverlay());
+        m_dashboard->overlayEditor()->edit(m_scene);
+    });
     connect(m_dashboard->settingsPage(), &SettingsPage::saved, this, [this](const GsrOptions &options, bool indicator, const QStringList &keys, const QString &accent, const QString &position) {
         auto *page = m_dashboard->settingsPage();
         const bool previousLaunch = m_settings.launchAtLogin();
@@ -153,8 +156,6 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
             page->showError(error); return;
         }
         m_settings.setDiscordPresence(page->discordPresence());
-        m_settings.setInputOverlay(page->inputOverlay());
-        m_dashboard->setInputOverlay(m_settings.inputOverlay());
         m_settings.setIdleCompression(page->idleCompression()); m_compressor.setRoot(m_options.outputDirectory); m_compressor.setEnabled(page->idleCompression());
         m_indicatorPosition = position;
         OverlaySurface::setPosition(m_indicator.get(), position);
@@ -164,15 +165,20 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_indicatorEnabled = indicator; m_shortcutKeys = keys; m_shortcuts.setKeys(keys); m_dashboard->setShortcutKeys(keys); persist(); refresh(); m_dashboard->home(); m_dashboard->refreshLibrary(m_options.outputDirectory);
     });
     qRegisterMetaType<Input::InputEvent>(); qRegisterMetaType<Input::InputStatus>();
-    connect(m_dashboard->settingsPage(), &SettingsPage::inputPreviewWanted, this, [this](const QString &layout) {
+    auto *editor = m_dashboard->overlayEditor();
+    connect(editor, &OverlayEditor::inputPreviewWanted, this, [this](const QString &layout) {
         m_inputPreviewLayout = layout; updateInputSource();
+    });
+    connect(editor, &OverlayEditor::inputOverlayChanged, this, [this](const InputOverlaySettings &value) {
+        m_settings.setInputOverlay(value);                 // saved as soon as it changes, like the layer list
+        m_dashboard->setInputOverlay(m_settings.inputOverlay());
     });
     connect(&m_input, &Input::InputSource::inputChanged, this, [this](const Input::InputEvent &event) {
         m_inputState.apply(event);
-        m_dashboard->settingsPage()->setInputLive(m_inputState);
+        m_dashboard->overlayEditor()->setInputLive(m_inputState);
     });
     connect(&m_input, &Input::InputSource::statusChanged, this, [this](Input::InputStatus status, const QString &detail) {
-        m_dashboard->settingsPage()->setInputStatus(status, detail);
+        m_dashboard->overlayEditor()->setInputStatus(status, detail);
     });
     connect(m_dashboard->overlayEditor(), &OverlayEditor::changed, this, &Controller::apply);
     connect(&m_shortcuts, &Shortcuts::activated, this, [this](const QString &action) {
@@ -409,7 +415,7 @@ bool Controller::persist(QString *result) {
     return ok;
 }
 // Starts, restarts or stops the single input source so it reads only what is needed right now: the layout
-// previewed in Settings. Nothing is read while no overlay is selected or Settings is closed.
+// previewed in the Capture overlays editor. Nothing is read while no overlay is selected or the editor is closed.
 void Controller::updateInputSource() {
     QSet<Input::InputId> wanted;
     Input::Layout layout; QString error;
@@ -417,7 +423,7 @@ void Controller::updateInputSource() {
     if (wanted == m_inputAllowlist && (wanted.isEmpty() == (m_input.status() == Input::InputStatus::Stopped))) return;
     m_input.stop();
     m_inputState.clear();
-    m_dashboard->settingsPage()->setInputLive(m_inputState);
+    m_dashboard->overlayEditor()->setInputLive(m_inputState);
     m_inputAllowlist = wanted;
     if (!wanted.isEmpty()) m_input.start(wanted);
 }

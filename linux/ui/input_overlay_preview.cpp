@@ -4,10 +4,9 @@
 namespace Shadowless {
 InputOverlayPreview::InputOverlayPreview(QWidget *parent) : QWidget(parent) {
     setObjectName("inputOverlayPreview");
-    setMinimumHeight(120);
-    setAccessibleName("Peripheral overlay preview");
+        setAccessibleName("Peripheral overlay preview");
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    setFixedHeight(190);
+    setFixedHeight(150);
 }
 void InputOverlayPreview::setLayoutId(const QString &id) {
     m_id = id;
@@ -21,15 +20,7 @@ void InputOverlayPreview::setLayoutId(const QString &id) {
 void InputOverlayPreview::setOpacity(int percent) { m_style.opacity = qBound(20, percent, 100) / 100.; update(); }
 void InputOverlayPreview::setLiveState(const Input::InputState &state) { m_live = state; m_isLive = true; update(); }
 void InputOverlayPreview::clearLiveState() { m_isLive = false; m_live.clear(); update(); }
-void InputOverlayPreview::rebuildDemo() {
-    m_demo.clear();
-    if (!m_layout.isValid()) return;
-    const auto allowed = m_layout.allowlist();
-    for (const char *name : {"key.w", "mouse.left", "pad.south", "pad.r1", "key.up"}) {
-        const Input::InputId id = QString::fromLatin1(name);
-        if (allowed.contains(id)) m_demo.apply({id, true, 0});
-    }
-}
+void InputOverlayPreview::rebuildDemo() { m_demo = Input::demoState(m_layout); }
 void InputOverlayPreview::paintEvent(QPaintEvent *) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);

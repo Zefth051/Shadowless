@@ -1,6 +1,6 @@
 # Input overlay (keyboard, mouse, gamepad)
 
-Medal-style overlay showing pressed inputs. Phase 1: Settings preview, an optional
+Medal-style overlay showing pressed inputs. Phase 1: a live preview inside **Capture overlays** (the overlay settings, not general Settings), an optional
 timestamped sidecar next to each clip, and an editable overlay drawn by the editor over a
 clean video. Burning the overlay into captured frames (GSR composition) is out of scope.
 Everything is **opt-in and off by default**. The same layout JSON and sidecar format are
@@ -60,7 +60,7 @@ interactive elements) is the only set a source may emit.
 
 `/dev/input/event*` is normally `root:input`, mode `0660`. Shadowless never modifies
 permissions and never asks you to join the `input` group (that grants every program you run
-read access to all keyboards). The Settings page explains the problem and shows the steps; the
+read access to all keyboards). The Capture overlays page explains the problem and shows the steps; the
 user runs them. Preferred: a narrow udev rule that tags only the needed device classes for
 the active seat session, installed by the user:
 
