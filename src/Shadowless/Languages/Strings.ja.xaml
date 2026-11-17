@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">オーディオルーティングを利用できません</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">このバージョンの Windows ではアプリごとの音声ルーティングを使用できません。ミックス音声でキャプチャを続行します。設定は保持されます。</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">アプリごとの音声コンポーネントが見つかりません。ミックス音声でキャプチャを続行します。設定は保持されます。</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">6つの音声トラックがすべて使用中のため、システムトラックは録音されません。含めるには音声設定でトラックを空けてください。設定は保持されます。</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">新しいフレームは受信されませんでした。</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless を開始できませんでした:
 {0}</sys:String>

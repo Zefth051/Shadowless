@@ -142,6 +142,7 @@ internal static class Program
             Run("advanced unavailable reasons", AdvancedUnavailableReasons);
             Run("Windows 10 audio routing falls back to mixed audio", Windows10AudioRoutingFallback);
             Run("recovery reports the real startup error", RecoveryReportsRealStartupError);
+            Run("advanced audio skips the System track when all six tracks are used", AdvancedFullTracksSkipSystem);
             Run("advanced diagnostics privacy", AdvancedDiagnosticsPrivacy);
             Run("audio routing format limits", AudioRoutingFormatLimits);
             Run("audio process group priority", AudioProcessGroupPriority);
@@ -1194,6 +1195,42 @@ internal static class Program
             ObsReplayEngine.DetectProcessAudioAvailability(windows11, sourceRegistered: false),
             out bool missingPluginFellBack);
         Equal(true, missingPluginFellBack);
+    }
+
+    private static void AdvancedFullTracksSkipSystem()
+    {
+        // Mic on track 6 and apps on tracks 1-5 leave no track for System: previously capture start threw.
+        var full = new Config
+        {
+            AudioRoutingMode = "advanced",
+            CaptureSystemAudio = true,
+            CaptureMicrophone = true,
+            AdvancedMicrophoneTrack = 6,
+            ProcessAudioRoutes =
+            [
+                new ProcessAudioRoute { Executable = "a.exe", Track = 1 },
+                new ProcessAudioRoute { Executable = "b.exe", Track = 2 },
+                new ProcessAudioRoute { Executable = "c.exe", Track = 3 },
+                new ProcessAudioRoute { Executable = "d.exe", Track = 4 },
+                new ProcessAudioRoute { Executable = "e.exe", Track = 5 },
+            ],
+        };
+        Equal(0, full.AdvancedSystemAudioTrack);
+        Config effective = ObsReplayEngine.ResolveSystemTrack(full, out bool dropped);
+        Equal(true, dropped);
+        Equal(false, effective.CaptureSystemAudio);
+        Equal(6, ObsReplayEngine.AudioTrackCount(effective));      // no longer throws
+        Equal(true, full.CaptureSystemAudio);                      // saved preference untouched
+        Equal("advanced", effective.AudioRoutingMode);             // app routing is kept
+        Equal(5, effective.ProcessAudioRoutes.Count);
+
+        // A free track keeps System; non-advanced modes are never touched.
+        full.ProcessAudioRoutes.RemoveAt(4);
+        Config withTrack = ObsReplayEngine.ResolveSystemTrack(full, out bool droppedNow);
+        Equal(false, droppedNow);
+        Equal(true, ReferenceEquals(full, withTrack));
+        ObsReplayEngine.ResolveSystemTrack(new Config { CaptureSystemAudio = true }, out bool simpleDropped);
+        Equal(false, simpleDropped);
     }
 
     private static void RecoveryReportsRealStartupError()

@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">오디오 라우팅을 사용할 수 없음</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">이 Windows 버전은 앱별 오디오 라우팅을 지원하지 않습니다. 혼합 오디오로 캡처를 계속하며 설정은 유지됩니다.</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">앱별 오디오 구성 요소가 없습니다. 혼합 오디오로 캡처를 계속하며 설정은 유지됩니다.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">오디오 트랙 6개가 모두 사용 중이라 시스템 트랙은 녹음되지 않습니다. 포함하려면 오디오 설정에서 트랙을 비우세요. 설정은 유지됩니다.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">새 프레임이 수신되지 않았습니다.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless을 시작할 수 없습니다:
 {0}</sys:String>

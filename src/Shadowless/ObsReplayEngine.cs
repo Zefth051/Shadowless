@@ -172,6 +172,7 @@ public sealed partial class ObsReplayEngine : IDisposable
         get;
         private set;
     }
+    internal bool SystemAudioDropped { get; private set; }
     private Config? _routingConfig;
     private Config RoutingConfig => _routingConfig ?? _config;
     public bool IsGameCapture { get; }
@@ -687,8 +688,15 @@ public sealed partial class ObsReplayEngine : IDisposable
                     "); capturing mixed audio. Saved audio settings are kept.");
             }
             EnsureConfiguredCodecIsSupported();
-            if (IsAdvancedAudioRouting && _config.CaptureSystemAudio && _config.AdvancedSystemAudioTrack == 0)
-                throw new InvalidOperationException(Localization.Text("L.Error.AdvancedSystemTrackFull"));
+            Config withSystemTrack = ResolveSystemTrack(RoutingConfig, out bool systemDropped);
+            if (systemDropped)
+            {
+                // All six tracks are taken by apps and the microphone. Keep the user's app routing and
+                // skip only the System track instead of refusing to capture (saved settings stay as they are).
+                _routingConfig = withSystemTrack;
+                SystemAudioDropped = true;
+                Log.Write("Advanced audio: all six tracks are in use; recording without the System track. Saved audio settings are kept.");
+            }
             CreateSources();
             CreateEncoders();
             CreateOutput();
@@ -704,7 +712,7 @@ public sealed partial class ObsReplayEngine : IDisposable
                 $"windowsBuild={Environment.OSVersion.Version.Build}, " +
                 $"audioRouting={RoutingConfig.AudioRoutingMode}" +
                 $"{(RoutingConfig.SeparateAudioTracks ? "+separate" : "")}, " +
-                $"audioFallback={AudioRoutingFallback?.ToString() ?? "none"}");
+                $"audioFallback={AudioRoutingFallback?.ToString() ?? (SystemAudioDropped ? "NoFreeSystemTrack" : "none")}");
         }
         catch
         {
@@ -1241,7 +1249,7 @@ public sealed partial class ObsReplayEngine : IDisposable
             {
                 ReconcileSeparateSystemAudio(null);
             }
-            if (IsAdvancedAudioRouting && _config.CaptureSystemAudio)
+            if (IsAdvancedAudioRouting && RoutingConfig.CaptureSystemAudio)
                 ReconcileSeparateSystemAudio(null);
         }
 
@@ -1596,7 +1604,7 @@ public sealed partial class ObsReplayEngine : IDisposable
             targets = identity is null ? [] : targets.Select(target => target with { Identity = identity }).ToArray();
         }
         ProcessAudioReconcileResult result = _processAudioReconciler.Reconcile(snapshot, targets);
-        if (IsAdvancedAudioRouting && _config.CaptureSystemAudio)
+        if (IsAdvancedAudioRouting && RoutingConfig.CaptureSystemAudio)
         {
             ProcessNode[] roots = snapshot.SelectIndependentRoots(targets.Select(target => target.Executable))
                 .OrderBy(node => node.Identity.CreationTime).ThenBy(node => node.Identity.ProcessId).ToArray();
@@ -2640,6 +2648,14 @@ public sealed partial class ObsReplayEngine : IDisposable
         ArgumentNullException.ThrowIfNull(config);
         fellBackToMixedAudio = !IsAudioRoutingAvailable(config, processAudioAvailability);
         return fellBackToMixedAudio ? config.WithMixedAudio() : config;
+    }
+
+    internal static Config ResolveSystemTrack(Config config, out bool systemDropped)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        systemDropped = string.Equals(config.AudioRoutingMode, "advanced", StringComparison.OrdinalIgnoreCase) &&
+                        config.CaptureSystemAudio && config.AdvancedSystemAudioTrack == 0;
+        return systemDropped ? config.WithoutSystemAudio() : config;
     }
 
     internal static bool IsAudioRoutingAvailable(

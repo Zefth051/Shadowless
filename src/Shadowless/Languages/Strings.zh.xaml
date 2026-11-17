@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">音频路由不可用</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">此版本的 Windows 无法按应用路由音频。将继续使用混合音频捕获；您的设置已保留。</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">缺少应用音频组件。将继续使用混合音频捕获；您的设置已保留。</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">六条音频轨道均已占用，因此不会录制系统轨道。请在音频设置中释放一条轨道以包含它；您的设置已保留。</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">未收到新帧。</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless 无法启动：
 {0}</sys:String>

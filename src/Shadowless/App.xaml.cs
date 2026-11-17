@@ -46,7 +46,7 @@ public partial class App : Application
     private string _activationPipeName = "";
     private string? _pendingUiError;
     private string? _lastStartupError;
-    private AdvancedProcessAudioAvailability? _notifiedAudioFallback;
+    private string? _notifiedAudioFallbackKey;
     private DispatcherTimer? _healthTimer;
     private DispatcherTimer? _captureStateTimer;
     private DateTime _pipelineStartedUtc;
@@ -1999,7 +1999,7 @@ public partial class App : Application
             _recoveryFailures = 0;
             _lastStartupError = null;
             Log.Write($"OBS pipeline started in {stopwatch.ElapsedMilliseconds} ms.");
-            NotifyAudioRoutingFallback(engine.AudioRoutingFallback);
+            NotifyAudioRoutingFallback(engine.AudioRoutingFallback, engine.SystemAudioDropped);
             UpdateUiState();
             return true;
         }
@@ -2053,19 +2053,23 @@ public partial class App : Application
     }
 
     private void NotifyAudioRoutingFallback(
-        AdvancedProcessAudioAvailability? availability)
+        AdvancedProcessAudioAvailability? availability,
+        bool systemTrackDropped)
     {
         // One non-blocking notice per reason and session; restarts stay quiet.
-        if (availability is null || _notifiedAudioFallback == availability)
+        string? detailKey = availability switch
+        {
+            AdvancedProcessAudioAvailability.UnsupportedWindowsVersion => "L.Notify.AudioFallbackUnsupported",
+            AdvancedProcessAudioAvailability.SourceUnavailable => "L.Notify.AudioFallbackSource",
+            _ => systemTrackDropped ? "L.Notify.AudioFallbackNoTrack" : null,
+        };
+        if (detailKey is null || _notifiedAudioFallbackKey == detailKey)
             return;
-        _notifiedAudioFallback = availability;
+        _notifiedAudioFallbackKey = detailKey;
         ShowOverlayNotification(
             "!",
             Localization.Text("L.Notify.AudioFallbackTitle"),
-            Localization.Text(
-                availability == AdvancedProcessAudioAvailability.UnsupportedWindowsVersion
-                    ? "L.Notify.AudioFallbackUnsupported"
-                    : "L.Notify.AudioFallbackSource"),
+            Localization.Text(detailKey),
             OverlayTone.Warning,
             8000);
     }

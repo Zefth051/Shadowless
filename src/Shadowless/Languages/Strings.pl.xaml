@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">Routing dźwięku niedostępny</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Ta wersja systemu Windows nie obsługuje routingu dźwięku dla aplikacji. Przechwytywanie trwa z dźwiękiem mieszanym; ustawienia zostały zachowane.</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">Brakuje składnika dźwięku aplikacji. Przechwytywanie trwa z dźwiękiem mieszanym; ustawienia zostały zachowane.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">Wszystkie sześć ścieżek audio jest zajętych, więc ścieżka systemowa nie jest nagrywana. Zwolnij ścieżkę w ustawieniach dźwięku, aby ją uwzględnić; ustawienia zostały zachowane.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Nie otrzymano nowych ramek.</sys:String>
   <sys:String x:Key="L.App.StartError">Nie można uruchomić Shadowless:
 {0}</sys:String>

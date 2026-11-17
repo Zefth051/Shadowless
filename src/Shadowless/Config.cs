@@ -194,6 +194,14 @@ public sealed class Config
         return mixed;
     }
 
+    // Same routing without the System track; used when every track is already taken.
+    internal Config WithoutSystemAudio()
+    {
+        Config clone = Clone();
+        clone.CaptureSystemAudio = false;
+        return clone;
+    }
+
     public Config Clone()
     {
         var clone = new Config();

@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">Маршрутизация звука недоступна</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Эта версия Windows не поддерживает маршрутизацию звука по приложениям. Захват продолжается со смешанным звуком; ваши настройки сохранены.</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">Отсутствует компонент звука приложений. Захват продолжается со смешанным звуком; ваши настройки сохранены.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">Все шесть звуковых дорожек заняты, поэтому системная дорожка не записывается. Освободите дорожку в настройках звука, чтобы включить её; ваши настройки сохранены.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Новые кадры не поступают.</sys:String>
   <sys:String x:Key="L.App.StartError">Не удалось запустить Shadowless:
 {0}</sys:String>

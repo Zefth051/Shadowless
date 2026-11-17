@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">Routage audio indisponible</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Cette version de Windows ne peut pas router l'audio par application. La capture continue avec l'audio mixte ; vos réglages sont conservés.</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">Le composant audio par application est absent. La capture continue avec l'audio mixte ; vos réglages sont conservés.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">Les six pistes audio sont utilisées, la piste Système n'est donc pas enregistrée. Libérez une piste dans les réglages audio pour l'inclure ; vos réglages sont conservés.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Aucune nouvelle trame reçue.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless n'a pas pu démarrer :
 {0}</sys:String>

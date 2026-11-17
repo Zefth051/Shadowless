@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">Enrutado de audio no disponible</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Esta versión de Windows no puede enrutar el audio por aplicación. La captura continúa con audio mezclado; tus ajustes se conservan.</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">Falta el componente de audio por aplicación. La captura continúa con audio mezclado; tus ajustes se conservan.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">Las seis pistas de audio están en uso, así que no se graba la pista del sistema. Libera una pista en Ajustes de audio para incluirla; tus ajustes se conservan.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">No se recibieron nuevos fotogramas.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless no pudo iniciar:
 {0}</sys:String>

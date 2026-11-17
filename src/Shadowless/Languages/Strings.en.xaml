@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">Audio routing unavailable</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">This version of Windows cannot route audio per application. Capture continues with mixed audio; your settings are kept.</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">The application audio component is missing. Capture continues with mixed audio; your settings are kept.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">All six audio tracks are in use, so the System track is not recorded. Free a track in Audio settings to include it; your settings are kept.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">No new frames received.</sys:String>
   <sys:String x:Key="L.App.StartError">Shadowless could not start:
 {0}</sys:String>

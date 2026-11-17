@@ -306,6 +306,7 @@
   <sys:String x:Key="L.Notify.AudioFallbackTitle">Roteamento de áudio indisponível</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackUnsupported">Esta versão do Windows não consegue rotear o áudio por aplicativo. A captura continua com áudio misto; suas configurações foram mantidas.</sys:String>
   <sys:String x:Key="L.Notify.AudioFallbackSource">O componente de áudio por aplicativo está ausente. A captura continua com áudio misto; suas configurações foram mantidas.</sys:String>
+  <sys:String x:Key="L.Notify.AudioFallbackNoTrack">As seis faixas de áudio estão em uso, então a faixa do sistema não é gravada. Libere uma faixa nas configurações de áudio para incluí-la; suas configurações foram mantidas.</sys:String>
   <sys:String x:Key="L.Recovery.NoFrames">Nenhum novo quadro recebido.</sys:String>
   <sys:String x:Key="L.App.StartError">Não foi possível iniciar o Shadowless:
 {0}</sys:String>
