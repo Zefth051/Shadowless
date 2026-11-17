@@ -305,7 +305,8 @@ int main(int argc, char **argv) {
             fixture = compile_fixture(directory, source,
                 ['libavformat', 'libavcodec', 'libavutil', 'libavfilter', 'libdrm', 'libpipewire-0.3', 'x11', 'xrandr'],
                 ['src/recorder/muxer.c', 'src/log.c', 'src/utils.c'])
-            subprocess.run([str(fixture), directory], check=True, timeout=10)
+            # Keep the spool name within GSR's fixed buffer even under a long TMPDIR.
+            subprocess.run([str(fixture), '.'], cwd=directory, check=True, timeout=10)
 
     def test_live_application_choices_handle_escaped_identity_and_preserve_capture_clock(self):
         source = r'''
