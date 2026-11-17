@@ -8,8 +8,8 @@
 namespace Shadowless::Input {
 struct RenderStyle {
     QColor accent{"#8b5cf6"}; // pressed fill
-    QColor idle{18, 18, 20, 215};
-    QColor outline{255, 255, 255, 110};
+    QColor idle{18, 18, 20, 200};
+    QColor outline{255, 255, 255, 60};
     QColor text{235, 235, 240};
     double opacity = 1.0;     // 0..1 applied to the whole image
 };

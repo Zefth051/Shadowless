@@ -409,7 +409,7 @@ private slots:
         const QRect full = Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 100, "full");
         const QRect game = Input::overlayRect(video, {11.05, 5.62}, "bottom-left", 100, "gameplay");
         QVERIFY(full.width() > game.width());
-        QVERIFY(full.width() <= video.width() * 45 / 100);                     // still moderate
+        QVERIFY(full.width() <= video.width() * 40 / 100);                     // still moderate
         QCOMPARE(Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 50, "full").width(), full.width() / 2);
     }
     void overlayRectHonoursCornerMarginsAndShrinksGamepads() {
