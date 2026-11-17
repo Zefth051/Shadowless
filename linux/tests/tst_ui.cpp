@@ -843,7 +843,7 @@ private slots:
             QVERIFY(exportButton->mapTo(player,QPoint()).y()>timeline->mapTo(player,timeline->rect().bottomLeft()).y());
             QVERIFY(timeline->mapTo(player,QPoint()).y()<audio->mapTo(player,QPoint()).y());
             QVERIFY2(player->rect().contains(QRect(exportButton->mapTo(player,QPoint()),exportButton->size())),
-                     qPrintable(QString("Export y=%1, audio y=%2 height=%3, player height=%4").arg(exportButton->mapTo(player,QPoint()).y()).arg(audio->mapTo(player,QPoint()).y()).arg(audio->height()).arg(player->height())));
+                     qPrintable(QString("size=%1x%2 export=%3,%4 %5x%6 audio y=%7 height=%8 player=%9x%10 error='%11' visible=%12").arg(size.width()).arg(size.height()).arg(exportButton->mapTo(player,QPoint()).x()).arg(exportButton->mapTo(player,QPoint()).y()).arg(exportButton->width()).arg(exportButton->height()).arg(audio->mapTo(player,QPoint()).y()).arg(audio->height()).arg(player->width()).arg(player->height()).arg(player->findChild<QLabel *>("clipError")?player->findChild<QLabel *>("clipError")->text():QString("-")).arg(player->findChild<QLabel *>("clipError")?player->findChild<QLabel *>("clipError")->isVisible():false)));
             QVERIFY(player->rect().contains(QRect(exportButton->mapTo(player,QPoint()),exportButton->size())));
         }
     }
