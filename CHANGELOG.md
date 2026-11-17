@@ -4,6 +4,10 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Clean Windows PCs without the Visual C++ Redistributable:** the Visual C++ runtime that the capture engine imports is now bundled app-local, so Instant Replay and Recording no longer depend on a separate install. Not yet reproduced or verified on a clean PC.
+
 ## [0.3.4] - 2026-11-17
 
 ### Fixed

@@ -32,11 +32,11 @@ that every GPU, driver or desktop configuration works. A claim needs evidence
   Shadowless captures mixed audio instead (see ADR 0002 and ADR 0006). This fallback
   ships in Windows 0.3.4; Windows 0.3.3 does not have it and cannot start capture on
   Windows 10 with those settings saved.
-- Visual C++ runtime (x64): the native OBS components import `VCRUNTIME140`,
-  `VCRUNTIME140_1` and `MSVCP140`, and the Portable/Setup do not bundle them. A PC
-  without the Visual C++ Redistributable is expected to fail to load OBS. Not yet
-  reproduced on a clean machine; tracked as an independent improvement
-  (`tools/check_runtime_dependencies.py`).
+- Visual C++ runtime (x64): the capture engine imports `VCRUNTIME140`, `VCRUNTIME140_1` and
+  `MSVCP140`, which Windows does not include. They are bundled app-local from the build machine's
+  Visual C++ redistributable (`tools/AddVcRuntime.ps1`, checked by `tools/check_runtime_dependencies.py`),
+  so no separate install or administrator rights are needed. Releases before this change did not
+  bundle them; behavior on a clean PC is E1 (CI) until tested on one.
 
 ### Linux (Arch Linux and CachyOS)
 

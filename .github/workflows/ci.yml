@@ -61,6 +61,20 @@ jobs:
             -p:AnalysisMode=All `
             -p:WarningsAsErrors=CA1806%3BCA2000%3BCA2216%3BCA5392%3BCA5393
 
+      - name: Validate app-local Visual C++ runtime for OBS
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP "obs-vc-check"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item ./runtime/obs/bin/* $stage -Recurse -Force
+          Copy-Item ./runtime/obs/obs-plugins/64bit/* $stage -Recurse -Force -ErrorAction SilentlyContinue
+          python -m pip install --quiet pefile
+          python ./tools/check_runtime_dependencies.py $stage
+          if ($LASTEXITCODE -eq 0) { throw "Expected the unbundled OBS runtime to need the Visual C++ runtime." }
+          ./tools/AddVcRuntime.ps1 -RuntimeDirectory $stage
+          python ./tools/check_runtime_dependencies.py $stage
+          if ($LASTEXITCODE -ne 0) { throw "OBS runtime still has unresolved imports after bundling the Visual C++ runtime." }
+
       - name: Validate GPU and capture capability model
         shell: pwsh
         run: |

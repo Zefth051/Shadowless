@@ -111,6 +111,15 @@ if (-not (Test-Path -LiteralPath (Join-Path $runtimeDirectory "libmpv-2.dll"))) 
     throw "Published libmpv runtime not found."
 }
 
+# The OBS components import the Visual C++ runtime, which Windows does not include. Bundle it
+# app-local so a clean PC works without a separate install or administrator rights.
+& (Join-Path $PSScriptRoot "AddVcRuntime.ps1") -RuntimeDirectory $runtimeDirectory
+python -m pip install --quiet pefile
+python (Join-Path $PSScriptRoot "check_runtime_dependencies.py") $runtimeDirectory
+if ($LASTEXITCODE -ne 0) {
+    throw "The published runtime has imports that a clean Windows PC cannot resolve."
+}
+
 Write-Host "Creating Portable archive..."
 Compress-Archive -LiteralPath $publishDirectory `
     -DestinationPath $portableArchive `
