@@ -19,3 +19,10 @@ SUBDIRS += compressiontests
 compressiontests.file = tests/compression/CompressionTests.pro
 SUBDIRS += discordtests
 discordtests.file = tests/discord/DiscordTests.pro
+
+# Input overlay suites (contract/layouts, evdev source, recorder, sidecar session)
+SUBDIRS += inputcoretests inputevdevtests inputrecordertests inputsidecartests
+inputcoretests.file = tests/input/core/InputCoreTests.pro
+inputevdevtests.file = tests/input/evdev/EvdevTests.pro
+inputrecordertests.file = tests/input/recorder/RecorderTests.pro
+inputsidecartests.file = tests/input/sidecar/SidecarTests.pro
