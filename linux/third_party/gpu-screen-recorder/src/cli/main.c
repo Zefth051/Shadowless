@@ -557,7 +557,8 @@ static int run(args_parser *arg_parser) {
         goto done;
     }
 
-    const bool uses_app_audio = gsr_audio_input_tracks_has_app_audio(&audio_input_tracks);
+    const bool uses_app_audio = gsr_audio_input_tracks_has_app_audio(&audio_input_tracks)
+        || (getenv("SHADOWLESS_DYNAMIC_AUDIO") && strcmp(getenv("SHADOWLESS_DYNAMIC_AUDIO"), "1") == 0);
 #ifdef GSR_APP_AUDIO
     if(uses_app_audio) {
         const int app_audio_result = setup_app_audio(&app_audio_names);

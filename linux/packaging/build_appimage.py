@@ -85,7 +85,7 @@ def stage_appdir(build, appdir):
     for name in ["AI_DEVELOPMENT.md", "FEATURES.md", "DEPENDENCY_AUDIT.md"]:
         shutil.copy2(REPO / "docs" / name, appdir / "usr/share/doc/shadowless" / name)
     shutil.copytree(REPO / "licenses", appdir / "usr/share/doc/shadowless/licenses")
-    for tool in ["ffmpeg", "ffprobe", "hyprctl", "pactl", "pw-loopback"]:
+    for tool in ["ffmpeg", "ffprobe", "hyprctl", "pactl"]:
         target = appdir / "usr/libexec/shadowless-host" / tool
         shutil.copy2(PACKAGING / "host-tool", target)
         target.chmod(0o755)

@@ -3,7 +3,7 @@ CONFIG += c++17
 CONFIG -= app_bundle
 TARGET = shadowless
 SHADOWLESS_VERSION = $$(SHADOWLESS_VERSION)
-isEmpty(SHADOWLESS_VERSION): SHADOWLESS_VERSION = 0.3.5
+isEmpty(SHADOWLESS_VERSION): SHADOWLESS_VERSION = 0.3.6
 DEFINES += SHADOWLESS_VERSION=\\\"$$SHADOWLESS_VERSION\\\"
 equals(SHADOWLESS_PUBLIC_UPDATES, true): DEFINES += SHADOWLESS_PUBLIC_UPDATES
 SOURCES += update_service.cpp
@@ -39,3 +39,7 @@ HEADERS += ../ui/clip_player.h
 
 SOURCES += ../capture/replay_paths.cpp ../ui/clip_notification.cpp
 HEADERS += ../capture/replay_paths.h ../ui/clip_notification.h
+HEADERS += ../ui/clip_waveform.h
+
+SOURCES += discord_presence.cpp idle_compressor.cpp
+HEADERS += discord_presence.h idle_compressor.h

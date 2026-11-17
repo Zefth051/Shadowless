@@ -79,7 +79,7 @@ void MediaTools::launch(const QString &program,const QStringList &args,std::func
     m_process->start(program,args);
 }
 void MediaTools::probe(const QString &path,std::function<void(MediaInfo)> done) {
-    launch("ffprobe",{"-v","error","-threads","1","-show_entries","format=duration:stream=index,codec_type,codec_name,width,height,channels:stream_tags=title","-of","json",path},[this,path,done] {
+    launch("ffprobe",{"-v","error","-threads","1","-show_entries","format=duration:stream=index,codec_type,codec_name,width,height,channels:stream_tags=title,handler_name","-of","json",path},[this,path,done] {
         QJsonParseError error; auto document=QJsonDocument::fromJson(m_output,&error);
         if(error.error!=QJsonParseError::NoError) { fail("Invalid media metadata."); return; }
         const auto object=document.object(); MediaInfo info; info.path=path;
@@ -89,21 +89,29 @@ void MediaTools::probe(const QString &path,std::function<void(MediaInfo)> done) 
         for(const auto &v:object["streams"].toArray()) {
             const auto s=v.toObject();
             if(s["codec_type"]=="video" && info.videoSize.isEmpty()) info.videoSize=QSize(s["width"].toInt(),s["height"].toInt());
-            if(s["codec_type"]=="audio") info.audioStreams.append({s["index"].toInt(),s["tags"].toObject()["title"].toString(),s["codec_name"].toString(),s["channels"].toInt()});
+            if(s["codec_type"]=="audio") {
+                const auto tags=s["tags"].toObject();
+                QString title=tags["title"].toString();
+                const auto handler=tags["handler_name"].toString();
+                if(title.isEmpty() && handler!="SoundHandler" && handler!="AudioHandler") title=handler;
+                info.audioStreams.append({s["index"].toInt(),title,s["codec_name"].toString(),s["channels"].toInt()});
+            }
         }
-        if(info.videoSize.isEmpty() || info.audioStreams.size()>32) { fail("Unsupported video or audio stream count."); return; }
+        if(info.videoSize.isEmpty()) { fail("The clip has no supported video stream."); return; }
+        if(info.audioStreams.size()>128) { fail("The clip exceeds the supported limit of 128 audio streams."); return; }
         done(info);
     });
 }
-bool MediaTools::analyze(const QString &path) {
+bool MediaTools::analyze(const QString &path, bool metadataOnly) {
     if(m_busy) return false;
     m_busy=true; m_stopping=false; m_thumbnail=0; m_audio=0; m_thumbnails.clear();
     const auto generation=++m_generation;
-    QTimer::singleShot(0,this,[this,path,generation] {
+    QTimer::singleShot(0,this,[this,path,generation,metadataOnly] {
         if(!m_busy || generation!=m_generation) return;
         if(!QFileInfo(path).isFile()) { fail("The source clip does not exist."); return; }
-        probe(QFileInfo(path).absoluteFilePath(),[this,generation](MediaInfo info) {
-            m_info=info; emit metadataReady(info); if(m_busy && generation==m_generation) nextThumbnail();
+        probe(QFileInfo(path).absoluteFilePath(),[this,generation,metadataOnly](MediaInfo info) {
+            m_info=info; emit metadataReady(info);
+            if(m_busy && generation==m_generation) { if(metadataOnly) finish(); else nextThumbnail(); }
         });
     });
     return true;
@@ -126,7 +134,7 @@ void MediaTools::nextWaveform() {
     if(m_audio==m_info.audioStreams.size()) { emit progress(1); if(m_busy && generation==m_generation) finish(); return; }
     m_peaks.fill(0,512); m_sample=0;
     auto args=ffmpegArgs(); args << "-i" << m_info.path << "-map" << QString("0:a:%1").arg(m_audio)
-        << "-vn" << "-af" << "aformat=channel_layouts=mono,aeval=abs(val(0)),aresample=100" << "-ac" << "1" << "-ar" << "100" << "-f" << "s16le" << "pipe:1";
+        << "-vn" << "-af" << "aformat=channel_layouts=mono,aeval=abs(val(0)),aresample=100:first_pts=0" << "-ac" << "1" << "-ar" << "100" << "-f" << "s16le" << "pipe:1";
     launch("ffmpeg",args,[this,generation] {
         emit waveformReady(m_audio,m_peaks); if(!m_busy || generation!=m_generation) return;
         ++m_audio; emit progress(0.5+0.5*m_audio/qMax(1,m_info.audioStreams.size()));
@@ -153,7 +161,8 @@ bool MediaTools::exportClip(const ExportRequest &request) {
             auto args=ffmpegArgs(); args << "-y" << "-ss" << seconds(r.inMs) << "-i" << r.sourcePath << "-t" << seconds(r.outMs-r.inMs) << "-map" << "0:v:0";
             if(r.mixAudio && r.audioTracks.size()>1) {
                 QString graph;
-                for(int i:r.audioTracks) graph+=QString("[0:a:%1]").arg(i);
+                for(int i:r.audioTracks) graph+=QString("[0:a:%1]aresample=async=1:first_pts=0[a%1];").arg(i);
+                for(int i:r.audioTracks) graph+=QString("[a%1]").arg(i);
                 graph+=QString("amix=inputs=%1:duration=longest:normalize=1[mix]").arg(r.audioTracks.size());
                 args << "-filter_complex" << graph << "-map" << "[mix]";
             } else for(int i:r.audioTracks) args << "-map" << QString("0:a:%1").arg(i);

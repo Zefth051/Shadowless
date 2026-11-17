@@ -53,7 +53,7 @@ static void gsr_av_packet_ram_unref(gsr_av_packet_ram *self) {
 
 static void gsr_replay_buffer_ram_destroy(gsr_replay_buffer *replay_buffer) {
     gsr_replay_buffer_ram *self = (gsr_replay_buffer_ram*)replay_buffer;
-    for(size_t i = 0; i < self->num_packets; ++i) {
+    for(size_t i = 0; i < self->capacity_num_packets; ++i) {
         if(self->packets[i]) {
             gsr_av_packet_ram_unref(self->packets[i]);
             self->packets[i] = NULL;
@@ -92,6 +92,14 @@ static bool gsr_replay_buffer_ram_append(gsr_replay_buffer *replay_buffer, const
     if(self->num_packets > self->capacity_num_packets)
         self->num_packets = self->capacity_num_packets;
 
+    /* Capacity covers the maximum source count; time still bounds actual retention. */
+    while(self->max_duration > 0.0 && self->num_packets > 1) {
+        const size_t oldest = (self->index + self->capacity_num_packets - self->num_packets) % self->capacity_num_packets;
+        if(self->packets[oldest]->timestamp >= timestamp - self->max_duration) break;
+        gsr_av_packet_ram_unref(self->packets[oldest]);
+        self->packets[oldest] = NULL;
+        --self->num_packets;
+    }
     return true;
 }
 
@@ -110,12 +118,7 @@ static void gsr_replay_buffer_ram_clear(gsr_replay_buffer *replay_buffer) {
 static gsr_av_packet_ram* gsr_replay_buffer_ram_get_packet_at_index(gsr_replay_buffer *replay_buffer, size_t index) {
     gsr_replay_buffer_ram *self = (gsr_replay_buffer_ram*)replay_buffer;
     assert(index < self->num_packets);
-    size_t start_index = 0;
-    if(self->num_packets < self->capacity_num_packets)
-        start_index = self->num_packets - self->index;
-    else
-        start_index = self->index;
-
+    const size_t start_index = (self->index + self->capacity_num_packets - self->num_packets) % self->capacity_num_packets;
     const size_t offset = (start_index + index) % self->capacity_num_packets;
     return self->packets[offset];
 }
@@ -140,6 +143,7 @@ static gsr_replay_buffer* gsr_replay_buffer_ram_clone(gsr_replay_buffer *replay_
 
     destination->capacity_num_packets = self->capacity_num_packets;
     destination->index = self->index;
+    destination->max_duration = self->max_duration;
     destination->packets = calloc(destination->capacity_num_packets, sizeof(gsr_av_packet_ram*));
     if(!destination->packets) {
         free(destination);
@@ -148,7 +152,8 @@ static gsr_replay_buffer* gsr_replay_buffer_ram_clone(gsr_replay_buffer *replay_
 
     destination->num_packets = self->num_packets;
     for(size_t i = 0; i < destination->num_packets; ++i) {
-        destination->packets[i] = gsr_av_packet_ram_ref(self->packets[i]);
+        const size_t index = (self->index + self->capacity_num_packets - self->num_packets + i) % self->capacity_num_packets;
+        destination->packets[index] = gsr_av_packet_ram_ref(self->packets[index]);
     }
 
     return (gsr_replay_buffer*)destination;

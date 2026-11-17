@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSaveFile>
 #include <QRegularExpression>
 #include <QUuid>
 #include <csignal>
@@ -66,17 +67,32 @@ QString GsrOptions::validate(const GsrCapabilities &capabilities) const {
     if (container != "mp4" && container != "mkv") return "Choose MP4 or MKV.";
     if (outputDirectory.trimmed().isEmpty()) return "Choose an output directory.";
     static const QRegularExpression deviceId("^[A-Za-z0-9_][A-Za-z0-9_.:-]*$");
-    if ((!audioOutput.isEmpty() && (!audioOutput.endsWith(".monitor") || !deviceId.match(audioOutput).hasMatch()))
+    if ((!dynamicAudioEnabled() && !audioOutput.isEmpty() && (!audioOutput.endsWith(".monitor") || !deviceId.match(audioOutput).hasMatch()))
         || (!audioInput.isEmpty() && (audioInput.endsWith(".monitor") || !deviceId.match(audioInput).hasMatch())))
         return "Choose a valid audio device.";
     if (levels.systemVolume < 0 || levels.systemVolume > 100 || levels.microphoneVolume < 0
-        || levels.microphoneVolume > 100 || levels.microphoneBoost < 0 || levels.microphoneBoost > 20)
+        || levels.microphoneVolume > 100 || levels.microphoneBoost < 0 || levels.microphoneBoost > 20
+        || levels.gameVolume < 0 || levels.gameVolume > 100 || levels.musicVolume < 0 || levels.musicVolume > 100)
         return "Audio levels are out of range.";
     if (audioCodec != "aac" && audioCodec != "opus") return "Choose AAC or Opus audio.";
     if (audioBitrateKbps != 0 && (audioBitrateKbps < 32 || audioBitrateKbps > 320))
         return "Audio bitrate must be automatic or between 32 and 320 kbps.";
     if (microphoneTrack < 1 || microphoneTrack > 6) return "Choose a valid microphone track.";
     if (pcTrack < 0 || pcTrack > 6) return "Choose a valid PC audio track.";
+    if (fourTrackAudio) {
+        if (!applicationAudio || pcTrack != 1 || !microphone || microphoneTrack != 4)
+            return "Four-track audio requires PC on track 1 and the microphone enabled on track 4.";
+        if (!applicationTracks.values().contains(2) || !applicationTracks.values().contains(3))
+            return "Assign at least one game application to Game and one music application to Music.";
+        QStringList selected;
+        for (auto it = applicationTracks.cbegin(); it != applicationTracks.cend(); ++it) {
+            if (it.value() != 2 && it.value() != 3)
+                return "Four-track audio applications must use Game (track 2) or Music (track 3).";
+            const auto name = it.key().trimmed().toCaseFolded();
+            if (selected.contains(name)) return "Assign each application to only one audio role.";
+            selected.append(name);
+        }
+    }
     if (applicationAudio && applicationTracks.isEmpty() && !pcTrack) return "Choose at least one application to record.";
     if (applicationAudio && pcTrack && (applicationTracks.values().contains(pcTrack) || (microphone && microphoneTrack == pcTrack)))
         return "PC audio needs its own track, separate from selected applications and the microphone.";
@@ -94,7 +110,10 @@ QStringList GsrOptions::audioTracks() const {
     };
     const auto mic = microphone ? source(audioInput, "default_input") : QString();
     QStringList tracks;
-    if (applicationAudio) {
+    if (dynamicAudioEnabled()) {
+        tracks.append("name:PC|app-inverse:");
+        if (!mic.isEmpty()) tracks.append("name:Microphone|" + mic);
+    } else if (applicationAudio) {
         QMap<int, QStringList> grouped;
         for (auto it = applicationTracks.cbegin(); it != applicationTracks.cend(); ++it)
             grouped[it.value()].append("app:" + it.key());
@@ -104,11 +123,22 @@ QStringList GsrOptions::audioTracks() const {
             if (excluded.isEmpty()) excluded.append(QString());
             for (const auto &name : excluded) grouped[pcTrack].append("app-inverse:" + name);
         }
-        for (const auto &group : grouped) tracks.append(group.join('|'));
+        if (fourTrackAudio) {
+            const QStringList names{"PC", "Game", "Music", "Microphone"};
+            for (int track = 1; track <= 4; ++track)
+                tracks.append("name:" + names[track - 1] + '|' + grouped.value(track).join('|'));
+        } else {
+            for (const auto &group : grouped) tracks.append(group.join('|'));
+        }
     } else {
         if (systemAudio) tracks.append(source(audioOutput, "default_output"));
         if (!mic.isEmpty()) tracks.append(mic);
-        if (!separateAudioTracks && tracks.size() > 1) tracks = {tracks.join('|')};
+        if (!separateAudioTracks && tracks.size() > 1) {
+            tracks = {"name:PC + Microphone|" + tracks.join('|')};
+        } else {
+            for (int i = 0; i < tracks.size(); ++i)
+                tracks[i].prepend((systemAudio && i == 0) ? "name:PC|" : "name:Microphone|");
+        }
     }
     return tracks;
 }
@@ -135,7 +165,7 @@ QStringList GsrOptions::arguments(const QString &socketPath) const {
     return args;
 }
 
-GsrRequest::GsrRequest(QObject *parent) : QObject(parent) {
+GsrRequest::GsrRequest(QObject *parent) : QObject(parent), m_timeout(this) {
     m_timeout.setSingleShot(true);
     connect(&m_socket, &QLocalSocket::readyRead, this, &GsrRequest::readReply);
     connect(&m_socket, &QLocalSocket::errorOccurred, this, [this] {
@@ -154,6 +184,10 @@ void GsrRequest::send(const QString &socket, int id, const QString &name, const 
     });
     m_timeout.start(timeoutMs);
     m_socket.connectToServer(socket);
+}
+
+void GsrRequest::keepAlive(int timeoutMs) {
+    if (!m_finished && m_timeout.isActive()) m_timeout.start(qMax(1, timeoutMs));
 }
 
 void GsrRequest::readReply() {
@@ -195,6 +229,12 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program)
     m_readyTimer.setInterval(100);
     m_startTimeout.setSingleShot(true);
     m_stopTimeout.setSingleShot(true);
+    m_pauseTimeout.setSingleShot(true);
+    connect(&m_pauseTimeout, &QTimer::timeout, this, [this] {
+        m_pausePending = false; m_pauseKnown = false;
+        emit recordingPauseChanged();
+        emit error("Recording pause state could not be confirmed. Stop and save the recording before starting again.");
+    });
     connect(&m_process, &QProcess::readyReadStandardOutput, this, &GsrCapture::readLog);
     connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError failure) {
         if (failure == QProcess::FailedToStart) {
@@ -214,6 +254,7 @@ GsrCapture::GsrCapture(QObject *parent, const QString &program)
         m_audio->stop();
         const bool expected = m_stopping && code == 0 && status == QProcess::NormalExit;
         m_ready = false; m_stopping = false; m_stopQueued = false; m_replayRecording = false;
+        resetRecordingPause();
         if (!expected) emit error(QString("GPU Screen Recorder stopped (exit %1).\n%2").arg(code).arg(m_logTail.join('\n')));
         emit recordingChanged(false);
         emit stopped();
@@ -265,6 +306,10 @@ void GsrCapture::start(const GsrOptions &options, const GsrCapabilities &capabil
         emit error("Cannot create the capture runtime or output directory."); return;
     }
     m_options = options;
+    m_applicationGames.clear();
+    if (options.dynamicAudioEnabled() && !writeApplicationAudioState()) {
+        emit error("Could not prepare application audio selection."); return;
+    }
     m_preparingAudio = true;
     m_audio->start(options);
 }
@@ -280,10 +325,17 @@ void GsrCapture::startRecorder(const QString &output, const QString &input) {
     QFile::remove(overlaySocketPath());
     QFile::remove(overlaySocketPath() + ".preview");
     auto environment = QProcessEnvironment::systemEnvironment();
+    environment.insert("SHADOWLESS_AUDIO_LEVELS_FILE", m_audio->levelsPath());
+    environment.insert("SHADOWLESS_FOUR_TRACK_AUDIO", options.fourTrackAudio || options.dynamicAudioEnabled() ? "1" : "0");
+    environment.insert("SHADOWLESS_DYNAMIC_AUDIO", options.dynamicAudioEnabled() ? "1" : "0");
+    environment.insert("SHADOWLESS_AUDIO_APPS_FILE", applicationAudioStatePath());
+    environment.insert("SHADOWLESS_MICROPHONE_SOURCE", options.microphone
+        ? (options.audioInput.isEmpty() ? "default_input" : options.audioInput) : QString());
     environment.insert("SHADOWLESS_OVERLAY_SOCKET", overlaySocketPath());
     environment.insert("SHADOWLESS_GSR_KMS_RUNTIME", m_runtime.path());
     m_process.setProcessEnvironment(environment);
     m_ready = false; m_stopping = false; m_stopQueued = false; m_replayRecording = false;
+    resetRecordingPause();
     m_logTail.clear(); m_logBuffer.clear();
     setAuthenticating(false);
     m_readyTimer.start(); m_startTimeout.start(60000);
@@ -304,8 +356,49 @@ void GsrCapture::startReplayRecording() {
 
 void GsrCapture::stopReplayRecording() { request("stop-replay-recording"); }
 
+void GsrCapture::setRecordingPaused(bool paused) {
+    if (!m_options.continuousRecording) { emit error("Pause is available only for recording without Instant Replay."); return; }
+    if (!m_ready || m_stopping || busy() || m_pausePending) { emit error("Capture is not ready to change recording pause state."); return; }
+    if (!m_pauseKnown) { emit error("Recording pause state is unknown. Stop and save the recording first."); return; }
+    if (paused == m_recordingPaused) return;
+    m_pausePending = true;
+    m_pauseTimeout.start(3000);
+    request("set-paused", paused);
+    emit recordingPauseChanged();
+}
+
+void GsrCapture::resetRecordingPause() {
+    m_pauseTimeout.stop();
+    const bool changed = m_recordingPaused || m_pausePending || !m_pauseKnown;
+    m_recordingPaused = false; m_pausePending = false; m_pauseKnown = true;
+    if (changed) emit recordingPauseChanged();
+}
+
 void GsrCapture::setAudioLevels(const AudioLevels &levels) {
     if (active()) m_audio->setLevels(levels);
+}
+
+bool GsrCapture::writeApplicationAudioState() {
+    QJsonObject selections;
+    auto names = m_options.applicationIncluded.keys();
+    names.append(m_options.applicationGame.keys()); names.append(m_applicationGames.keys());
+    names.removeDuplicates();
+    for (const auto &name : names) selections.insert(name, QJsonObject{
+        {"game", m_options.applicationGame.value(name, m_applicationGames.value(name, false))},
+        {"included", m_options.applicationIncluded.value(name, true)}});
+    QSaveFile file(applicationAudioStatePath());
+    const auto bytes = QJsonDocument(selections).toJson(QJsonDocument::Compact);
+    return file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit();
+}
+
+bool GsrCapture::setApplicationAudioState(const QString &name, bool game, bool included) {
+    if (!m_options.dynamicAudioEnabled() || name.isEmpty() || name.size() > 512
+        || name.contains(QChar::Null) || name.contains('\n') || name.contains('\r')) return false;
+    const auto previous = m_options;
+    m_options.applicationGame.insert(name, game); m_options.applicationIncluded.insert(name, included);
+    if (writeApplicationAudioState()) return true;
+    m_options = previous;
+    emit error("Could not update application audio selection."); return false;
 }
 
 void GsrCapture::stop() {
@@ -324,7 +417,7 @@ void GsrCapture::stop() {
     }
     m_readyTimer.stop(); m_startTimeout.stop();
     m_stopping = true;
-    m_stopTimeout.start(15000);
+    m_stopTimeout.start(m_options.dynamicAudioEnabled() ? 30000 : 15000);
     if (m_ready) request("stop");
     else if (m_process.processId() > 0) ::kill(static_cast<pid_t>(m_process.processId()), SIGINT);
 }
@@ -339,6 +432,9 @@ void GsrCapture::request(const QString &name, const QJsonValue &data) {
         m_request = nullptr;
         command->deleteLater();
         if (!success) {
+            if (name == "set-paused" && m_pausePending) {
+                m_pauseTimeout.stop(); m_pausePending = false; m_pauseKnown = false;
+            }
             if (name == "stop-replay-recording" && m_stopQueued) m_replayRecording = false;
             emit error(result);
             if (name == "stop" && active()) ::kill(static_cast<pid_t>(m_process.processId()), SIGINT);
@@ -350,6 +446,7 @@ void GsrCapture::request(const QString &name, const QJsonValue &data) {
                 emit recordingChanged(m_replayRecording);
             }
         }
+        if (name == "set-paused") emit recordingPauseChanged();
         if (m_stopQueued) { m_stopQueued = false; QTimer::singleShot(0, this, &GsrCapture::stop); }
     });
     command->send(m_socketPath, ++m_nextId, name, data);
@@ -378,8 +475,39 @@ void GsrCapture::readLog() {
         const auto line = QString::fromUtf8(m_logBuffer.left(qMin(newline, 4096))).trimmed();
         m_logBuffer.remove(0, newline + 1);
         if (line.isEmpty()) continue;
+        if (!m_options.continuousRecording && (line == "gsr info: Started recording"
+            || line == "gsr info: Stopped recording" || line == "gsr error: Failed to save recording")) {
+            const bool recording = line == "gsr info: Started recording";
+            if (m_replayRecording != recording) {
+                m_replayRecording = recording;
+                emit recordingChanged(recording);
+            }
+        }
+        if (m_options.dynamicAudioEnabled() && line == "gsr info: shadowless-audio-finalizing: progress") {
+            if (m_request) m_request->keepAlive();
+            if (m_stopping) m_stopTimeout.start(30000);
+        }
+        const QString appPrefix = "gsr info: shadowless-audio-app: ";
+        if (m_options.dynamicAudioEnabled() && line.startsWith(appPrefix)) {
+            const auto app = QJsonDocument::fromJson(line.mid(appPrefix.size()).toUtf8()).object();
+            const auto name = app.value("name").toString();
+            if (!name.isEmpty() && name.size() <= 512 && !name.contains(QChar::Null)
+                && !name.contains('\n') && !name.contains('\r') && app.value("game").isBool()) {
+                const bool game = m_options.applicationGame.value(name, app.value("game").toBool());
+                if (!m_applicationGames.contains(name) || m_applicationGames.value(name) != game) {
+                    m_applicationGames.insert(name, game);
+                    emit applicationAudioDiscovered(name, game);
+                }
+            }
+        }
         if (line == "gsr info: shadowless-kms-auth: begin") setAuthenticating(true);
         else if (line == "gsr info: shadowless-kms-auth: end") setAuthenticating(false);
+        // IPC acknowledges queuing; the recorder log confirms that pause was applied.
+        if (m_options.continuousRecording && (line == "gsr info: Paused" || line == "gsr info: Unpaused")) {
+            m_recordingPaused = line == "gsr info: Paused";
+            m_pausePending = false; m_pauseKnown = true; m_pauseTimeout.stop();
+            emit recordingPauseChanged();
+        }
         m_logTail.append(line.left(1000));
         while (m_logTail.size() > 12) m_logTail.removeFirst();
         emit diagnostic(line);

@@ -1,7 +1,10 @@
 #pragma once
 #include <QMap>
+#include <QHash>
+#include <QPixmap>
 #include <QTimer>
 #include <QWidget>
+#include <QPointer>
 class QLabel;
 class QSlider;
 class QPushButton;
@@ -17,12 +20,13 @@ namespace Shadowless {
 class MpvPlayer;
 class MediaTools;
 class ClipTimeline;
+class ClipAudioTracks;
 class ClipPlayer : public QWidget {
     Q_OBJECT
 public:
     explicit ClipPlayer(QWidget *parent = nullptr);
     void open(const QString &path);
-    void setClips(const QStringList &paths);
+    void setClips(const QStringList &paths, const QString &directory = {});
     void setThumbnail(const QString &path, const QPixmap &image);
     bool fullscreen() const { return m_fullscreen; }
     bool editing() const { return m_editingEnabled; }
@@ -40,28 +44,33 @@ protected:
 private:
     MpvPlayer *m_player;
     MediaTools *m_tools;
-    QLabel *m_title, *m_error, *m_time, *m_jobStatus;
+    QPointer<MediaTools> m_metadataTools;
+    QLabel *m_title, *m_error, *m_time, *m_jobStatus, *m_recentEmpty;
     QSlider *m_seek, *m_volume;
     QPushButton *m_play, *m_next, *m_previous, *m_fullscreenButton, *m_edit, *m_export, *m_cancel;
-    QComboBox *m_speed;
-    QCheckBox *m_mute, *m_mix;
+    QComboBox *m_speed, *m_gameFilter, *m_modeFilter;
+    QPushButton *m_mute; QCheckBox *m_mix;
     QDoubleSpinBox *m_in, *m_out;
     QListWidget *m_recent;
     QStackedWidget *m_pages;
-    QWidget *m_header, *m_controls, *m_editing, *m_audio, *m_recentPanel;
-    QVBoxLayout *m_trackLayout;
-    QGridLayout *m_videoLayout;
+    QWidget *m_header, *m_controls, *m_editing, *m_recentPanel;
+    ClipAudioTracks *m_audio;
+    QWidget *m_video;
+    void layoutVideo();
     QScrollArea *m_audioScroll;
     ClipTimeline *m_timeline;
-    QMap<int, QCheckBox *> m_tracks;
-    QMap<int, QWidget *> m_waveforms;
     QStringList m_clips;
+    QStringList m_audioTitles;
+    QStringList m_visibleClips;
+    QString m_clipDirectory;
+    QHash<QString, QPixmap> m_thumbnails;
     QString m_highlightedSource;
     QTimer m_idle;
     bool m_fullscreen = false, m_analyzePending = false, m_exporting = false;
     bool m_editingEnabled = false, m_metadataReady = false;
     bool m_resumeAfterScrub = false;
     void updateState();
+    void filterClips();
     void updateTracks();
     void navigate(int delta);
     void showControls();

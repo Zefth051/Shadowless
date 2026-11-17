@@ -1,6 +1,8 @@
 #include "library.h"
+#include "clip_label.h"
 #include <QDir>
 #include <QDirIterator>
+#include <QSet>
 #include <QComboBox>
 #include <QSignalBlocker>
 #include <algorithm>
@@ -119,7 +121,12 @@ Library::Library(QWidget *parent) : QWidget(parent), m_ffmpeg(QStandardPaths::fi
     connect(&m_scan, &QFutureWatcher<Scan>::finished, this, [this] {
         m_scanning = false;
         const auto scan = m_scan.result();
-        if (scan.directory == m_directory) { m_lastScan = scan; render(scan); }
+        if (scan.directory == m_directory) {
+            m_lastScan = scan;
+            QStringList paths; for(const auto &clip:scan.clips) paths.append(clip.path);
+            emit allClipsChanged(paths,scan.directory);
+            render(scan);
+        }
         startScan();
     });
     m_timeout.setSingleShot(true);
@@ -159,6 +166,7 @@ void Library::refresh(const QString &directory) {
     if (m_directory != directory) {
         m_pendingDelete.clear(); m_deleteConfirmation->hide(); m_deleteError->hide();
         m_directory = directory;
+        emit allClipsChanged({},directory);
         Scan loading;
         loading.directory = directory;
         loading.emptyText = "Loading clips…";
@@ -182,7 +190,7 @@ void Library::startScan() {
         }
 
         const QDir folder(directory);
-        QHash<QString, QList<Clip>> collections;
+        QSet<QString> collections;
         const auto newer = [](const Clip &a, const Clip &b) {
             return a.modified != b.modified ? a.modified > b.modified : a.path < b.path;
         };
@@ -192,17 +200,12 @@ void Library::startScan() {
             const auto file = files.fileInfo();
             if (file.size() <= 0) continue;
             const auto collection = folder.relativeFilePath(file.absolutePath());
-            auto &recent = collections[collection];
+            collections.insert(collection);
             const Clip clip{file.absoluteFilePath(), file.lastModified(), file.size(), collection};
-            const auto position = std::lower_bound(recent.begin(), recent.end(), clip, newer);
-            if (position != recent.end() || recent.size() < 20) {
-                recent.insert(position, clip);
-                if (recent.size() > 20) recent.removeLast();
-            }
+            result.clips.append(clip);
         }
-        for (const auto &recent : collections) result.clips.append(recent);
         std::sort(result.clips.begin(), result.clips.end(), newer);
-        result.collections = collections.keys(); result.collections.sort(Qt::CaseInsensitive);
+        result.collections = collections.values(); result.collections.sort(Qt::CaseInsensitive);
         result.emptyText = "Saved replays and recordings appear here.";
         if (folder.exists() && !folder.isReadable()) result.emptyText = "The clips folder cannot be read.";
 
@@ -277,15 +280,14 @@ void Library::render(const Scan &scan) {
         name->setObjectName("clipName");
         name->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
         name->setTextFormat(Qt::PlainText);
-        name->setText(file.completeBaseName());
-        name->setAccessibleName(file.completeBaseName());
+        name->setText(clipWhen(file));
+        name->setAccessibleName(file.fileName());
         name->setToolTip(file.fileName());
         labels->addWidget(name);
-        auto *meta = new QLabel(QLocale().toString(clip.modified, QLocale::ShortFormat) +
-                                " · " + QLocale().formattedDataSize(clip.size, 1));
+        auto *meta = new QLabel(clipTitle(file) + " · " + QLocale().formattedDataSize(clip.size, 1)); // short enough to fit; the full date is in the title and tooltip
         meta->setProperty("muted", true);
         meta->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-        meta->setToolTip(meta->text());
+        meta->setToolTip(file.fileName() + "\n" + QLocale().toString(clip.modified, QLocale::LongFormat));
         labels->addWidget(meta);
         line->addLayout(labels, 1);
 

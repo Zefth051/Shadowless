@@ -24,6 +24,7 @@ public:
     void setMuted(bool muted);
     void setSpeed(double speed);
     void setAudioTracks(const QVector<int> &ids);
+    double aspect() const { return m_aspect; }
     QString source() const { return m_source; }
     qint64 duration() const { return m_duration; }
     qint64 position() const { return m_position; }
@@ -34,6 +35,7 @@ public:
 signals:
     void stateChanged();
     void tracksChanged();
+    void aspectChanged();
     void frameRendered();
     void error(const QString &message);
     void doubleClicked();
@@ -48,6 +50,7 @@ private:
     QString m_source;
     QString m_hardwareDecoder;
     QImage m_frame;
+    double m_aspect = 16. / 9.;
     QVector<PlaybackTrack> m_tracks;
     QVector<int> m_selectedTracks;
     qint64 m_duration = 0, m_position = 0;

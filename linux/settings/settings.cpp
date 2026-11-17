@@ -42,6 +42,12 @@ GsrOptions Settings::capture(const GsrCapabilities &caps) const {
     o.microphoneTrack = qBound(1, s.value("audio/microphoneTrack", 1).toInt(), 6);
     o.pcTrack = qBound(0, s.value("audio/pcTrack", 0).toInt(), 6);
     o.applicationAudio = s.value("audio/applicationMode", false).toBool();
+    o.fourTrackAudio = s.value("audio/fourTrackMode", false).toBool();
+    o.dynamicApplicationAudio = s.value("audio/dynamicApplicationMode", true).toBool();
+    const auto included = s.value("audio/applicationIncluded").toMap();
+    for (auto it = included.cbegin(); it != included.cend(); ++it) o.applicationIncluded.insert(it.key(), it.value().toBool());
+    const auto games = s.value("audio/applicationGames").toMap();
+    for (auto it = games.cbegin(); it != games.cend(); ++it) o.applicationGame.insert(it.key(), it.value().toBool());
     const auto routes = s.value("audio/applicationTracks").toMap();
     for (auto it = routes.cbegin(); it != routes.cend(); ++it) o.applicationTracks.insert(it.key(), it.value().toInt());
     o.levels.systemVolume = qBound(0, s.value("audio/systemVolume", 100).toInt(), 100);
@@ -49,6 +55,10 @@ GsrOptions Settings::capture(const GsrCapabilities &caps) const {
     o.levels.microphoneBoost = qBound(0, s.value("audio/microphoneBoost", 0).toInt(), 20);
     o.levels.systemMuted = s.value("audio/systemMuted", false).toBool();
     o.levels.microphoneMuted = s.value("audio/microphoneMuted", false).toBool();
+    o.levels.gameVolume = qBound(0, s.value("audio/gameVolume", 100).toInt(), 100);
+    o.levels.musicVolume = qBound(0, s.value("audio/musicVolume", 100).toInt(), 100);
+    o.levels.gameMuted = s.value("audio/gameMuted", false).toBool();
+    o.levels.musicMuted = s.value("audio/musicMuted", false).toBool();
     o.separateAudioTracks = s.value("separateAudioTracks", false).toBool();
     o.continuousRecording = s.value("continuousRecording", false).toBool();
     o.organizeByGame = s.value("organizeByGame", false).toBool();
@@ -71,6 +81,10 @@ OverlayScene Settings::scene() const {
 bool Settings::indicator() const { return m_store->value("overlay/indicator", false).toBool(); }
 bool Settings::launchAtLogin() const { return m_store->value("startup/launchAtLogin", false).toBool(); }
 bool Settings::startReplayOnLaunch() const { return m_store->value("startup/startReplayOnLaunch", false).toBool(); }
+bool Settings::discordPresence() const { return m_store->value("discord/presence", true).toBool(); }
+void Settings::setDiscordPresence(bool enabled) { m_store->setValue("discord/presence", enabled); m_store->sync(); }
+bool Settings::idleCompression() const { return m_store->value("compression/idle", false).toBool(); }
+void Settings::setIdleCompression(bool enabled) { m_store->setValue("compression/idle", enabled); m_store->sync(); }
 bool Settings::saveStartup(bool launch, bool replay, QString *error) {
     const auto previousLaunch = m_store->value("startup/launchAtLogin", false);
     const auto previousReplay = m_store->value("startup/startReplayOnLaunch", false);
@@ -105,6 +119,12 @@ bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicat
     s.setValue("audio/microphoneTrack", o.microphoneTrack);
     s.setValue("audio/pcTrack", o.pcTrack);
     s.setValue("audio/applicationMode", o.applicationAudio);
+    s.setValue("audio/fourTrackMode", o.fourTrackAudio);
+    s.setValue("audio/dynamicApplicationMode", o.dynamicApplicationAudio);
+    QVariantMap included, games;
+    for (auto it = o.applicationIncluded.cbegin(); it != o.applicationIncluded.cend(); ++it) included.insert(it.key(), it.value());
+    for (auto it = o.applicationGame.cbegin(); it != o.applicationGame.cend(); ++it) games.insert(it.key(), it.value());
+    s.setValue("audio/applicationIncluded", included); s.setValue("audio/applicationGames", games);
     QVariantMap routes;
     for (auto it = o.applicationTracks.cbegin(); it != o.applicationTracks.cend(); ++it) routes.insert(it.key(), it.value());
     s.setValue("audio/applicationTracks", routes);
@@ -113,6 +133,10 @@ bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicat
     s.setValue("audio/microphoneBoost", o.levels.microphoneBoost);
     s.setValue("audio/systemMuted", o.levels.systemMuted);
     s.setValue("audio/microphoneMuted", o.levels.microphoneMuted);
+    s.setValue("audio/gameVolume", o.levels.gameVolume);
+    s.setValue("audio/musicVolume", o.levels.musicVolume);
+    s.setValue("audio/gameMuted", o.levels.gameMuted);
+    s.setValue("audio/musicMuted", o.levels.musicMuted);
     s.setValue("separateAudioTracks", o.separateAudioTracks); s.setValue("continuousRecording", o.continuousRecording);
     s.setValue("outputDirectory", o.outputDirectory); s.setValue("overlay/indicator", indicator);
     s.setValue("organizeByGame", o.organizeByGame);

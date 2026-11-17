@@ -1,6 +1,7 @@
 #include "../../include/recorder/replay_save.h"
 #include "../../include/ffmpeg_utils.h"
 #include "../../include/log.h"
+#include "../../include/recorder/dynamic_audio.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -86,20 +87,26 @@ static void* replay_save_thread(void *userdata) {
             stream = recording_start_audio->stream;
             codec_context = audio_track->codec_context;
 
-            const gsr_audio_pts_offset *audio_pts_offset = &self->audio_pts_offsets[av_packet.stream_index - 1];
-            assert(audio_pts_offset->stream_index == av_packet.stream_index);
+            const gsr_audio_pts_offset *audio_pts_offset = NULL;
+            for(size_t i = 0; i < self->num_audio_pts_offsets; ++i) {
+                if(self->audio_pts_offsets[i].stream_index == av_packet.stream_index)
+                    audio_pts_offset = &self->audio_pts_offsets[i];
+            }
+            if(!audio_pts_offset) { free(replay_packet_data); success = false; break; }
             av_packet.pts -= audio_pts_offset->pts_offset;
             av_packet.dts -= audio_pts_offset->pts_offset;
         }
 
-        //av_packet.stream_index = stream->index;
+        av_packet.stream_index = stream->index;
         av_packet_rescale_ts(&av_packet, codec_context->time_base, stream->time_base);
 
         const int ret = av_write_frame(self->recording_output.av_format_context, &av_packet);
         if(ret >= 0)
             gsr_av_format_context_mark_packet_written(self->recording_output.av_format_context);
-        else
+        else {
+            success = false;
             gsr_log(GSR_LOG_LEVEL_ERROR, "Failed to write frame index %d to muxer, reason: %s (%d)", av_packet.stream_index, gsr_av_error_to_string(ret), ret);
+        }
 
         free(replay_packet_data);
 
@@ -108,7 +115,7 @@ static void* replay_save_thread(void *userdata) {
             break;
     }
 
-    gsr_recording_output_stop(&self->recording_output);
+    success = gsr_recording_output_stop(&self->recording_output) && success;
 
     self->success = success;
     gsr_replay_save_cleanup(self);
@@ -157,9 +164,9 @@ bool gsr_replay_save_start(gsr_replay_save *self, AVCodecContext *video_codec_co
     }
 
     for(size_t i = 0; i < audio_capture->num_tracks; ++i) {
-        const gsr_audio_track *audio_track = &audio_capture->tracks[i];
-        const gsr_replay_buffer_iterator audio_start_iterator = gsr_replay_buffer_find_keyframe(self->cloned_replay_buffer, self->video_start_iterator, audio_track->stream_index, false);
-        const int64_t audio_pts_offset = audio_start_iterator.packet_index == (size_t)-1 ? 0 : gsr_replay_buffer_iterator_get_packet(self->cloned_replay_buffer, audio_start_iterator)->pts;
+        const gsr_audio_track *audio_track = audio_capture->tracks[i];
+        const int64_t audio_pts_offset = gsr_dynamic_audio_origin(self->video_pts_offset,
+            video_codec_context->time_base, audio_track->codec_context->time_base);
         self->audio_pts_offsets[i].pts_offset = audio_pts_offset;
         self->audio_pts_offsets[i].stream_index = audio_track->stream_index;
         ++self->num_audio_pts_offsets;

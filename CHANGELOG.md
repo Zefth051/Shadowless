@@ -4,6 +4,35 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-11-16
+
+### Added
+
+- **Linux four-track recording:** Optional PC / Game / Music / Microphone mode with independent volume and mute per source, track names stored in MP4 metadata and selected-track exports. A "Set up four tracks" shortcut appears on the dashboard.
+- **Dynamic application audio:** Applications that start playing after capture begins are discovered and buffered without restarting video or discarding replay history. Per-application tracks appear in the editor under More tracks.
+- **Pause/Resume** for standalone continuous recording.
+- **Discord Rich Presence** (basic): capture state and the detected game name.
+- **Idle clip compression (opt-in, off by default):** While no game is open, older H.264 clips can be re-encoded to HEVC; the original is replaced only if validation and an SSIM check pass.
+- **Editor:** Filter the sidebar by game folder and recording mode; waveforms for every audio row; track selectors stay on the left.
+
+### Improved
+
+- **Linux dashboard:** Audio sources are stacked full-width cards in the Windows style (mute icon, name, divider and a "100%" button that opens a volume popup), with new Game and Music icons and larger Instant Clip / Recording tiles.
+- **Linux overlay:** Frameless home page with a floating header, translucent cards and a darker dim.
+
+### Fixed
+
+- Remove a graphics opacity effect over the scrolled capture settings, the probable cause of the reported KDE Plasma crash when scrolling Settings. Not confirmed on a real Plasma session.
+- Keep waveform backgrounds dark and readable with custom accents.
+
+### Upgrade notes
+
+- Quit and reopen after updating. Existing settings and clips are preserved; four-track mode and compression are opt-in.
+
+### Known limitations
+
+- Live four-track capture, dynamic application discovery, pause/finalization and Discord presence are verified only with fixtures. Live Plasma validation is still pending.
+
 ## [0.3.5] - 2026-11-16
 
 ### Improved

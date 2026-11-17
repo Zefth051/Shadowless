@@ -28,6 +28,7 @@ typedef struct {
     bool has_received_keyframe;
     char *first_frame_ts_filepath;
     bool first_frame_ts_written;
+    bool write_failed;
 } gsr_encoder_recording_destination;
 
 typedef struct {
@@ -56,6 +57,7 @@ void gsr_encoder_receive_packets(gsr_encoder *self, AVCodecContext *codec_contex
 
 /* Returns the id to the recording destination, or -1 on error */
 size_t gsr_encoder_add_recording_destination(gsr_encoder *self, AVCodecContext *codec_context, AVFormatContext *format_context, AVStream *stream, int64_t first_pts);
+/* Always removes a found destination; returns false for missing IDs or any packet write failure. */
 bool gsr_encoder_remove_recording_destination(gsr_encoder *self, size_t id);
 bool gsr_encoder_set_recording_destination_first_frame_ts_filepath(gsr_encoder *self, size_t id, const char *filepath);
 

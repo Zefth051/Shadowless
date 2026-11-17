@@ -18,6 +18,9 @@
 #include "../../include/utils.h"
 #include "../../include/ffmpeg_utils.h"
 #include "../../include/log.h"
+#include "../../include/json.h"
+#include "../../include/recorder/dynamic_audio.h"
+#include "../../include/recorder/audio_spool.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -45,6 +48,17 @@
 #define GSR_REPLAY_RECORDING_REQUEST_START 2
 #define GSR_REPLAY_RECORDING_REQUEST_STOP 3
 
+typedef struct {
+    pthread_t thread;
+    atomic_int finished;
+    bool success;
+    char filepath[PATH_MAX], directory[64];
+    char paths[GSR_MAX_DYNAMIC_AUDIO_TRACKS][PATH_MAX];
+    char names[GSR_MAX_DYNAMIC_AUDIO_TRACKS][GSR_AUDIO_TRACK_NAME_MAX_SIZE];
+    size_t count;
+    int64_t origin_us;
+} gsr_audio_finalizer;
+
 struct gsr_recorder {
     gsr_recorder_settings settings;
     gsr_recorder_callbacks callbacks;
@@ -60,6 +74,17 @@ struct gsr_recorder {
     double target_fps;
     bool uses_amix;
     bool audio_only;
+    bool dynamic_audio;
+    bool audio_started;
+    double next_audio_discovery;
+    struct recorder_audio_discovery *audio_discovery;
+    char spool_directory[64];
+    gsr_audio_finalizer *audio_finalizer;
+    struct { char path[PATH_MAX]; AVFormatContext *format; size_t destination; gsr_audio_track *track; } spools[GSR_MAX_DYNAMIC_AUDIO_TRACKS];
+    size_t num_spools;
+    bool spooling;
+    bool spool_failed;
+    int64_t recording_origin_us;
     bool hdr;
     bool low_power;
     vec2i video_size;
@@ -324,7 +349,7 @@ static int recorder_setup_audio_track(gsr_recorder *self, const gsr_merged_audio
         return GSR_ERROR_GENERIC;
 
     AVStream *audio_stream = NULL;
-    if(!self->settings.is_replaying) {
+    if(!self->settings.is_replaying && !(self->dynamic_audio && gsr_audio_inputs_has_app_audio(merged_audio_inputs))) {
         audio_stream = create_stream(self->av_format_context, audio_track->codec_context);
         if(!audio_stream)
             return GSR_ERROR_GENERIC;
@@ -334,8 +359,10 @@ static int recorder_setup_audio_track(gsr_recorder *self, const gsr_merged_audio
     }
 
     snprintf(audio_track->name, sizeof(audio_track->name), "%s", merged_audio_inputs->track_name);
-    if(audio_stream && audio_track->name[0] != '\0' && !self->settings.exclude_metadata)
+    if(audio_stream && audio_track->name[0] != '\0' && !self->settings.exclude_metadata) {
         av_dict_set(&audio_stream->metadata, "title", audio_track->name, 0);
+        av_dict_set(&audio_stream->metadata, "handler_name", audio_track->name, 0);
+    }
 
     if(!open_audio(audio_track->codec_context, self->settings.ffmpeg_audio_opts))
         return GSR_ERROR_GENERIC;
@@ -349,14 +376,15 @@ static int recorder_setup_audio_track(gsr_recorder *self, const gsr_merged_audio
     const int num_channels = audio_track->codec_context->ch_layout.nb_channels;
     #endif
 
+    const size_t num_capture_sources = gsr_audio_inputs_num_capture_sources(merged_audio_inputs);
     AVFilterContext *src_filter_ctx[GSR_MAX_AUDIO_SOURCES_PER_TRACK];
     if(use_amix) {
-        if(merged_audio_inputs->num_items > GSR_MAX_AUDIO_SOURCES_PER_TRACK) {
+        if(num_capture_sources > GSR_MAX_AUDIO_SOURCES_PER_TRACK) {
             gsr_log(GSR_LOG_LEVEL_ERROR, "too many audio sources for one audio track, the maximum is %d", GSR_MAX_AUDIO_SOURCES_PER_TRACK);
             return GSR_ERROR_GENERIC;
         }
 
-        if(gsr_audio_init_filter_graph(audio_track->codec_context, &audio_track->graph, &audio_track->sink, src_filter_ctx, merged_audio_inputs->num_items) < 0) {
+        if(gsr_audio_init_filter_graph(audio_track->codec_context, &audio_track->graph, &audio_track->sink, src_filter_ctx, num_capture_sources) < 0) {
             gsr_log(GSR_LOG_LEVEL_ERROR, "failed to create audio filter");
             return GSR_ERROR_GENERIC;
         }
@@ -370,9 +398,8 @@ static int recorder_setup_audio_track(gsr_recorder *self, const gsr_merged_audio
     audio_track->pts = -audio_track->codec_context->frame_size * num_audio_frames_shift;
 
     if(gsr_audio_inputs_has_app_audio(merged_audio_inputs)) {
-        assert(!use_amix);
 #ifdef GSR_APP_AUDIO
-        return gsr_audio_track_init_application_input(audio_track, merged_audio_inputs, audio_track->codec_context, num_channels, num_audio_frames_shift, self->pipewire_audio);
+        return gsr_audio_track_init_application_input(audio_track, merged_audio_inputs, audio_track->codec_context, num_channels, num_audio_frames_shift, self->pipewire_audio, src_filter_ctx, use_amix);
 #else
         return GSR_ERROR_UNSUPPORTED;
 #endif
@@ -381,6 +408,288 @@ static int recorder_setup_audio_track(gsr_recorder *self, const gsr_merged_audio
     return gsr_audio_track_init_device_inputs(audio_track, merged_audio_inputs, audio_track->codec_context, num_channels, num_audio_frames_shift, src_filter_ctx, use_amix);
 }
 
+static bool recorder_start_audio_spool(gsr_recorder *self, gsr_audio_track *track) {
+    if(!track->dynamic_source || !self->spooling) return true;
+    if(self->num_spools >= GSR_MAX_DYNAMIC_AUDIO_TRACKS) return false;
+    const size_t n = self->num_spools;
+    snprintf(self->spools[n].path, sizeof(self->spools[n].path), "%s/%zu.mkv", self->spool_directory, n);
+    AVFormatContext *format = NULL;
+    avformat_alloc_output_context2(&format, NULL, "matroska", self->spools[n].path);
+    if(!format) return false;
+    format->avoid_negative_ts = AVFMT_AVOID_NEG_TS_DISABLED;
+    AVStream *stream = create_stream(format, track->codec_context);
+    if(!stream || avcodec_parameters_from_context(stream->codecpar, track->codec_context) < 0
+            || avio_open(&format->pb, self->spools[n].path, AVIO_FLAG_WRITE) < 0
+            || avformat_write_header(format, NULL) < 0) {
+        if(format->pb) avio_closep(&format->pb);
+        avformat_free_context(format);
+        return false;
+    }
+    size_t destination = gsr_encoder_add_recording_destination(&self->encoder, track->codec_context,
+        format, stream, GSR_RECORDING_FIRST_PTS_CAPTURE_START);
+    if(destination == (size_t)-1) { avio_closep(&format->pb); avformat_free_context(format); return false; }
+    self->spools[n].format = format;
+    self->spools[n].destination = destination;
+    self->spools[n].track = track;
+    ++self->num_spools;
+    return true;
+}
+
+static bool recorder_begin_audio_spools(gsr_recorder *self) {
+    if(!self->dynamic_audio) return true;
+    snprintf(self->spool_directory, sizeof(self->spool_directory), "/tmp/shadowless-audio-XXXXXX");
+    if(!mkdtemp(self->spool_directory)) return false;
+    self->spooling = true;
+    self->spool_failed = false;
+    self->num_spools = 0;
+    for(size_t i = 0; i < self->audio_capture.num_tracks; ++i)
+        if(!recorder_start_audio_spool(self, self->audio_capture.tracks[i])) { self->spool_failed = true; return false; }
+    return true;
+}
+
+static void* recorder_finalize_audio_thread(void *userdata) {
+    gsr_audio_finalizer *job = userdata;
+    const char *paths[GSR_MAX_DYNAMIC_AUDIO_TRACKS], *names[GSR_MAX_DYNAMIC_AUDIO_TRACKS];
+    for(size_t i = 0; i < job->count; ++i) { paths[i] = job->paths[i]; names[i] = job->names[i]; }
+    job->success = gsr_audio_spools_finalize(job->filepath, paths, names, job->count, job->origin_us);
+    if(job->success) {
+        for(size_t i = 0; i < job->count; ++i) unlink(paths[i]);
+        rmdir(job->directory);
+    } else {
+        gsr_log(GSR_LOG_LEVEL_ERROR, "dynamic audio finalization failed; retained recording '%s' and stems '%s'", job->filepath, job->directory);
+    }
+    atomic_store(&job->finished, 1);
+    return NULL;
+}
+
+static bool recorder_poll_audio_finalizer(gsr_recorder *self, bool wait, bool notify) {
+    gsr_audio_finalizer *job = self->audio_finalizer;
+    if(!job || (!wait && !atomic_load(&job->finished))) return true;
+    pthread_join(job->thread, NULL);
+    const bool success = job->success;
+    if(notify && self->callbacks.recording_stopped) {
+        if(success) gsr_log(GSR_LOG_LEVEL_INFO, "Stopped recording");
+        self->callbacks.recording_stopped(success ? job->filepath : NULL, self->callbacks.userdata);
+    }
+    free(job);
+    self->audio_finalizer = NULL;
+    return success;
+}
+
+static bool recorder_finish_audio_spools(gsr_recorder *self, const char *filepath) {
+    if(!self->dynamic_audio || !self->spooling) return true;
+    bool success = !self->spool_failed;
+    gsr_audio_finalizer *job = calloc(1, sizeof(*job));
+    if(!job) success = false;
+    for(size_t i = 0; i < self->num_spools; ++i) {
+        if(!gsr_encoder_remove_recording_destination(&self->encoder, self->spools[i].destination)) {
+            self->spool_failed = true;
+            success = false;
+        }
+        if(av_write_trailer(self->spools[i].format) < 0) success = false;
+        if(avio_closep(&self->spools[i].format->pb) < 0) success = false;
+        avformat_free_context(self->spools[i].format);
+        self->spools[i].format = NULL;
+        if(job) {
+            snprintf(job->paths[i], sizeof(job->paths[i]), "%s", self->spools[i].path);
+            snprintf(job->names[i], sizeof(job->names[i]), "%s", self->spools[i].track->name);
+        }
+    }
+    self->spooling = false;
+    if(job) {
+        snprintf(job->filepath, sizeof(job->filepath), "%s", filepath);
+        snprintf(job->directory, sizeof(job->directory), "%s", self->spool_directory);
+        job->count = self->num_spools;
+        job->origin_us = self->recording_origin_us;
+        atomic_init(&job->finished, 0);
+        if(success && pthread_create(&job->thread, NULL, recorder_finalize_audio_thread, job) != 0) success = false;
+    }
+    if(success) self->audio_finalizer = job;
+    else {
+        free(job);
+        gsr_log(GSR_LOG_LEVEL_ERROR, "dynamic audio finalization failed; retained recording '%s' and stems '%s'", filepath, self->spool_directory);
+    }
+    self->num_spools = 0;
+    return success;
+}
+
+#ifdef GSR_APP_AUDIO
+static void recorder_update_app_choice(gsr_audio_track *track) {
+    bool game = false, included = true;
+    const char *initial_game = getenv("SHADOWLESS_GAME_AUDIO_APP");
+    if(initial_game && strcasecmp(initial_game, track->application_name) == 0) game = true;
+    const char *path = getenv("SHADOWLESS_AUDIO_APPS_FILE");
+    FILE *file = path ? fopen(path, "rb") : NULL;
+    if(file) {
+        char data[65537];
+        const size_t len = fread(data, 1, sizeof(data)-1, file);
+        const bool complete = !ferror(file) && feof(file);
+        fclose(file);
+        if(complete) {
+            data[len] = '\0';
+            sj_Reader reader = sj_reader(data, len);
+            sj_Value root = sj_read(&reader), key, value;
+            char escaped[GSR_AUDIO_INPUT_NAME_MAX_SIZE * 6 + 1];
+            gsr_json_escape_string(escaped, sizeof(escaped), track->application_name);
+            while(root.type == SJ_OBJECT && sj_iter_object(&reader, root, &key, &value)) {
+                if(!gsr_json_string_equals(&key, escaped) || value.type != SJ_OBJECT) continue;
+                sj_Value property, setting;
+                while(sj_iter_object(&reader, value, &property, &setting)) {
+                    if(setting.type != SJ_BOOL) continue;
+                    const bool enabled = setting.end-setting.start == 4 && memcmp(setting.start, "true", 4) == 0;
+                    if(gsr_json_string_equals(&property, "game")) game = enabled;
+                    if(gsr_json_string_equals(&property, "included")) included = enabled;
+                }
+                break;
+            }
+        }
+    }
+    atomic_store(&track->game, game);
+    track->included = included;
+    if(track->application_name[0])
+        snprintf(track->name, sizeof(track->name), "%s%s: %s", game ? "Game" : "App", included ? "" : " (off)", track->application_name);
+}
+
+typedef struct { char names[GSR_MAX_DYNAMIC_AUDIO_APPS][GSR_AUDIO_INPUT_NAME_MAX_SIZE]; size_t count; bool overflow; } recorder_app_snapshot;
+static bool recorder_copy_app(const char *name, void *userdata) {
+    recorder_app_snapshot *snapshot = userdata;
+    if(snapshot->count >= GSR_MAX_DYNAMIC_AUDIO_APPS || strlen(name) >= GSR_AUDIO_INPUT_NAME_MAX_SIZE) { snapshot->overflow = true; return false; }
+    snprintf(snapshot->names[snapshot->count++], GSR_AUDIO_INPUT_NAME_MAX_SIZE, "%s", name);
+    return true;
+}
+
+/* One unpublished track at a time. The worker never touches live tracks, the
+   encoder, spools or filter_mutex, including while waiting on Pulse/PipeWire. */
+typedef struct recorder_audio_discovery {
+    pthread_t thread;
+    atomic_bool finished;
+    gsr_recorder *recorder;
+    recorder_app_snapshot known;
+    size_t num_tracks;
+    gsr_audio_track track;
+    bool prepared;
+    int result;
+} recorder_audio_discovery;
+
+static int recorder_prepare_app(gsr_recorder *self, const char *name, int stream_index, gsr_audio_track *track) {
+    gsr_audio_input input = {.type = GSR_AUDIO_INPUT_TYPE_APPLICATION};
+    snprintf(input.name, sizeof(input.name), "%s", name);
+    gsr_merged_audio_inputs merged = {.items = &input, .num_items = 1};
+    snprintf(merged.track_name, sizeof(merged.track_name), "App: %s", input.name);
+    const int result = recorder_setup_audio_track(self, &merged, stream_index, track);
+    if(result != GSR_ERROR_OK) return result;
+    track->dynamic_source = true;
+    snprintf(track->application_name, sizeof(track->application_name), "%s", input.name);
+    atomic_init(&track->game, false);
+    recorder_update_app_choice(track);
+    return GSR_ERROR_OK;
+}
+
+static int recorder_register_app(gsr_recorder *self, gsr_audio_track *track) {
+    if(self->audio_started) {
+        const double elapsed = gsr_recording_clock_get_time(self->recording_clock) - self->record_start_time;
+        track->initial_frames = (int64_t)(fmax(0.0, elapsed) * track->codec_context->sample_rate / track->codec_context->frame_size);
+        const int64_t shift = track->initial_frames * track->codec_context->frame_size;
+        track->pts += shift;
+        for(size_t j = 0; j < track->num_audio_devices; ++j) track->audio_devices[j].frame->pts += shift;
+    }
+    /* No PipeWire calls under this lock. Replay snapshots run on this same
+       capture thread and therefore only observe fully registered tracks. */
+    gsr_audio_capture_lock_filter(&self->audio_capture);
+    const bool added = gsr_audio_capture_add_track(&self->audio_capture, track);
+    gsr_audio_track *stored = added ? self->audio_capture.tracks[self->audio_capture.num_tracks-1] : NULL;
+    gsr_audio_capture_unlock_filter(&self->audio_capture);
+    if(!stored) return GSR_ERROR_GENERIC;
+    memset(track, 0, sizeof(*track)); /* ownership transferred even if startup fails */
+    if(!recorder_start_audio_spool(self, stored)) { self->spool_failed = true; return GSR_ERROR_GENERIC; }
+    if(self->audio_started && gsr_audio_capture_start_track(&self->audio_capture, stored) != GSR_ERROR_OK) return GSR_ERROR_GENERIC;
+    char escaped[GSR_AUDIO_INPUT_NAME_MAX_SIZE * 6 + 1];
+    gsr_json_escape_string(escaped, sizeof(escaped), stored->application_name);
+    gsr_log(GSR_LOG_LEVEL_INFO, "shadowless-audio-app: {\"name\":\"%s\",\"game\":%s}", escaped, atomic_load(&stored->game) ? "true" : "false");
+    return GSR_ERROR_OK;
+}
+
+static int recorder_find_app(gsr_recorder *self, const recorder_app_snapshot *known, size_t num_tracks, gsr_audio_track *track, bool *prepared) {
+    recorder_app_snapshot snapshot = {0};
+    gsr_pipewire_audio_for_each_app(self->pipewire_audio, recorder_copy_app, &snapshot);
+    if(snapshot.overflow) { gsr_log(GSR_LOG_LEVEL_ERROR, "dynamic application audio capacity exceeded"); return GSR_ERROR_GENERIC; }
+    for(size_t n = 0; n < snapshot.count; ++n) {
+        bool exists = false;
+        for(size_t i = 0; i < known->count; ++i)
+            if(strcasecmp(known->names[i], snapshot.names[n]) == 0) { exists = true; break; }
+        if(exists) continue;
+        if(known->count >= GSR_MAX_DYNAMIC_AUDIO_APPS || num_tracks >= GSR_MAX_DYNAMIC_AUDIO_TRACKS) {
+            gsr_log(GSR_LOG_LEVEL_ERROR, "dynamic application audio reached the session limit of %d applications; capture stopped to avoid losing sources", GSR_MAX_DYNAMIC_AUDIO_APPS);
+            return GSR_ERROR_GENERIC;
+        }
+        const int result = recorder_prepare_app(self, snapshot.names[n], num_tracks + 1, track);
+        *prepared = result == GSR_ERROR_OK;
+        return result;
+    }
+    return GSR_ERROR_OK;
+}
+
+static void* recorder_discover_audio_thread(void *userdata) {
+    recorder_audio_discovery *job = userdata;
+    job->result = recorder_find_app(job->recorder, &job->known, job->num_tracks, &job->track, &job->prepared);
+    atomic_store(&job->finished, true);
+    return NULL;
+}
+
+static void recorder_join_audio_discovery(gsr_recorder *self) {
+    recorder_audio_discovery *job = self->audio_discovery;
+    if(!job) return;
+    pthread_join(job->thread, NULL);
+    gsr_audio_track_deinit(&job->track);
+    free(job);
+    self->audio_discovery = NULL;
+}
+
+static int recorder_discover_audio(gsr_recorder *self) {
+    if(!self->dynamic_audio) return GSR_ERROR_OK;
+    if(self->audio_discovery) {
+        recorder_audio_discovery *job = self->audio_discovery;
+        if(!atomic_load(&job->finished)) return GSR_ERROR_OK;
+        pthread_join(job->thread, NULL);
+        int result = job->result;
+        if(result == GSR_ERROR_OK && job->prepared) result = recorder_register_app(self, &job->track);
+        gsr_audio_track_deinit(&job->track);
+        free(job);
+        self->audio_discovery = NULL;
+        if(result != GSR_ERROR_OK) return result;
+    }
+    recorder_app_snapshot known = {0};
+    for(size_t i = 0; i < self->audio_capture.num_tracks; ++i) {
+        gsr_audio_track *track = self->audio_capture.tracks[i];
+        if(track->application_name[0]) {
+            recorder_copy_app(track->application_name, &known);
+            recorder_update_app_choice(track);
+        }
+    }
+    if(self->audio_started) {
+        recorder_audio_discovery *job = calloc(1, sizeof(*job));
+        if(!job) return GSR_ERROR_GENERIC;
+        job->recorder = self;
+        job->known = known;
+        job->num_tracks = self->audio_capture.num_tracks;
+        atomic_init(&job->finished, false);
+        if(pthread_create(&job->thread, NULL, recorder_discover_audio_thread, job) != 0) { free(job); return GSR_ERROR_GENERIC; }
+        self->audio_discovery = job;
+        return GSR_ERROR_OK;
+    }
+    /* Initial devices are opened before capture begins. */
+    for(;;) {
+        gsr_audio_track track = {0};
+        bool prepared = false;
+        int result = recorder_find_app(self, &known, self->audio_capture.num_tracks, &track, &prepared);
+        if(result == GSR_ERROR_OK && prepared) result = recorder_register_app(self, &track);
+        gsr_audio_track_deinit(&track);
+        if(result != GSR_ERROR_OK || !prepared) return result;
+        recorder_copy_app(self->audio_capture.tracks[self->audio_capture.num_tracks-1]->application_name, &known);
+    }
+}
+#endif
+
 static int recorder_setup_audio(gsr_recorder *self) {
     if(gsr_audio_capture_init(&self->audio_capture, &self->encoder, self->recording_clock, &self->running) != GSR_ERROR_OK)
         return GSR_ERROR_GENERIC;
@@ -388,7 +697,16 @@ static int recorder_setup_audio(gsr_recorder *self) {
     int audio_stream_index = self->audio_only ? 0 : GSR_VIDEO_STREAM_INDEX + 1;
     for(size_t i = 0; i < self->audio_input_tracks->num_items; ++i) {
         gsr_audio_track audio_track;
-        const int audio_track_result = recorder_setup_audio_track(self, &self->audio_input_tracks->items[i], audio_stream_index, &audio_track);
+        gsr_merged_audio_inputs merged = self->audio_input_tracks->items[i];
+        gsr_audio_input remainder = {.type = GSR_AUDIO_INPUT_TYPE_APPLICATION};
+        if(self->dynamic_audio && strcmp(merged.track_name, "Microphone") != 0) {
+            snprintf(remainder.name, sizeof(remainder.name), "__shadowless_unassigned__");
+            merged.items = &remainder; merged.num_items = 1;
+            snprintf(merged.track_name, sizeof(merged.track_name), "PC (other)");
+        }
+        const int audio_track_result = recorder_setup_audio_track(self, &merged, audio_stream_index, &audio_track);
+        audio_track.dynamic_source = self->dynamic_audio && strcmp(merged.track_name, "PC (other)") == 0;
+        atomic_init(&audio_track.game, false);
         if(audio_track_result != GSR_ERROR_OK) {
             gsr_audio_track_deinit(&audio_track);
             return audio_track_result;
@@ -404,6 +722,11 @@ static int recorder_setup_audio(gsr_recorder *self) {
         if(audio_track.codec_context->frame_size > self->audio_max_frame_size)
             self->audio_max_frame_size = audio_track.codec_context->frame_size;
     }
+
+#ifdef GSR_APP_AUDIO
+    if(self->dynamic_audio && recorder_discover_audio(self) != GSR_ERROR_OK) return GSR_ERROR_GENERIC;
+#endif
+    if(self->dynamic_audio && !self->settings.is_replaying && !recorder_begin_audio_spools(self)) return GSR_ERROR_GENERIC;
 
     return GSR_ERROR_OK;
 }
@@ -444,6 +767,7 @@ gsr_recorder* gsr_recorder_create(const gsr_recorder_params *params, const gsr_r
     self->capture_sources = params->capture_sources;
     self->audio_input_tracks = params->audio_input_tracks;
     self->audio_only = params->capture_sources->num_items == 0;
+    self->dynamic_audio = getenv("SHADOWLESS_DYNAMIC_AUDIO") && strcmp(getenv("SHADOWLESS_DYNAMIC_AUDIO"), "1") == 0;
     atomic_init(&self->running, 1);
     atomic_init(&self->toggle_pause, 0);
     atomic_init(&self->set_paused_request, GSR_SET_PAUSED_REQUEST_NONE);
@@ -732,6 +1056,17 @@ static void recorder_apply_pause_toggle(gsr_recorder *self) {
     }
 }
 
+static void recorder_snapshot_recording_origin(gsr_recorder *self) {
+    pthread_mutex_lock(&self->encoder.file_write_mutex);
+    for(size_t i = 0; i < self->encoder.num_recording_destinations; ++i) {
+        const gsr_encoder_recording_destination *destination = &self->encoder.recording_destinations[i];
+        if(destination->format_context == self->replay_recording_output.av_format_context
+                && destination->codec_context == self->video_codec_context && destination->first_pts >= 0)
+            self->recording_origin_us = av_rescale_q(destination->first_pts, self->video_codec_context->time_base, AV_TIME_BASE_Q);
+    }
+    pthread_mutex_unlock(&self->encoder.file_write_mutex);
+}
+
 static void recorder_apply_replay_recording_toggle(gsr_recorder *self) {
     const int request = atomic_exchange(&self->replay_recording_request, GSR_REPLAY_RECORDING_REQUEST_NONE);
     if(request == GSR_REPLAY_RECORDING_REQUEST_NONE)
@@ -752,11 +1087,24 @@ static void recorder_apply_replay_recording_toggle(gsr_recorder *self) {
     if(new_replay_recording_state == self->replay_recording)
         return;
 
+    if(new_replay_recording_state && self->audio_finalizer) {
+        if(self->callbacks.recording_started) self->callbacks.recording_started(NULL, self->callbacks.userdata);
+        return;
+    }
     if(new_replay_recording_state) {
         gsr_audio_capture_lock_filter(&self->audio_capture);
         self->num_replay_recording_items = 0;
         const bool filepath_created = gsr_create_new_recording_filepath_from_timestamp(self->replay_recording_filepath, sizeof(self->replay_recording_filepath), self->settings.replay_recording_directory, "Video", self->file_extension, self->settings.date_folders);
-        if(filepath_created && gsr_recording_output_start(&self->replay_recording_output, self->replay_recording_filepath, &self->settings, self->video_codec_context, &self->audio_capture, self->hdr, self->video_sources)) {
+        gsr_audio_capture recording_audio = {0};
+        gsr_audio_track *fixed_tracks[GSR_MAX_DYNAMIC_AUDIO_TRACKS];
+        for(size_t i = 0; self->dynamic_audio && i < self->audio_capture.num_tracks; ++i) {
+            if(!self->audio_capture.tracks[i]->dynamic_source)
+                fixed_tracks[recording_audio.num_tracks++] = self->audio_capture.tracks[i];
+        }
+        recording_audio.tracks = self->dynamic_audio ? fixed_tracks : self->audio_capture.tracks;
+        if(!self->dynamic_audio) recording_audio.num_tracks = self->audio_capture.num_tracks;
+        self->recording_origin_us = 0;
+        if(filepath_created && recorder_begin_audio_spools(self) && gsr_recording_output_start(&self->replay_recording_output, self->replay_recording_filepath, &self->settings, self->video_codec_context, &recording_audio, self->hdr, self->video_sources)) {
             const size_t video_recording_destination_id = gsr_encoder_add_recording_destination(&self->encoder, self->video_codec_context, self->replay_recording_output.av_format_context, self->replay_recording_output.video_stream, GSR_RECORDING_FIRST_PTS_NEXT_KEYFRAME);
             if(self->settings.write_first_frame_ts && video_recording_destination_id != (size_t)-1) {
                 char ts_filepath[PATH_MAX + 4];
@@ -785,21 +1133,29 @@ static void recorder_apply_replay_recording_toggle(gsr_recorder *self) {
             if(self->callbacks.recording_started)
                 self->callbacks.recording_started(self->replay_recording_filepath, self->callbacks.userdata);
         } else {
+            if(self->spooling) {
+                self->spool_failed = true;
+                recorder_finish_audio_spools(self, self->replay_recording_filepath);
+            }
             if(self->callbacks.recording_started)
                 self->callbacks.recording_started(NULL, self->callbacks.userdata);
         }
         gsr_audio_capture_unlock_filter(&self->audio_capture);
     } else if(self->replay_recording_output.av_format_context) {
+        recorder_snapshot_recording_origin(self);
         for(size_t i = 0; i < self->num_replay_recording_items; ++i) {
-            gsr_encoder_remove_recording_destination(&self->encoder, self->replay_recording_items[i]);
+            if(!gsr_encoder_remove_recording_destination(&self->encoder, self->replay_recording_items[i])) self->spool_failed = true;
         }
         self->num_replay_recording_items = 0;
 
-        if(gsr_recording_output_stop(&self->replay_recording_output)) {
+        const bool base_saved = gsr_recording_output_stop(&self->replay_recording_output);
+        if(!base_saved) self->spool_failed = true;
+        const bool stems_saved = recorder_finish_audio_spools(self, self->replay_recording_filepath);
+        if(base_saved && stems_saved && !self->audio_finalizer) {
             gsr_log(GSR_LOG_LEVEL_INFO, "Stopped recording");
             if(self->callbacks.recording_stopped)
                 self->callbacks.recording_stopped(self->replay_recording_filepath, self->callbacks.userdata);
-        } else {
+        } else if(!base_saved || !stems_saved) {
             if(self->callbacks.recording_stopped)
                 self->callbacks.recording_stopped(NULL, self->callbacks.userdata);
         }
@@ -897,6 +1253,8 @@ int gsr_recorder_run(gsr_recorder *self) {
         return GSR_ERROR_GENERIC;
     }
 
+    self->audio_started = true;
+
     // Set update_fps to 24 to test if duplicate/delayed frames cause video/audio desync or too fast/slow video.
     //const double update_fps = fps + 190;
     self->should_stop_error = false;
@@ -934,8 +1292,15 @@ int gsr_recorder_run(gsr_recorder *self) {
     }
 
     while(atomic_load(&self->running)) {
+#ifdef GSR_APP_AUDIO
+        if(self->dynamic_audio && clock_get_monotonic_seconds() >= self->next_audio_discovery) {
+            self->next_audio_discovery = clock_get_monotonic_seconds() + 0.10;
+            if(recorder_discover_audio(self) != GSR_ERROR_OK) { self->should_stop_error = true; break; }
+        }
+#endif
         recorder_tick_video(self);
         recorder_apply_pause_toggle(self);
+        recorder_poll_audio_finalizer(self, false, true);
         recorder_apply_replay_recording_toggle(self);
         recorder_poll_replay_save(self);
         recorder_sleep_until_next_frame(self);
@@ -955,12 +1320,15 @@ static void gsr_recorder_flush_video(gsr_recorder *self) {
 
 static void gsr_recorder_stop_recording(gsr_recorder *self) {
     atomic_store(&self->running, 0);
+#ifdef GSR_APP_AUDIO
+    recorder_join_audio_discovery(self);
+#endif
 
     bool final_replay_save_result = false;
     const char *final_replay_save_output_filepath = NULL;
     if(gsr_replay_save_join(&self->replay_save, &final_replay_save_result, &final_replay_save_output_filepath)) {
-        if(final_replay_save_output_filepath[0] != '\0' && self->callbacks.replay_saved)
-            self->callbacks.replay_saved(final_replay_save_output_filepath, self->callbacks.userdata);
+        if(self->callbacks.replay_saved)
+            self->callbacks.replay_saved(final_replay_save_result && final_replay_save_output_filepath[0] ? final_replay_save_output_filepath : NULL, self->callbacks.userdata);
     }
 
     gsr_plugins_deinit(&self->plugins);
@@ -971,34 +1339,61 @@ static void gsr_recorder_stop_recording(gsr_recorder *self) {
     gsr_audio_capture_flush(&self->audio_capture);
 
     if(self->replay_recording_output.av_format_context) {
+        recorder_snapshot_recording_origin(self);
         for(size_t i = 0; i < self->num_replay_recording_items; ++i) {
-            gsr_encoder_remove_recording_destination(&self->encoder, self->replay_recording_items[i]);
+            if(!gsr_encoder_remove_recording_destination(&self->encoder, self->replay_recording_items[i])) self->spool_failed = true;
         }
         self->num_replay_recording_items = 0;
 
-        if(gsr_recording_output_stop(&self->replay_recording_output)) {
+        const bool base_saved = gsr_recording_output_stop(&self->replay_recording_output);
+        if(!base_saved) self->spool_failed = true;
+        const bool stems_saved = recorder_finish_audio_spools(self, self->replay_recording_filepath);
+        if(base_saved && stems_saved && !self->audio_finalizer) {
             gsr_log(GSR_LOG_LEVEL_INFO, "Stopped recording");
             if(self->callbacks.recording_stopped)
                 self->callbacks.recording_stopped(self->replay_recording_filepath, self->callbacks.userdata);
-        } else {
+        } else if(!base_saved || !stems_saved) {
             if(self->callbacks.recording_stopped)
                 self->callbacks.recording_stopped(NULL, self->callbacks.userdata);
         }
     }
 
-    // TODO: Replace this with start_recording_create_steams
-    if(!self->settings.is_replaying && gsr_av_format_context_write_trailer(self->av_format_context) != 0) {
-        //fprintf(stderr, "Failed to write trailer\n");
-    }
+    recorder_poll_audio_finalizer(self, true, true);
 
-    if(!self->settings.is_replaying && self->callbacks.recording_stopped)
-        self->callbacks.recording_stopped(self->settings.filename, self->callbacks.userdata);
+    if(!self->settings.is_replaying) {
+        if(self->dynamic_audio) {
+            pthread_mutex_lock(&self->encoder.file_write_mutex);
+            for(size_t i = 0; i < self->encoder.num_recording_destinations; ++i) {
+                const gsr_encoder_recording_destination *destination = &self->encoder.recording_destinations[i];
+                if(destination->format_context == self->av_format_context && destination->write_failed)
+                    self->spool_failed = true;
+            }
+            pthread_mutex_unlock(&self->encoder.file_write_mutex);
+        }
+        bool saved = gsr_av_format_context_write_trailer(self->av_format_context) == 0;
+        if(self->dynamic_audio) {
+            if(avio_closep(&self->av_format_context->pb) < 0) saved = false;
+            if(!saved) self->spool_failed = true;
+            saved = recorder_finish_audio_spools(self, self->settings.filename) && saved;
+            saved = recorder_poll_audio_finalizer(self, true, false) && saved;
+        }
+        if(self->callbacks.recording_stopped)
+            self->callbacks.recording_stopped(saved ? self->settings.filename : NULL, self->callbacks.userdata);
+    }
 }
 
 void gsr_recorder_destroy(gsr_recorder *self, bool exiting) {
     if(!self)
         return;
 
+#ifdef GSR_APP_AUDIO
+    recorder_join_audio_discovery(self);
+#endif
+    if(self->spooling) {
+        self->spool_failed = true;
+        recorder_finish_audio_spools(self, self->settings.filename);
+    }
+    recorder_poll_audio_finalizer(self, true, false);
     gsr_audio_capture_deinit(&self->audio_capture);
     gsr_plugins_deinit(&self->plugins);
 

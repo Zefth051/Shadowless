@@ -9,6 +9,7 @@ gsr_replay_buffer* gsr_replay_buffer_create(gsr_replay_storage replay_storage, c
     switch(replay_storage) {
         case GSR_REPLAY_STORAGE_RAM:
             replay_buffer = gsr_replay_buffer_ram_create(replay_buffer_num_packets);
+            if(replay_buffer) ((gsr_replay_buffer_ram*)replay_buffer)->max_duration = replay_buffer_time;
             break;
         case GSR_REPLAY_STORAGE_DISK:
             replay_buffer = gsr_replay_buffer_disk_create(replay_directory, replay_buffer_time);

@@ -14,3 +14,8 @@ app.file = app/ShadowlessLinux.pro
 tests.file = tests/GsrTests.pro
 overlaytests.file = tests/overlays/OverlayTests.pro
 uitests.file = tests/ui/UiTests.pro
+
+SUBDIRS += compressiontests
+compressiontests.file = tests/compression/CompressionTests.pro
+SUBDIRS += discordtests
+discordtests.file = tests/discord/DiscordTests.pro

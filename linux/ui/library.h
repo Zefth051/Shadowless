@@ -25,6 +25,7 @@ signals:
     void clipRequested(const QString &path);
     void storageChanged(qint64 available, qint64 total);
     void clipsChanged(const QStringList &paths);
+    void allClipsChanged(const QStringList &paths, const QString &directory);
     void thumbnailReady(const QString &path, const QPixmap &image);
 protected:
     void showEvent(QShowEvent *event) override;

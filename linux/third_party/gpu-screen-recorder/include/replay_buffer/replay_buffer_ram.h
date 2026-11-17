@@ -15,6 +15,7 @@ typedef struct {
     size_t capacity_num_packets;
     size_t num_packets;
     size_t index;
+    double max_duration;
 } gsr_replay_buffer_ram;
 
 gsr_replay_buffer* gsr_replay_buffer_ram_create(size_t replay_buffer_num_packets);

@@ -139,7 +139,7 @@ class AppImageTests(unittest.TestCase):
         self.module.stage_appdir(self.build, appdir)
         host = self.root / "host"
         host.mkdir()
-        for name in ["ffmpeg", "ffprobe", "pactl", "pw-loopback"]:
+        for name in ["ffmpeg", "ffprobe", "pactl"]:
             tool = host / name
             tool.write_text("#!/bin/sh\nexit 0\n")
             tool.chmod(0o755)

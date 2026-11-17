@@ -9,6 +9,8 @@
 #include <QSoundEffect>
 #include <functional>
 #include "update_service.h"
+#include "discord_presence.h"
+#include "idle_compressor.h"
 class QMenu;
 class QAction;
 namespace Shadowless {
@@ -49,6 +51,13 @@ private:
     QFutureWatcher<QString> m_validation;
     QTimer m_saveLevels;
     UpdateService m_updates;
+    DiscordPresence m_presence;
+    QTimer m_presencePoll;
+    QFutureWatcher<QString> m_presenceGameQuery;
+    QString m_presenceGame;
+    IdleCompressor m_compressor;
+    QTimer m_idlePoll;
+    QFutureWatcher<QString> m_idleGameQuery;
     bool m_validating = false;
     void refresh();
     void setAccent(const QString &name);

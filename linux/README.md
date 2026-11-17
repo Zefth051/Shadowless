@@ -19,8 +19,8 @@ and the GSR development dependencies in its Meson file (X11 extensions, Wayland,
 libdrm, libva, libcap, PulseAudio, PipeWire and D-Bus). No GSR package is needed:
 the recorder, helper and matching plugin header come from the maintained
 6.1.7 source in `linux/third_party/gpu-screen-recorder/`.
-Desktop and microphone capture also use PipeWire, pipewire-pulse, `pw-loopback`
-and `pactl`.
+Audio capture uses PipeWire and pipewire-pulse. `pactl` supplies application icons;
+no loopback command or virtual audio device is required.
 
 ```sh
 ./linux/build.sh
@@ -66,6 +66,11 @@ Each recent clip has a Trash button available before playback. Deletion requires
 confirmation and moves only that clip to the desktop Trash; failures leave the
 file in place and show an error.
 The player sidebar reuses library thumbnails and finishes pending thumbnails while open.
+Its game-folder and recording-mode filters use the complete scanned library,
+independently of the dashboard's 20 recent clips. Navigation follows the filtered
+list; filtering keeps the current playback and trim state. Unknown/imported
+filenames appear under Other clips. Audio waveforms use dark surfaces and readable
+accent colors, including silence and dark custom accents.
 Returning to the dashboard or hiding the panel stops playback. Directory scans run off the UI
 thread and unchanged clips reuse thumbnails while Shadowless is running.
 
@@ -164,47 +169,54 @@ Use **Appearance → Accent color** to select a color, then save to apply it.
 
 ## Audio
 
-Open **Audio settings** to select the desktop output and microphone. Default
-devices are resolved when capture starts. Change routing with capture stopped.
-Desktop and microphone can mix into one track or use separate tracks.
+**Automatic application tracks** is the normal desktop-audio mode. It captures
+applications across output devices and keeps discovering sources during replay
+and recording. Applications appear on the dashboard when they first produce
+audio; opening one later does not restart the video encoder or clear the buffer.
+Sources sharing an application audio identity share a track, including browser
+tabs that use the same identity.
 
-**Selected applications** captures the apps assigned to tracks in the table.
-Start playback in an app, then refresh to find it. Sources on the same track
-mix, unused tracks are omitted, and the microphone can use any track. Choose
-AAC or Opus and an automatic or fixed audio bitrate.
+The dashboard gives each discovered source **Track** and **Game** controls.
+**Track** chooses its default inclusion in saved clips; the independently buffered
+source remains available in the editor. **Game** moves that application's audio
+out of PC and into Game. Known catalog names are suggested automatically; use
+Game to correct an unidentified game or application. Choices persist between
+launches. Closed or quiet applications retain their identity for the session.
 
-Enable **PC / other applications track** to capture unassigned applications on
-their own track. Every explicitly assigned application is excluded from PC as
-one combined exclusion list, so game and music audio are not duplicated there.
-PC must use a different track from assigned apps and the microphone. Suggested
-assignments: game on 1, music players on 2, PC on 3 and microphone on 4. Leave
-the browser unassigned to include it in PC. With PC off, unassigned apps are not
-recorded. The PC option defaults to off for existing configurations.
+The editor presents **PC**, **Game** and **Microphone** groups for new automatic
+captures. PC combines non-game applications and any unidentified desktop audio;
+Game is excluded from PC. **More tracks** reveals actual source tracks. Expanding
+or collapsing does not change playback or export selection. Group and individual
+selectors control the same physical streams, so an application is never mixed
+twice. A group with no recorded source is disabled. Existing mixed/two-track files
+retain their real tracks and cannot be separated retroactively.
 
-The dashboard adjusts volume and mute during capture. These controls affect
-the private recording routes, including the microphone in application mode.
-Microphone boost is configurable up to 20 dB.
+Microphone capture remains opt-in and uses the selected input device, including
+system-default following. PC/Game/Microphone volume and mute are independent;
+microphone boost supports up to 20 dB. Gain is applied only to capture PCM before
+encoding. Playback volume, real device levels and default devices are unchanged;
+Shadowless creates no virtual input/output devices and needs no pw-loopback.
 
-Capture volume controls use temporary PipeWire virtual **input** devices named
-Shadowless desktop audio / Shadowless microphone. Other applications, including
-Discord, can enumerate them. They are removed when capture stops; they are not
-playback outputs. The routing does not explicitly change the default devices.
+Explicit **Selected applications** and **Four tracks: PC / Game / Music /
+Microphone** routing remain available as advanced modes. They preserve existing
+assignments. Automatic mode does not use the old physical output selector or
+system/microphone mixing option; these values are retained for legacy modes.
+AAC/Opus and automatic/fixed bitrate settings still apply.
 
-Spotify and dedicated music clients can use separate application identities.
-YouTube Music in a browser can share its identity with other tabs; the selector
-does not provide per-tab separation. A dedicated client must advertise its own
-audio application name to be assigned separately; being installed as a web app
-alone does not guarantee this. Automatic game audio assignment is not provided.
+Application sources use the shared capture clock, retaining silence before a
+late source begins. Replay buffers reserve capacity for up to 64 application
+identities plus PC remainder and microphone; exceeding capacity is reported,
+not silently truncated. The editor accepts up to 128 audio streams and reports
+larger files explicitly. Real PipeWire/device synchronization still needs testing
+on the target desktop.
 
-An attempted replacement of capture devices with disconnected playback streams
-produced silent standalone desktop/microphone tracks with GSR 6.1.7 and PipeWire
-1.6.11. That replacement was discarded; temporary input devices remain necessary
-for the current implementation's independent gain and mute controls.
-A follow-up comparison also tested non-virtual application identities and a raw
-capture/playback pipe. GSR captured the direct application/device test tone at
-about -21 dB, while the private routes remained at the AAC silence floor (-91 dB).
-Those experiments were not adopted. Removing the devices while retaining reliable
-independent gain/mute remains unresolved; capture still creates temporary inputs.
+Continuous recordings keep private audio stems under a private temporary directory
+and finalize them into the requested MP4/MKV without re-encoding video. Saving a
+simultaneous recording runs in the background while replay continues. The stop
+watchdog follows actual finalization progress rather than a fixed total duration.
+Failed writes/finalization preserve the base recording and stems and report
+failure; the recovery paths are included in recorder diagnostics. Extra disk space
+is required until successful finalization completes.
 
 ## Capture overlays
 
@@ -281,6 +293,41 @@ recording cases; checks fixture position/orientation and full FFmpeg decoding;
 and stores short recorder CPU/RSS measurements beside clips. CPU is expressed
 as a percentage of one core. It does not measure game FPS or GPU execution time.
 See `docs/LINUX_HYPRLAND_OVERLAY.md` for actual coverage and remaining checks.
+
+## Advanced four-track mode and recording pause
+
+In Settings → Audio, select **Four tracks: PC / Game / Music / Microphone**.
+Assign the game application to Game and the music application to Music, and
+enable the microphone. New captures then contain PC (1), Game (2), Music (3)
+and Microphone (4). PC contains other applications, excluding the selected game
+and music sources. Selected applications may be quiet or not running yet; their
+streams remain separate. Existing two-track or mixed files cannot be separated
+retroactively. The editor retains independent track selection and export.
+
+Standalone continuous recording exposes **Pause recording / Resume recording**.
+Resume continues the same file. The control waits for the recorder to confirm
+the change; Stop remains available if confirmation fails. GSR does not support
+pausing only the recording while Instant Clip is also running, so that mode does
+not expose Pause.
+
+## Discord Rich Presence
+
+With the Discord desktop client running, Shadowless shows `Clipping "Game"`
+(or Recording / Recording paused), with the Shadowless logo and a small game
+badge when artwork is available. There is no elapsed-time line and unchanged
+activities are not republished. Game detection runs independently of folder
+organization. Hyprland uses the focused game; Plasma matches current-user game
+processes against the bundled catalog, including Wine/Proton executables.
+Ambiguous or unknown games show only the capture state, without a guessed title.
+The Shadowless artwork uses a public image pinned to a repository commit. Game
+artwork is resolved once per session from the same public, revision-pinned source
+as the embedded game catalog, with a 10-second timeout and 16 MiB response limit.
+The icon catalog is optional: offline or missing artwork never blocks capture.
+Only catalog game names and public image URLs are sent; no unrelated window
+titles, clip filenames, audio applications or recording paths are included.
+The public Application ID requires no user token or configuration. Discord may
+be closed or restarted without interrupting capture. Actual client display still
+needs validation; protocol tests use isolated peers.
 
 ## Appearance
 

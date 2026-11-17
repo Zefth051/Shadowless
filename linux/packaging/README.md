@@ -29,7 +29,7 @@ checks and downloads. TLS uses the system certificate trust store.
 
 Hyprland or Plasma 6 on native Wayland, compatible graphics drivers, PipeWire/pipewire-pulse,
 `ffmpeg`, `ffprobe`,
-`pactl` and `pw-loopback` must be installed through the distribution. Hyprland
+`pactl` must be installed through the distribution. Hyprland
 also requires `hyprctl`; Plasma uses the desktop shortcut portal. Current source
 adds Plasma support; previous published binaries are unchanged.
 GSR does not need to be installed. Only the recording engine and helper are

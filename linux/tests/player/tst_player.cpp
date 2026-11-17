@@ -42,6 +42,85 @@ private slots:
         QCOMPARE(waves.size(),2);
         for (const auto &w:waves) { const auto peaks=qvariant_cast<QVector<float>>(w[1]); QCOMPARE(peaks.size(),512); QVERIFY(*std::max_element(peaks.begin(),peaks.end())>0.01f); }
     }
+    void preservesFourNamedMp4TracksAndSelectedExports() {
+        const auto path=dir.filePath("four-tracks.mp4");
+        QVERIFY(run("ffmpeg",{"-v","error","-f","lavfi","-i","color=red:s=160x90:r=15:d=2",
+            "-f","lavfi","-i","sine=frequency=220:duration=2","-f","lavfi","-i","sine=frequency=440:duration=2",
+            "-f","lavfi","-i","sine=frequency=660:duration=2","-f","lavfi","-i","anullsrc=r=48000:cl=mono",
+            "-t","2","-map","0:v","-map","1:a","-map","2:a","-map","3:a","-map","4:a",
+            "-metadata:s:a:0","handler_name=PC","-metadata:s:a:1","handler_name=Game",
+            "-metadata:s:a:2","handler_name=Music","-metadata:s:a:3","handler_name=Microphone",
+            "-c:v","mpeg4","-c:a","aac",path}));
+        MediaTools tools; QSignalSpy metadata(&tools,&MediaTools::metadataReady), waves(&tools,&MediaTools::waveformReady);
+        QSignalSpy done(&tools,&MediaTools::finished), errors(&tools,&MediaTools::failed);
+        QVERIFY(tools.analyze(path)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,15000); QCOMPARE(errors.size(),0);
+        const auto info=qvariant_cast<MediaInfo>(metadata[0][0]); QCOMPARE(info.audioStreams.size(),4); QCOMPARE(waves.size(),4);
+        const QStringList names{"PC","Game","Music","Microphone"};
+        for(int i=0;i<names.size();++i) QCOMPARE(info.audioStreams[i].title,names[i]);
+        const auto silent=qvariant_cast<QVector<float>>(waves[3][1]); QVERIFY(*std::max_element(silent.begin(),silent.end())<.001f);
+        ExportRequest request; request.sourcePath=path; request.destinationPath=dir.filePath("three-selected.mp4");
+        request.inMs=0; request.outMs=1500; request.audioTracks={0,2,3};
+        QVERIFY(tools.exportClip(request)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),2,15000); QCOMPARE(errors.size(),0);
+        QVERIFY(tools.analyze(request.destinationPath)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),3,15000); QCOMPARE(errors.size(),0);
+        const auto selected=qvariant_cast<MediaInfo>(metadata.last()[0]); QCOMPARE(selected.audioStreams.size(),3);
+        QCOMPARE(selected.audioStreams[0].title,QString("PC")); QCOMPARE(selected.audioStreams[1].title,QString("Music"));
+        QCOMPARE(selected.audioStreams[2].title,QString("Microphone"));
+    }
+    void dynamicMp4MetadataAndLateSourceKeepCaptureTiming() {
+        const auto path=dir.filePath("dynamic-late.mp4");
+        QVERIFY(run("ffmpeg",{"-v","error","-f","lavfi","-i","color=red:s=160x90:r=15:d=3",
+            "-f","lavfi","-i","anullsrc=r=48000:cl=mono","-itsoffset","1.5","-f","lavfi","-i","sine=frequency=880:duration=1.5",
+            "-t","3","-map","0:v","-map","1:a","-map","2:a","-metadata:s:a:0","handler_name=PC (other)",
+            "-metadata:s:a:1","handler_name=App: Late browser","-c:v","mpeg4","-c:a","aac",path}));
+        MediaTools tools; QSignalSpy metadata(&tools,&MediaTools::metadataReady), waves(&tools,&MediaTools::waveformReady), thumbs(&tools,&MediaTools::thumbnailsReady);
+        QSignalSpy done(&tools,&MediaTools::finished), errors(&tools,&MediaTools::failed);
+        QVERIFY(tools.analyze(path,true)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,10000);
+        QCOMPARE(thumbs.size(),0); QCOMPARE(waves.size(),0);
+        const auto info=qvariant_cast<MediaInfo>(metadata[0][0]); QCOMPARE(info.audioStreams.size(),2);
+        QCOMPARE(info.audioStreams[0].title,QString("PC (other)")); QCOMPARE(info.audioStreams[1].title,QString("App: Late browser"));
+        QVERIFY(tools.analyze(path)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),2,15000); QCOMPARE(errors.size(),0);
+        auto late=qvariant_cast<QVector<float>>(waves[1][1]);
+        QVERIFY(*std::max_element(late.begin(),late.begin()+200)<.001f);
+        QVERIFY(*std::max_element(late.begin()+300,late.end())>.01f);
+        for(bool mix:{false,true}) {
+            ExportRequest request; request.sourcePath=path; request.destinationPath=dir.filePath(mix?"dynamic-mixed.mp4":"dynamic-selected.mp4");
+            request.outMs=3000; request.audioTracks=mix?QVector<int>{0,1}:QVector<int>{1}; request.mixAudio=mix;
+            const int completed=done.size(); QVERIFY(tools.exportClip(request)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),completed+1,15000); QCOMPARE(errors.size(),0);
+            waves.clear(); QVERIFY(tools.analyze(request.destinationPath)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),completed+2,15000); QCOMPARE(errors.size(),0);
+            QCOMPARE(qvariant_cast<MediaInfo>(metadata.last()[0]).audioStreams.size(),1);
+            QCOMPARE(waves.size(),1); late=qvariant_cast<QVector<float>>(waves[0][1]);
+            QVERIFY2(*std::max_element(late.begin(),late.begin()+200)<.001f,mix?"Mix moved late audio to the beginning":"Stream export moved late audio to the beginning");
+            QVERIFY(*std::max_element(late.begin()+300,late.end())>.01f);
+        }
+    }
+    void probesNativeDynamicStreamBoundAndRejectsOversizedClips() {
+        for(int count:{66,129}) {
+            const auto path=dir.filePath(QString("many-apps-%1.mkv").arg(count));
+            QStringList args{"-v","error","-f","lavfi","-i","color=red:s=160x90:r=10:d=0.2",
+                "-f","lavfi","-i","anullsrc=r=8000:cl=mono","-t","0.2","-map","0:v"};
+            for(int i=0;i<count;++i) args << "-map" << "1:a" << QString("-metadata:s:a:%1").arg(i)
+                << QString("title=%1").arg(i==0?QString("PC (other)"):i==count-1?QString("Microphone"):QString("App: Source %1").arg(i));
+            args << "-c:v" << "mpeg4" << "-c:a" << "pcm_s16le" << "-threads" << "1" << path;
+            QVERIFY(run("ffmpeg",args));
+            MediaTools tools; QSignalSpy metadata(&tools,&MediaTools::metadataReady), errors(&tools,&MediaTools::failed), done(&tools,&MediaTools::finished);
+            QVERIFY(tools.analyze(path,true)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),1,10000);
+            if(count>128) {
+                QCOMPARE(metadata.size(),0); QCOMPARE(errors.size(),1);
+                QVERIFY(errors[0][0].toString().contains("128"));
+                continue;
+            }
+            QCOMPARE(errors.size(),0); QCOMPARE(metadata.size(),1);
+            const auto info=qvariant_cast<MediaInfo>(metadata[0][0]); QCOMPARE(info.audioStreams.size(),count);
+            for(int i=0;i<count;++i) { QCOMPARE(info.audioStreams[i].index,i+1); QVERIFY(!info.audioStreams[i].title.isEmpty()); }
+            QCOMPARE(info.audioStreams[64].title,QString("App: Source 64"));
+            ExportRequest request; request.sourcePath=path; request.destinationPath=dir.filePath("last-app-selected.mkv");
+            request.outMs=200; request.audioTracks={64};
+            QVERIFY(tools.exportClip(request)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),2,10000); QCOMPARE(errors.size(),0);
+            QVERIFY(tools.analyze(request.destinationPath,true)); QTRY_COMPARE_WITH_TIMEOUT(done.size(),3,10000); QCOMPARE(errors.size(),0);
+            const auto selected=qvariant_cast<MediaInfo>(metadata.last()[0]); QCOMPARE(selected.audioStreams.size(),1);
+            QCOMPARE(selected.audioStreams[0].title,QString("App: Source 64"));
+        }
+    }
     void trimsSelectedStreamsAndMixes() {
         for(bool mix:{false,true}) {
             MediaTools tools; QSignalSpy done(&tools,&MediaTools::finished), ok(&tools,&MediaTools::exported), errors(&tools,&MediaTools::failed);

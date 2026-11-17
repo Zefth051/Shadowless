@@ -1,32 +1,27 @@
-# Shadowless Linux 0.3.4 — QOL update
+# Shadowless Linux 0.3.6 — four-track recording and refreshed dashboard
 
-This release makes capture authorization accessible, explains why capture settings
-are locked, and improves everyday controls on Linux. Existing clips and settings
-are preserved.
+This release adds optional four-track recording (PC / Game / Music / Microphone),
+dynamic application audio, pause/resume for continuous recording, a Windows-style
+audio dashboard and several editor improvements. Existing clips and settings are
+preserved; new features are opt-in.
 
-### Improved
+### Highlights
 
-- **Capture authorization:** Release the control overlay only when the managed KMS engine requests Polkit authorization, then restore its previous visibility after authorization or failure. Background startup stays hidden; an explicit hide or quit prevents restoration. System authorization is still required for direct KMS capture without existing privileges.
-- **Active capture settings:** Keep the capture-lock notice visible while scrolling and slightly dim locked fields, so it is clear why recording options cannot change until capture stops. Appearance, shortcuts and startup settings remain available.
-- **Settings readability:** Keep checked boxes visibly filled while capture locks their settings, enlarge checkbox indicators, and keep engine notices on the dashboard instead of settings or the editor.
-- **Appearance:** Add validated, persistent HEX accents with readable button text and keyboard focus, compact capture cards and consistent native control states.
-- **Recent clips:** Keep playback, containing-folder and Trash actions visible in narrow panels using adaptive filename elision.
-- **Game folders:** Reject conflicting game identities and preserve files when falling back to the output root. Plasma uses that fallback without invoking Hyprland tools.
-- **Application audio:** Use application icon metadata when available, with theme lookup and a bundled generic fallback. Include the Qt ICO reader for packaged app icons.
-- **Plasma Wayland:** Accept KDE Plasma sessions and use portal shortcuts, including configured triggers and desktop-approved assignments, without requiring Hyprland tools. Live Plasma capture and shortcut approval remain unverified.
-- **Updates:** Report HTTP/rate-limit and TLS failures with actionable details. Public discovery, verified download and atomic installation were exercised on temporary AppImages; the reported intermittent 0.3.3 check error has not been reproduced.
-
-### Upgrade notes
-
-- Use **Check for updates** from an update-enabled 0.3.3 AppImage, then quit and reopen after capture finishes. Keep the AppImage in a writable location. A manual AppImage installation remains available if the old build reports an error.
+- **Four-track recording** with independent volume/mute per source and named MP4 tracks.
+- **Dynamic application audio:** apps that start after capture begins are picked up without restarting video.
+- **Pause/Resume** for standalone continuous recording; basic **Discord Rich Presence**.
+- **Dashboard:** stacked full-width audio cards with volume popups, new Game/Music icons, larger capture tiles and a frameless overlay.
+- **Editor:** filters by game/mode, waveforms on every row.
+- **Opt-in idle compression** of old clips to HEVC with validation.
+- **KDE Plasma:** removes the probable cause of the Settings scroll crash (unconfirmed on a real session).
 
 ### Known limitations
 
-- Live Plasma capture/shortcut approval and the real Polkit interaction still need desktop validation. The full HTTPS updater passes isolated download/install tests; a real public 0.3.3-to-0.3.4 upgrade remains an owner test after publication.
+- Live four-track capture, dynamic discovery, pause/finalization, Discord presence and Plasma behavior are verified only with fixtures.
 
 ### Download and compatibility
 
-Download `Shadowless-0.3.4-linux-x86_64.AppImage` and `SHA256SUMS.txt`, verify with
+Download `Shadowless-0.3.6-linux-x86_64.AppImage` and `SHA256SUMS.txt`, verify with
 `sha256sum -c SHA256SUMS.txt`, then make the AppImage executable. Keep it in a
 permanent writable location for in-app updates.
 
@@ -52,4 +47,4 @@ AI assistance, including OpenAI Codex.
 
 This Linux release keeps the Windows update channel unchanged.
 
-[Full changelog](https://github.com/Zefth051/Shadowless/compare/linux-v0.3.3...linux-v0.3.4)
+[Full changelog](https://github.com/Zefth051/Shadowless/compare/linux-v0.3.3...linux-v0.3.6)

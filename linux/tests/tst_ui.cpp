@@ -4,6 +4,7 @@
 #include "../ui/overlay_editor.h"
 #include "../ui/status_indicator.h"
 #include "../ui/clip_player.h"
+#include "../ui/clip_waveform.h"
 #include "../player/mpv_player.h"
 #include "../player/media_tools.h"
 #include "../app/controller.h"
@@ -11,7 +12,7 @@
 #include "../ui/clip_notification.h"
 #include "../ui/theme.h"
 #include <QCheckBox>
-#include <QGraphicsOpacityEffect>
+#include <QTableWidget>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -81,12 +82,27 @@ private slots:
         page.resize(560, 650); page.edit(GsrOptions{}, false, true, keys); page.show();
         auto *notice = page.findChild<QLabel *>("captureActiveNotice"); QVERIFY(notice);
         auto *fields = page.findChild<QWidget *>("captureSettings"); QVERIFY(fields);
-        auto *effect = qobject_cast<QGraphicsOpacityEffect *>(fields->graphicsEffect()); QVERIFY(effect);
-        QVERIFY(!fields->isEnabled()); QCOMPARE(effect->opacity(), .84);
+        QVERIFY(!fields->graphicsEffect()); // graphics effects over scrolled widgets crash on Plasma/Wayland
+        QVERIFY(!fields->isEnabled());
         page.showAudio(); QTest::qWait(20);
         QVERIFY(notice->isVisible()); QVERIFY(page.rect().contains(notice->mapTo(&page, QPoint())));
         page.setCaptureActive(false); QVERIFY(fields->isEnabled());
-        QVERIFY(!notice->isVisible()); QCOMPARE(effect->opacity(), 1.);
+        QVERIFY(!notice->isVisible());
+    }
+    void dynamicApplicationControlsKeepExistingChoices() {
+        Dashboard dashboard(caps); GsrOptions options; options.dynamicApplicationAudio=true;
+        dashboard.updateState(options,{},true,true,false,false); dashboard.show();
+        // The main menu shows only the PC / Game / Microphone groups, never per-application rows.
+        QVERIFY(dashboard.findChildren<QPushButton *>("applicationTrack").isEmpty());
+        QVERIFY(dashboard.findChildren<QPushButton *>("applicationGame").isEmpty());
+        const auto summary=dashboard.findChild<QLabel *>("audioTrackSummary")->text();
+        QVERIFY(summary.contains("PC")); QVERIFY(summary.contains("Game"));
+        QVERIFY(!dashboard.findChild<QPushButton *>("fourTrackSetup")->isVisible());
+        QTemporaryDir directory; Settings settings(directory.filePath("settings.ini")); QString error;
+        options.applicationIncluded={{"Spotify",false}}; options.applicationGame={{"Late browser",true}};
+        QVERIFY(settings.save(options,{},false,&error)); const auto loaded=settings.capture(caps);
+        QCOMPARE(loaded.applicationIncluded,options.applicationIncluded); QCOMPARE(loaded.applicationGame,options.applicationGame);
+        QVERIFY(loaded.dynamicAudioEnabled());
     }
     void settingsRowsFitNarrowPanelAndSwitchFromKeyboard() {
         SettingsPage page(caps); applyTheme(&page);
@@ -679,7 +695,7 @@ private slots:
         QTest::mouseRelease(seek, Qt::LeftButton, Qt::NoModifier, QPoint(seek->width()/2, seek->height()/2));
         QTRY_VERIFY(qAbs(media->position()-10000) < 500);
         QTest::qWait(200); QVERIFY(qAbs(media->position()-10000) < 500); QVERIFY(media->paused());
-        auto *mute=player.findChild<QCheckBox *>("clipMute");
+        auto *mute=player.findChild<QPushButton *>("clipMute");
         mute->setFocus(); QTest::keyClick(mute,Qt::Key_Space);
         QVERIFY(mute->isChecked()); QTest::qWait(100); QVERIFY(media->paused());
         media->pause(false); QTRY_VERIFY(!media->paused());
@@ -687,6 +703,193 @@ private slots:
         QTRY_VERIFY(media->paused());
         QTest::mouseRelease(seek,Qt::LeftButton,Qt::NoModifier,QPoint(seek->width()/4,seek->height()/2));
         QTRY_VERIFY(!media->paused()); QTRY_VERIFY(qAbs(media->position()-5000)<500);
+    }
+    void editorWaveformsStayDarkAndVisible() {
+        QWidget root; QPalette light; light.setColor(QPalette::Base,Qt::white); root.setPalette(light);
+        auto *layout=new QVBoxLayout(&root); auto *wave=new ClipWaveform; layout->addWidget(wave);
+        root.resize(640,80); applyTheme(&root); root.show(); QCoreApplication::processEvents();
+        for(const auto &accent:{"violet","#000000","#0000ff"}) for(bool audible:{false,true}) {
+            applyTheme(&root,accent);
+            wave->peaks.fill(audible?.2f:0.f,512);
+            const auto image=wave->grab().toImage(); QVERIFY(!image.isNull());
+            QVERIFY2(image.pixelColor(4,4).lightness()<100,"Audio waveforms must use a dark surface, including silent tracks");
+            const auto center=image.pixelColor(image.width()/2,image.height()/2-5);
+            QCOMPARE(center.lightness()>100,audible);
+        }
+        wave->setEnabled(false);
+        QVERIFY(wave->grab().toImage().pixelColor(4,4).lightness()<100);
+    }
+    void audioSelectorsStayLeftWithAndWithoutWaveforms() {
+        ClipAudioTrack row("Microphone"); applyTheme(&row); row.resize(800,40); row.show();
+        for(bool editing:{false,true}) {
+            row.waveform->setVisible(editing); QCoreApplication::processEvents();
+            QVERIFY2(row.selector->x()<=8,"Track selection must stay at the left edge in preview and editing");
+            if(editing) QVERIFY(row.waveform->x()>row.selector->geometry().right());
+            row.selector->setFocus(); const bool checked=row.selector->isChecked();
+            QTest::keyClick(row.selector,Qt::Key_Space); QCOMPARE(row.selector->isChecked(),!checked);
+            QTest::mouseClick(row.selector,Qt::LeftButton,Qt::NoModifier,QPoint(180,16));
+            QCOMPARE(row.selector->isChecked(),checked);
+        }
+    }
+    void dynamicAudioGroupsSharePhysicalSelection() {
+        ClipAudioTracks rows; applyTheme(&rows); rows.resize(640,500); rows.show();
+        int changes=0; rows.selectionChanged=[&] { ++changes; };
+        rows.setTracks({{4,"PC (other)"},{8,"App: Browser"},{12,"Game: Arena"},{16,"Microphone"},{20,"App (off): Music"}});
+        QCOMPARE(rows.selectedIds(),QVector<int>({4,8,12,16}));
+        QCOMPARE(rows.selectedOrdinals(),QVector<int>({0,1,2,3}));
+        auto *more=rows.findChild<QPushButton *>("clipMoreTracks"); QVERIFY(more); QVERIFY(!more->isVisible()); // player: groups only
+        rows.setEditing(true); QVERIFY(more->isVisible()); // More tracks exists only in the editor
+        auto *app=rows.findChild<QCheckBox *>("clipTrack1"); QVERIFY(app); QVERIFY(!app->isVisible());
+        const int before=changes; more->click(); QVERIFY(app->isVisible()); QCOMPARE(changes,before);
+        QCOMPARE(rows.selectedIds(),QVector<int>({4,8,12,16}));
+        auto *pc=rows.findChild<QCheckBox *>("clipGroupPC"); QVERIFY(pc);
+        QCOMPARE(pc->checkState(),Qt::PartiallyChecked);
+        int prompts=0; bool accept=false; QString lastGroup; rows.confirmEnableAll=[&](const QString &group) { ++prompts; lastGroup=group; return accept; };
+        pc->click(); QCOMPARE(prompts,1); QCOMPARE(rows.selectedIds(),QVector<int>({4,8,12,16})); QCOMPARE(pc->checkState(),Qt::PartiallyChecked); // Cancel
+        QCOMPARE(lastGroup,QString("PC"));
+        accept=true; pc->click(); QCOMPARE(prompts,2); QCOMPARE(rows.selectedIds(),QVector<int>({4,8,12,16,20})); // Ok enables every PC track
+        pc->click(); QCOMPARE(prompts,2); QCOMPARE(rows.selectedIds(),QVector<int>({12,16})); // fully checked: one click turns the group off
+        pc->click(); QCOMPARE(prompts,2); QCOMPARE(rows.selectedIds(),QVector<int>({4,8,12,16,20}));
+        app->setFocus(); QTest::keyClick(app,Qt::Key_Space); QVERIFY(!rows.selectedIds().contains(8));
+        rows.setTracks({{4,"PC (other)"},{8,"App: Browser"},{12,"Game: Arena"},{16,"Microphone"},{20,"App (off): Music"},{24,"App: Late app"}});
+        QVERIFY(!rows.selectedIds().contains(8)); QVERIFY(rows.selectedIds().contains(24));
+        QCOMPARE(rows.selectedOrdinals(),QVector<int>({0,2,3,4,5}));
+        const auto selected=rows.selectedIds(); more->click(); QCOMPARE(rows.selectedIds(),selected);
+        rows.setTracks({{4,"PC (other)"},{8,"App: Renamed browser"},{12,"Game: Arena"},{16,"Microphone"},{20,"App (off): Music"},{24,"App: Late app"}});
+        QCOMPARE(rows.selectedIds(),selected);
+    }
+    void dynamicAudioGroupsPreserveLegacyAndResetExpansion() {
+        ClipAudioTracks rows; rows.resize(420,600); rows.show();
+        rows.setTracks({{1,"PC"},{2,"Microphone"}});
+        QVERIFY(!rows.findChild<QPushButton *>("clipMoreTracks")->isVisible());
+        QCOMPARE(rows.selectedIds(),QVector<int>({1,2}));
+        QVERIFY(!rows.findChild<QCheckBox *>("clipGroupPC")->isVisible());
+        rows.setTracks({{1,"PC (other)"},{2,"Microphone"}});
+        auto *game=rows.findChild<QCheckBox *>("clipGroupGame"); QVERIFY(game->isVisible()); QVERIFY(!game->isEnabled());
+        auto *more=rows.findChild<QPushButton *>("clipMoreTracks"); more->click();
+        rows.clear(); rows.setTracks({{1,"PC (other)"},{2,"App: New clip"}});
+        QVERIFY(!more->isChecked()); QVERIFY(!rows.findChild<QCheckBox *>("clipTrack1")->isVisible());
+        rows.findChild<QCheckBox *>("clipGroupPC")->setFocus();
+        QTest::keyClick(rows.findChild<QCheckBox *>("clipGroupPC"),Qt::Key_Space);
+        QVERIFY(rows.selectedIds().isEmpty());
+    }
+    void dynamicAudioOffDefaultsRespectLateMetadataAndUserSelection() {
+        ClipAudioTracks rows; rows.resize(500,400); rows.show();
+        rows.setTracks({{1,"Audio track 1"},{2,"Audio track 2"},{3,"Audio track 3"},{4,"Audio track 4"}});
+        auto *first=rows.findChild<QCheckBox *>("clipTrack0"); QVERIFY(first); first->setChecked(false);
+        rows.setTracks({{1,"App: Browser"},{2,"App (off): Music"},{3,"Game (off): Arena"},{4,"Microphone"}});
+        QCOMPARE(rows.selectedIds(),QVector<int>({4}));
+        QCOMPARE(rows.selectedOrdinals(),QVector<int>({3}));
+        auto *pc=rows.findChild<QCheckBox *>("clipGroupPC"), *game=rows.findChild<QCheckBox *>("clipGroupGame");
+        QVERIFY(pc->isEnabled()); QVERIFY(game->isEnabled());
+        QCOMPARE(pc->checkState(),Qt::Unchecked); QCOMPARE(game->checkState(),Qt::Unchecked);
+        game->click(); QCOMPARE(rows.selectedIds(),QVector<int>({3,4}));
+        pc->click(); QCOMPARE(rows.selectedIds(),QVector<int>({1,2,3,4}));
+        rows.setTracks({{1,"App: Browser"},{2,"App (off): Music"},{3,"Game (off): Arena"},{4,"Microphone"}});
+        QCOMPARE(rows.selectedIds(),QVector<int>({1,2,3,4}));
+        pc->click(); QCOMPARE(rows.selectedIds(),QVector<int>({3,4}));
+        rows.findChild<QPushButton *>("clipMoreTracks")->click();
+        QCOMPARE(rows.selectedIds(),QVector<int>({3,4}));
+        QCOMPARE(rows.selectedOrdinals(),QVector<int>({2,3}));
+    }
+    void dynamicAudioManyApplicationsStayScrollable() {
+        QScrollArea scroll; scroll.setWidgetResizable(true); scroll.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        auto *rows=new ClipAudioTracks; scroll.setWidget(rows); scroll.resize(420,230); applyTheme(&scroll);
+        QVector<QPair<int,QString>> sources{{1,"PC (other)"},{2,"Game: Arena"},{3,"Microphone"}};
+        for(int i=0;i<25;++i) sources.append({i+4,"App: A browser with a long shared application name "+QString::number(i)});
+        rows->setTracks(sources); rows->setEditing(true); scroll.show();
+        const auto ids=rows->selectedIds(); rows->findChild<QPushButton *>("clipMoreTracks")->click();
+        QCoreApplication::processEvents(); QCOMPARE(rows->selectedIds(),ids);
+        QVERIFY(rows->height()>scroll.viewport()->height());
+        for(auto *selector:rows->findChildren<QCheckBox *>()) {
+            auto *row=selector->parentWidget();
+            if(!row->isVisible()) { continue; }
+            QVERIFY(selector->x()<=8);
+            QVERIFY(row->geometry().right()<rows->width());
+            QVERIFY(!row->grab().isNull());
+        }
+        rows->findChild<QCheckBox *>("clipTrack27")->setFocus();
+        QTest::keyClick(rows->findChild<QCheckBox *>("clipTrack27"),Qt::Key_Space);
+        QCOMPARE(rows->selectedIds().size(),27);
+    }
+    void recordingPauseControlReflectsActualState() {
+        Dashboard dashboard(caps); dashboard.show(); GsrOptions options; options.continuousRecording=true;
+        auto *pause=dashboard.findChild<QPushButton *>("pauseRecording"); QVERIFY(pause);
+        QSignalSpy requested(&dashboard,&Dashboard::recordingPauseRequested);
+        dashboard.updateState(options,{},true,true,false,false);
+        QVERIFY(pause->isVisible()); QVERIFY(pause->isEnabled()); QCOMPARE(pause->text(),QString("Pause recording"));
+        pause->click(); QCOMPARE(requested.size(),1);
+        dashboard.updateState(options,{},true,true,false,false,false,false,true);
+        QCOMPARE(pause->text(),QString("Resume recording"));
+        QCOMPARE(dashboard.findChild<QLabel *>("statusTitle")->text(),QString("Recording paused"));
+        dashboard.updateState(options,{},true,true,false,false,false,false,false,true);
+        QVERIFY(!pause->isEnabled()); QCOMPARE(pause->text(),QString("Please wait…"));
+        dashboard.updateState(options,{},true,true,false,false,false,false,false,false,false);
+        QVERIFY(!pause->isEnabled());
+        QCOMPARE(dashboard.findChild<QLabel *>("statusTitle")->text(),QString("Recording pause state unknown"));
+        options.continuousRecording=false;
+        dashboard.updateState(options,{},true,true,false,false,true);
+        QVERIFY(!pause->isVisible());
+        StatusIndicator indicator; indicator.show(); indicator.setState(StatusIndicator::Paused);
+        QCOMPARE(indicator.accessibleDescription(),QString("Recording paused"));
+    }
+    void playerFiltersRecentClipsAndKeepsThumbnails() {
+        ClipPlayer player;
+        const QString root="/tmp/shadowless-filter-clips";
+        const QString replay=root+"/Game A/Replay_1.mp4", recording=root+"/Game B/Recording_2.mkv";
+        const QString desktop=root+"/Replay_3.mp4", imported=root+"/Game A/imported.mp4";
+        player.setClips({replay,recording,desktop,imported},root);
+        auto *games=player.findChild<QComboBox *>("clipGameFilter"); QVERIFY(games);
+        auto *mode=player.findChild<QComboBox *>("clipModeFilter"); QVERIFY(mode);
+        auto *list=player.findChild<QListWidget *>("clipRecent"); QCOMPARE(list->count(),4);
+        QPixmap red(48,28); red.fill(Qt::red); player.setThumbnail(replay,red);
+        games->setCurrentIndex(games->findText("Game A")); QCOMPARE(list->count(),2);
+        mode->setCurrentIndex(mode->findData("recording")); QCOMPARE(list->count(),0);
+        mode->setCurrentIndex(mode->findData("replay")); QCOMPARE(list->count(),1);
+        QCOMPARE(list->item(0)->data(Qt::UserRole).toString(),replay);
+        QCOMPARE(list->item(0)->icon().pixmap(48,28).toImage().pixelColor(24,14),QColor(Qt::red));
+        mode->setCurrentIndex(mode->findData("unknown")); QCOMPARE(list->count(),1);
+        QCOMPARE(list->item(0)->data(Qt::UserRole).toString(),imported);
+        games->setCurrentIndex(0); mode->setCurrentIndex(0); QCOMPARE(list->count(),4);
+        games->setCurrentIndex(games->findText("Game B"));
+        player.setClips({desktop},root);
+        QCOMPARE(games->currentIndex(),0); QCOMPARE(list->count(),1);
+        QCOMPARE(games->itemText(1),QString("Desktop / Unidentified"));
+    }
+    void settingsScrollsThroughCaptureStates() {
+        SettingsPage page(caps); applyTheme(&page);
+        page.edit(GsrOptions{},false,false,keys); page.show();
+        auto *scroll=page.findChild<QScrollArea *>(); QVERIFY(scroll);
+        for(const auto &size:{QSize(420,620),QSize(560,740)}) for(bool active:{false,true}) {
+            page.resize(size); page.setCaptureActive(active); QCoreApplication::processEvents();
+            auto *bar=scroll->verticalScrollBar(); QVERIFY(bar->maximum()>0);
+            for(int value=0;value<=bar->maximum();value+=qMax(1,bar->maximum()/8)) {
+                bar->setValue(value); QCoreApplication::processEvents();
+                QVERIFY(!page.grab().isNull());
+                const auto point=scroll->viewport()->rect().center();
+                QWheelEvent wheel(point,scroll->viewport()->mapToGlobal(point),QPoint(),QPoint(0,-120),
+                    Qt::NoButton,Qt::NoModifier,Qt::NoScrollPhase,false);
+                QApplication::sendEvent(scroll->viewport(),&wheel); QCoreApplication::processEvents();
+            }
+            bar->setValue(bar->maximum()); QVERIFY(page.isVisible());
+        }
+    }
+    void editorFiltersUseWholeLibraryBeforeDashboardLimit() {
+        QTemporaryDir directory; QVERIFY(QDir(directory.path()).mkpath("Game A")); QVERIFY(QDir(directory.path()).mkpath("Game B"));
+        for(int i=0;i<27;++i) {
+            const auto path=directory.filePath(i==26?"Game B/Recording_old.mp4":QString("Game A/Replay_%1.mp4").arg(i));
+            QFile file(path); QVERIFY(file.open(QIODevice::WriteOnly)); file.write("fixture");
+        }
+        Dashboard dashboard(caps); dashboard.show(); dashboard.refreshLibrary(directory.path());
+        auto *player=dashboard.findChild<ClipPlayer *>(); auto *list=player->findChild<QListWidget *>("clipRecent");
+        QTRY_VERIFY(list->count()>0); QCOMPARE(list->count(),27);
+        auto *library=dashboard.findChild<Library *>();
+        auto *dashboardFilter=library->findChild<QComboBox *>("collectionFilter");
+        dashboardFilter->setCurrentIndex(dashboardFilter->findData("Game A"));
+        QCOMPARE(list->count(),27);
+        auto *mode=player->findChild<QComboBox *>("clipModeFilter");
+        mode->setCurrentIndex(mode->findData("recording")); QCOMPARE(list->count(),1);
+        QCOMPARE(player->findChild<QComboBox *>("clipGameFilter")->findText("Game B")>=0,true);
     }
     void playerDragsVisibleTrimHandles() {
         QTemporaryDir directory; const auto path=directory.filePath("trim.mp4");
@@ -821,7 +1024,7 @@ private slots:
     void playerAudioEditorAndPickerLifecycle() {
         QTemporaryDir directory;
         const auto path = directory.filePath("Four audio tracks.mp4");
-        QCOMPARE(QProcess::execute("ffmpeg", {"-v", "error", "-f", "lavfi", "-i", "testsrc2=s=320x180:r=15", "-f", "lavfi", "-i", "sine=frequency=440", "-f", "lavfi", "-i", "sine=frequency=880", "-f", "lavfi", "-i", "sine=frequency=1320", "-f", "lavfi", "-i", "sine=frequency=1760", "-t", "8", "-map", "0:v", "-map", "1:a", "-map", "2:a", "-map", "3:a", "-map", "4:a", "-metadata:s:a:0", "title=Game", "-metadata:s:a:1", "title=Music", "-metadata:s:a:2", "title=PC", "-metadata:s:a:3", "title=Microphone", "-c:v", "libx264", "-threads", "1", "-c:a", "aac", path}), 0);
+        QCOMPARE(QProcess::execute("ffmpeg", {"-v", "error", "-f", "lavfi", "-i", "testsrc2=s=320x180:r=15", "-f", "lavfi", "-i", "sine=frequency=440", "-f", "lavfi", "-i", "sine=frequency=880", "-f", "lavfi", "-i", "sine=frequency=1320", "-f", "lavfi", "-i", "sine=frequency=1760", "-t", "8", "-map", "0:v", "-map", "1:a", "-map", "2:a", "-map", "3:a", "-map", "4:a", "-metadata:s:a:0", "handler_name=Game", "-metadata:s:a:1", "handler_name=Music", "-metadata:s:a:2", "handler_name=PC", "-metadata:s:a:3", "handler_name=Microphone", "-c:v", "libx264", "-threads", "1", "-c:a", "aac", path}), 0);
         Dashboard dashboard(caps); dashboard.resize(1280, 900); dashboard.show();
         auto *player = dashboard.findChild<ClipPlayer *>();
         dashboard.findChild<Library *>()->clipRequested(path);
@@ -842,6 +1045,7 @@ private slots:
             QVERIFY(track->isVisible());
             QVERIFY2(audio->viewport()->rect().contains(QRect(track->mapTo(audio->viewport(),QPoint()),track->size())), "Every track toggle must fit without scrolling");
             QVERIFY(track->height() >= 32);
+            QCOMPARE(track->accessibleName(),QStringList({"Game","Music","PC","Microphone"})[i]);
         }
         auto *exportButton = player->findChild<QPushButton *>("clipExport");
         auto *timeline = player->findChild<QWidget *>("clipTimeline"); QVERIFY(timeline);
@@ -974,6 +1178,98 @@ private slots:
         button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 1);
         const auto result = qvariant_cast<GsrOptions>(saved[0][0]); QCOMPARE(result.pcTrack, 5);
         QCOMPARE(result.applicationTracks, options.applicationTracks);
+    }
+    void fourTrackDashboardHasIndependentRoleLevels() {
+        Dashboard dashboard(caps); dashboard.show();
+        GsrOptions options; options.applicationAudio = true; options.fourTrackAudio = true;
+        options.microphone = true; options.pcTrack = 1; options.microphoneTrack = 4;
+        options.levels.systemVolume = 80; options.levels.gameVolume = 45;
+        options.levels.musicVolume = 30; options.levels.musicMuted = true;
+        dashboard.updateState(options, {}, true, true, false, false);
+        auto *game = dashboard.findChild<QSlider *>("gameCaptureVolume");
+        auto *music = dashboard.findChild<QSlider *>("musicCaptureVolume");
+        auto *gameButton = dashboard.findChild<QPushButton *>("gameCaptureAudio");
+        auto *musicButton = dashboard.findChild<QPushButton *>("musicCaptureAudio");
+        // Sliders live in each row's "100% ▾" popup; the row buttons are what the dashboard shows.
+        QVERIFY(game && music && gameButton && musicButton && gameButton->isVisible() && musicButton->isVisible());
+        QCOMPARE(game->value(), 45); QCOMPARE(music->value(), 30);
+        QVERIFY(gameButton && musicButton); QVERIFY(gameButton->isChecked()); QVERIFY(!musicButton->isChecked());
+        QVERIFY(button(&dashboard, "PC")->isVisible());
+        auto *summary = dashboard.findChild<QLabel *>("audioTrackSummary"); QVERIFY(summary);
+        QCOMPARE(summary->text(), QString("Audio tracks: PC · Game · Music · Microphone"));
+        QVERIFY(summary->wordWrap());
+        QSignalSpy volumes(&dashboard, &Dashboard::roleVolumeChanged);
+        QSignalSpy audio(&dashboard, &Dashboard::roleAudioChanged);
+        QSignalSpy system(&dashboard, &Dashboard::volumeChanged);
+        game->setValue(35); music->setValue(20); musicButton->click();
+        QCOMPARE(volumes.size(), 2); QCOMPARE(volumes[0][0].toInt(), 2); QCOMPARE(volumes[0][1].toInt(), 35);
+        QCOMPARE(volumes[1][0].toInt(), 3); QCOMPARE(volumes[1][1].toInt(), 20);
+        QCOMPARE(audio.size(), 1); QCOMPARE(audio[0][0].toInt(), 3); QVERIFY(audio[0][1].toBool());
+        QVERIFY(system.isEmpty());
+        dashboard.updateState(options, {}, true, true, false, false);
+        QCOMPARE(volumes.size(), 2);
+        options.fourTrackAudio = false; options.dynamicApplicationAudio = false; // legacy two-source mode; dynamic grouping is the default
+        options.applicationAudio = false; options.separateAudioTracks = true;
+        dashboard.updateState(options, {}, true, true, false, false);
+        QVERIFY(!game->isVisible() && !music->isVisible());
+        QCOMPARE(summary->text(), QString("Audio tracks: PC · Microphone"));
+        options.separateAudioTracks = false;
+        dashboard.updateState(options, {}, true, true, false, false);
+        QCOMPARE(summary->text(), QString("Audio tracks: PC + Microphone (mixed)"));
+        auto *setup = dashboard.findChild<QPushButton *>("fourTrackSetup");
+        QVERIFY(setup && setup->isVisible() && !setup->isEnabled());
+        dashboard.updateState(options, {}, false, false, false, false);
+        QVERIFY(setup->isEnabled());
+        QSignalSpy setupRequested(&dashboard, &Dashboard::fourTrackSetupRequested);
+        setup->click(); QCOMPARE(setupRequested.size(), 1);
+        QTemporaryDir directory; Settings settings(directory.filePath("settings.ini")); QString error;
+        const auto defaults = settings.capture(caps);
+        QCOMPARE(defaults.levels.gameVolume, 100); QCOMPARE(defaults.levels.musicVolume, 100);
+        QVERIFY(!defaults.levels.gameMuted && !defaults.levels.musicMuted);
+        options.levels.gameMuted = true;
+        QVERIFY(settings.save(options, {}, false, &error));
+        const auto restored = settings.capture(caps);
+        QCOMPARE(restored.levels.gameVolume, 45); QCOMPARE(restored.levels.musicVolume, 30);
+        QVERIFY(restored.levels.gameMuted && restored.levels.musicMuted);
+        QCOMPARE(restored.levels.systemVolume, 80);
+    }
+    void fourTrackAudioSetupPersistsNamedRoles() {
+        SettingsPage page(caps); GsrOptions options;
+        options.source = "DP-1"; options.outputDirectory = "/tmp/clips";
+        options.applicationAudio = true;
+        options.applicationTracks = {{"Game application", 2}, {"Music application", 3}};
+        page.edit(options, false, false, keys);
+        auto *mode = page.findChild<QComboBox *>("audioRoutingMode"); QVERIFY(mode);
+        mode->setCurrentIndex(2);
+        auto *table = page.findChild<QTableWidget *>(); QVERIFY(table);
+        QCOMPARE(table->rowCount(), 2);
+        auto *game = qobject_cast<QComboBox *>(table->cellWidget(0, 1)); QVERIFY(game);
+        auto *music = qobject_cast<QComboBox *>(table->cellWidget(1, 1)); QVERIFY(music);
+        QCOMPARE(game->currentText(), "Game (track 2)");
+        QCOMPARE(music->currentText(), "Music (track 3)");
+        QCOMPARE(game->count(), 3);
+        QSignalSpy saved(&page, &SettingsPage::saved);
+        music->setCurrentIndex(0);
+        button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 0);
+        QVERIFY(page.findChild<QLabel *>("settingsError")->text().contains("music"));
+        music->setCurrentIndex(music->findData(3));
+        button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 1);
+        const auto result = qvariant_cast<GsrOptions>(saved[0][0]);
+        QVERIFY(result.applicationAudio && result.fourTrackAudio && result.microphone);
+        QCOMPARE(result.pcTrack, 1); QCOMPARE(result.microphoneTrack, 4);
+        QCOMPARE(result.applicationTracks, options.applicationTracks);
+        QCOMPARE(result.audioTracks().size(), 4);
+        QTemporaryDir directory; Settings settings(directory.filePath("settings.ini")); QString error;
+        QVERIFY(settings.save(result, {}, false, &error));
+        const auto restored = settings.capture(caps);
+        QVERIFY(restored.fourTrackAudio); QCOMPARE(restored.audioTracks(), result.audioTracks());
+        page.edit(restored, false, false, keys);
+        QCOMPARE(mode->currentIndex(), 2);
+        mode->setCurrentIndex(1);
+        button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 2);
+        QVERIFY(!qvariant_cast<GsrOptions>(saved[1][0]).fourTrackAudio);
+        QVERIFY(settings.save(options, {}, false, &error));
+        QVERIFY(!settings.capture(caps).fourTrackAudio);
     }
     void videoPresetsPreserveCustomValuesAndIgnoreWheel() {
         SettingsPage page(caps);
@@ -1145,7 +1441,7 @@ private slots:
     }
     void dashboardKeepsRecordingVolumeAvailableDuringCapture() {
         Dashboard dashboard(caps);
-        GsrOptions options;
+        GsrOptions options; options.dynamicApplicationAudio = false; // legacy "System audio" label
         options.levels.systemVolume = 63;
         options.levels.systemMuted = true;
         dashboard.updateState(options, {}, true, true, false, false);

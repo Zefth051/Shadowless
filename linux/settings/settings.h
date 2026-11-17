@@ -15,6 +15,10 @@ public:
     QStringList shortcutKeys() const;
     bool launchAtLogin() const;
     bool startReplayOnLaunch() const;
+    bool discordPresence() const;
+    void setDiscordPresence(bool enabled);
+    bool idleCompression() const;
+    void setIdleCompression(bool enabled);
     bool saveStartup(bool launchAtLogin, bool startReplayOnLaunch, QString *error);
     bool save(const GsrOptions &options, const OverlayScene &scene, bool indicator, QString *error,
               const QStringList &keys = {"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"}, const QString &accent = {}, const QString &position = "top-right");

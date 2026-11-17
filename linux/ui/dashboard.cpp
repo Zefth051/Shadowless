@@ -15,6 +15,7 @@
 #include <QLabel>
 #include <QBoxLayout>
 #include <QScrollArea>
+#include <QStyle>
 #include <QLocale>
 #include <QPainter>
 #include <QProgressBar>
@@ -31,7 +32,7 @@ namespace {
 class CaptureModeTile : public QPushButton {
 public:
     CaptureModeTile(const QString &title, const QString &detail) : QPushButton(title), m_detail(detail) {
-        setFixedHeight(128);
+        setFixedHeight(138);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setAccessibleDescription(detail);
     }
@@ -47,18 +48,18 @@ protected:
         const auto accent = window()->palette().color(QPalette::Accent);
         const auto ink = palette().color(QPalette::WindowText);
         QColor badge = isChecked() ? accent : ink; badge.setAlpha(isChecked() ? 28 : 12);
-        const QRectF emblem(width() / 2. - 24, 14, 48, 48);
-        painter.setPen(QPen(isChecked() ? accent : QColor("#768089"), 2)); painter.setBrush(badge);
+        const QRectF emblem(width() / 2. - 28, 14, 56, 56);
+        painter.setPen(QPen(isChecked() ? accent : QColor("#768089"), 2.6)); painter.setBrush(badge);
         if (isChecked()) painter.drawArc(emblem, 95 * 16, 305 * 16);
         else painter.drawEllipse(emblem);
         painter.setPen(Qt::NoPen); painter.setBrush(isChecked() ? accent : QColor("#768089"));
-        painter.drawEllipse(emblem.center(), 5, 5);
+        painter.drawEllipse(emblem.center(), 6.5, 6.5);
         auto titleFont = font(); titleFont.setWeight(QFont::DemiBold); painter.setFont(titleFont);
         painter.setPen(isChecked() ? accent : ink);
-        painter.drawText(QRect(8, 67, width() - 16, 24), Qt::AlignCenter, text());
+        painter.drawText(QRect(8, 77, width() - 16, 24), Qt::AlignCenter, text());
         titleFont.setWeight(QFont::Normal); titleFont.setPixelSize(11); painter.setFont(titleFont);
         painter.setPen(QColor("#94a0a8"));
-        painter.drawText(QRect(12, 94, width() - 24, 20), Qt::AlignCenter,
+        painter.drawText(QRect(12, 102, width() - 24, 20), Qt::AlignCenter,
                          painter.fontMetrics().elidedText(m_detail, Qt::ElideRight, width() - 32));
     }
 private:
@@ -135,7 +136,8 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     shell->setContentsMargins(24, 20, 24, 18);
     shell->setSpacing(16);
 
-    m_chrome = new QWidget;
+    m_chrome = new QWidget(this); // floats at the screen edge, outside the content panel
+    m_chrome->setObjectName("dashboardChrome");
     auto *header = new QHBoxLayout(m_chrome);
     header->setContentsMargins(0, 0, 0, 0);
     m_logo = new QLabel;
@@ -151,6 +153,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     header->addWidget(m_back);
     m_settingsButton = new QPushButton("Settings");
     m_settingsButton->setObjectName("openSettings");
+    m_settingsButton->setIcon(QIcon(":/shadowless/icons/settings.svg"));
     header->addWidget(m_settingsButton);
     auto *close = new QPushButton("×");
     close->setObjectName("hideOverlay");
@@ -158,7 +161,6 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     close->setText("Esc  ×");
     close->setToolTip("Hide Shadowless and return to the game");
     header->addWidget(close);
-    shell->addWidget(m_chrome);
 
     m_pages = new QStackedWidget;
     m_home = new QWidget;
@@ -194,6 +196,12 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_detail->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     statusText->addWidget(m_detail);
     statusLayout->addLayout(statusText, 1);
+    m_pause = new QPushButton("Pause recording");
+    m_pause->setObjectName("pauseRecording");
+    m_pause->setAccessibleName("Pause recording");
+    m_pause->hide();
+    statusLayout->addWidget(m_pause);
+    connect(m_pause, &QPushButton::clicked, this, &Dashboard::recordingPauseRequested);
     homeLayout->addWidget(card);
 
     auto *overlayCard = new QFrame;
@@ -247,33 +255,108 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     auto *audioCard = new QFrame;
     audioCard->setObjectName("panel");
     auto *quick = new QGridLayout(audioCard);
-    quick->setContentsMargins(10, 8, 12, 8);
-    quick->setHorizontalSpacing(12);
-    quick->setColumnStretch(1, 1);
+    quick->setContentsMargins(0, 0, 0, 0);
+    quick->setHorizontalSpacing(8);
+    quick->setVerticalSpacing(8);
+    quick->setColumnStretch(0, 1);
+    audioCard->setObjectName("audioGroup");
     m_systemAudio = new QPushButton("System audio");
     m_microphone = new QPushButton("Microphone");
-    auto addAudioRow = [this, quick](int row, QPushButton *button, QSlider *&slider, QLabel *&percent) {
+    m_gameAudio = new QPushButton("Game");
+    m_musicAudio = new QPushButton("Music");
+    m_gameAudio->setObjectName("gameCaptureAudio");
+    m_musicAudio->setObjectName("musicCaptureAudio");
+    // Windows layout: one card per source = mute toggle (icon + name) + "100% ▾" button that opens a volume popup.
+    auto addAudioRow = [this, quick](int row, int gridRow, int gridCol, QPushButton *button, QSlider *&slider, QLabel *&percent) {
+        auto *card = new QFrame;
+        card->setObjectName("audioCard");
+        auto *cardLayout = new QHBoxLayout(card);
+        cardLayout->setContentsMargins(0, 0, 0, 0);
+        cardLayout->setSpacing(0);
         button->setCheckable(true);
-        quick->addWidget(button, row, 0);
+        button->setProperty("audioRow", true);
+        button->setIconSize(QSize(18, 18));
+        button->setMinimumWidth(0);
+        cardLayout->addWidget(button, 1);
         slider = new ClickToAdjust<QSlider>(Qt::Horizontal);
+        slider->setProperty("audioRow", true);
+        slider->setMinimumHeight(24);
         slider->setRange(0, 100);
         slider->setAccessibleName(button->text() + " capture volume");
         slider->setToolTip("Recording volume");
-        quick->addWidget(slider, row, 1);
-        percent = new QLabel("100%");
-        percent->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        percent->setMinimumWidth(percent->sizeHint().width());
-        percent->setProperty("muted", true);
-        quick->addWidget(percent, row, 2);
-        connect(slider, &QSlider::valueChanged, this, [this, row](int value) { emit volumeChanged(row == 1, value); });
+        auto *value = new QPushButton("100% ▾");
+        value->setProperty("audioValue", true);
+        value->setAccessibleName(button->text() + " volume");
+        value->setToolTip("Recording volume");
+        auto *popup = new QFrame(this, Qt::Popup);
+        popup->setObjectName("volumePopup");
+        auto *popupLayout = new QVBoxLayout(popup);
+        popupLayout->setContentsMargins(16, 14, 16, 14);
+        popupLayout->setSpacing(10);
+        auto *head = new QHBoxLayout;
+        auto *title = new QLabel(button->text());
+        title->setStyleSheet("font-weight: 600;");
+        auto *popupPercent = new QLabel("100%");
+        popupPercent->setProperty("muted", true);
+        head->addWidget(title, 1);
+        head->addWidget(popupPercent);
+        popupLayout->addLayout(head);
+        popupLayout->addWidget(slider);
+        percent = popupPercent;
+        slider->setProperty("valueButton", QVariant::fromValue<QObject *>(value));
+        popup->setFixedWidth(260);
+        cardLayout->addWidget(value);
+        connect(value, &QPushButton::clicked, this, [value, popup, button, title] {
+            title->setText(button->text());
+            popup->adjustSize();
+            popup->move(value->mapToGlobal(QPoint(value->width() - popup->width(), value->height() + 8)));
+            popup->show();
+            popup->raise();
+        });
+        connect(slider, &QSlider::valueChanged, this, [value, popupPercent](int v) {
+            value->setText(QString("%1% ▾").arg(v));
+            popupPercent->setText(QString("%1%").arg(v));
+        });
+        connect(slider, &QSlider::valueChanged, this, [this, row](int v) {
+            if (row == 1 || row == 2) emit roleVolumeChanged(row + 1, v);
+            else emit volumeChanged(row == 3, v);
+        });
+        quick->addWidget(card, gridRow, gridCol);
     };
-    addAudioRow(0, m_systemAudio, m_systemVolume, m_systemPercent);
-    addAudioRow(1, m_microphone, m_microphoneVolume, m_microphonePercent);
+    addAudioRow(0, 0, 0, m_systemAudio, m_systemVolume, m_systemPercent);
+    addAudioRow(1, 2, 0, m_gameAudio, m_gameVolume, m_gamePercent);
+    addAudioRow(2, 3, 0, m_musicAudio, m_musicVolume, m_musicPercent);
+    addAudioRow(3, 1, 0, m_microphone, m_microphoneVolume, m_microphonePercent);
+    m_gameVolume->setObjectName("gameCaptureVolume");
+    m_musicVolume->setObjectName("musicCaptureVolume");
     m_audioSettings = new QPushButton("Audio settings");
     m_audioSettings->setObjectName("settingsLink");
-    quick->addWidget(m_audioSettings, 2, 0, 1, 3);
+    quick->addWidget(m_audioSettings, 4, 0);
+    m_audioTrackSummary = new QLabel;
+    m_audioTrackSummary->setObjectName("audioTrackSummary");
+    m_audioTrackSummary->setWordWrap(true);
+    m_audioTrackSummary->setProperty("muted", true);
+    quick->addWidget(m_audioTrackSummary, 5, 0);
+    m_fourTrackSetup = new QPushButton("Set up four tracks");
+    m_fourTrackSetup->setObjectName("fourTrackSetup");
+    quick->addWidget(m_fourTrackSetup, 6, 0);
+    connect(m_fourTrackSetup, &QPushButton::clicked, this, [this] {
+        showPage(m_settings, 560);
+        emit fourTrackSetupRequested();
+        m_settings->showAudio();
+    });
     homeLayout->addWidget(audioCard);
 
+    m_action = new QPushButton;
+    m_action->setObjectName("captureAction");
+    homeLayout->addWidget(m_action);
+
+    // Format, free space and save folder share one card so they read as a group, separate from the audio card above.
+    auto *storageCard = new QFrame;
+    storageCard->setObjectName("panel");
+    auto *storage = new QVBoxLayout(storageCard);
+    storage->setContentsMargins(12, 8, 12, 10);
+    storage->setSpacing(6);
     auto *summary = new QHBoxLayout;
     m_format = new QPushButton;
     m_format->setObjectName("settingsLink");
@@ -284,18 +367,14 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     summary->addWidget(m_format);
     summary->addStretch();
     summary->addWidget(m_disk);
-    homeLayout->addLayout(summary);
+    storage->addLayout(summary);
     m_diskUsage = new QProgressBar;
     m_diskUsage->setAccessibleName("Output volume usage");
     m_diskUsage->setRange(0, 100);
     m_diskUsage->setTextVisible(false);
     m_diskUsage->setFixedHeight(4);
     m_diskUsage->hide();
-    homeLayout->addWidget(m_diskUsage);
-
-    m_action = new QPushButton;
-    m_action->setObjectName("captureAction");
-    homeLayout->addWidget(m_action);
+    storage->addWidget(m_diskUsage);
     auto *folderRow = new QHBoxLayout;
     m_folder = new QPushButton;
     m_folder->setObjectName("settingsLink");
@@ -304,7 +383,8 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_openFolder = new QPushButton("Open folder");
     m_openFolder->setObjectName("clipsFolder");
     folderRow->addWidget(m_openFolder);
-    homeLayout->addLayout(folderRow);
+    storage->addLayout(folderRow);
+    homeLayout->addWidget(storageCard);
     homeLayout->addStretch();
     auto *libraryCard = new QFrame;
     libraryCard->setObjectName("panel");
@@ -321,6 +401,8 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_record->setIcon(QIcon(":/shadowless/icons/record.svg"));
     m_systemAudio->setIcon(QIcon(":/shadowless/icons/speaker.svg"));
     m_microphone->setIcon(QIcon(":/shadowless/icons/microphone.svg"));
+    m_gameAudio->setIcon(QIcon(":/shadowless/icons/game.svg"));
+    m_musicAudio->setIcon(QIcon(":/shadowless/icons/music.svg"));
     m_openFolder->setIcon(QIcon(":/shadowless/icons/folder.svg"));
     m_folder->setIcon(QIcon(":/shadowless/icons/folder.svg"));
     m_format->setIcon(QIcon(":/shadowless/icons/video.svg"));
@@ -339,7 +421,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     });
     connect(m_player, &ClipPlayer::back, this, &Dashboard::home);
     connect(m_player, &ClipPlayer::editingChanged, this, [this] { positionPanel(); });
-    connect(m_library, &Library::clipsChanged, m_player, &ClipPlayer::setClips);
+    connect(m_library, &Library::allClipsChanged, m_player, &ClipPlayer::setClips);
     connect(m_library, &Library::thumbnailReady, m_player, &ClipPlayer::setThumbnail);
     auto *playback = m_player->findChild<MpvPlayer *>();
     connect(playback, &MpvPlayer::stateChanged, m_library, [this, playback] { m_library->setPreviewActive(!playback->source().isEmpty()); });
@@ -387,6 +469,8 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     });
     connect(m_systemAudio, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(false, checked); });
     connect(m_microphone, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(true, checked); });
+    connect(m_gameAudio, &QPushButton::clicked, this, [this](bool checked) { emit roleAudioChanged(2, checked); });
+    connect(m_musicAudio, &QPushButton::clicked, this, [this](bool checked) { emit roleAudioChanged(3, checked); });
     auto openSettings = [this] {
         emit settingsRequested();
         showPage(m_settings, 560);
@@ -434,18 +518,25 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
 }
 
 void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool active, bool ready, bool saving, bool stopping,
-                            bool replayRecording, bool busy) {
+                            bool replayRecording, bool busy, bool paused, bool pausePending, bool pauseKnown) {
     m_overlayPreview->setVisible(!scene.layers.isEmpty());
     m_overlayPreview->setScene(scene, -1);
     const QString mode = o.continuousRecording ? "Recording" : "Instant Replay";
+    const QString recordingStatus = !pauseKnown ? "Recording pause state unknown" :
+                                    pausePending ? "Changing recording pause state…" : paused ? "Recording paused" : mode;
     m_status->setText(stopping ? "Finishing capture…" : active && !ready ? "Starting capture…" :
-                      ready ? (o.continuousRecording ? mode : replayRecording ? "Recording + Instant Replay" : "Instant Replay is on")
+                      ready ? (o.continuousRecording ? recordingStatus : replayRecording ? "Recording + Instant Replay" : "Instant Replay is on")
                             : mode + " is off");
     const QString source = o.source == "portal" ? "Screen picker" : o.source;
     m_detail->setText(o.continuousRecording ? source + " · Continuous recording" :
                      QString("Last %1 sec · %2").arg(o.bufferSeconds).arg(source));
     m_detail->setToolTip(m_detail->text());
-    static_cast<CaptureRing *>(m_ring)->setState(ready && !stopping, o.continuousRecording);
+    static_cast<CaptureRing *>(m_ring)->setState(ready && !stopping && !paused && pauseKnown, o.continuousRecording);
+    m_pause->setVisible(active && ready && o.continuousRecording);
+    m_pause->setEnabled(!busy && !pausePending && !saving && !stopping && pauseKnown);
+    m_pause->setText(pausePending ? "Please wait…" : paused ? "Resume recording" : "Pause recording");
+    m_pause->setAccessibleName(m_pause->text());
+    m_pause->setToolTip(pauseKnown ? "Pause or resume this recording without creating another file" : "Stop and save the recording before starting again");
     m_replay->setChecked(active && !o.continuousRecording);
     m_record->setChecked(active && (o.continuousRecording || replayRecording));
     const bool available = !stopping && !saving && !busy;
@@ -465,11 +556,38 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
         slider->setEnabled(enabled && !stopping);
         slider->setValue(volume);
         percent->setText(QString("%1%").arg(volume));
+        if (auto *value = qobject_cast<QPushButton *>(slider->property("valueButton").value<QObject *>())) {
+            value->setText(QString("%1% ▾").arg(volume));
+            value->setEnabled(enabled && !stopping);
+        }
     };
-    updateAudio(m_systemAudio, m_systemVolume, m_systemPercent, o.systemAudio, o.levels.systemMuted, o.levels.systemVolume);
+    const bool grouped = o.fourTrackAudio || o.dynamicAudioEnabled();
+    m_systemAudio->setText(grouped ? "PC" : "System audio");
+    m_systemVolume->setAccessibleName(grouped ? "PC capture volume" : "System audio capture volume");
+    updateAudio(m_systemAudio, m_systemVolume, m_systemPercent, o.fourTrackAudio || o.systemAudio, o.levels.systemMuted, o.levels.systemVolume);
     updateAudio(m_microphone, m_microphoneVolume, m_microphonePercent, o.microphone, o.levels.microphoneMuted, o.levels.microphoneVolume);
-    for (auto *widget : {static_cast<QWidget *>(m_systemAudio), static_cast<QWidget *>(m_systemVolume), static_cast<QWidget *>(m_systemPercent)})
-        widget->setVisible(!o.applicationAudio);
+    m_systemAudio->parentWidget()->setVisible(!o.applicationAudio || o.fourTrackAudio);
+    updateAudio(m_gameAudio, m_gameVolume, m_gamePercent, grouped, o.levels.gameMuted, o.levels.gameVolume);
+    updateAudio(m_musicAudio, m_musicVolume, m_musicPercent, o.fourTrackAudio, o.levels.musicMuted, o.levels.musicVolume);
+    m_gameAudio->parentWidget()->setVisible(grouped);
+    m_musicAudio->parentWidget()->setVisible(o.fourTrackAudio);
+    QStringList audioNames;
+    if (o.dynamicAudioEnabled()) {
+        audioNames = {"PC", "Game"};
+        if (o.microphone) audioNames.append("Microphone");
+    } else if (o.fourTrackAudio) audioNames = {"PC", "Game", "Music", "Microphone"};
+    else if (o.applicationAudio) audioNames = {QString("%1 configured").arg(o.audioTracks().size())};
+    else {
+        if (o.systemAudio) audioNames.append("PC");
+        if (o.microphone) audioNames.append("Microphone");
+    }
+    const bool mixed = !o.dynamicAudioEnabled() && !o.applicationAudio && !o.separateAudioTracks && audioNames.size() > 1;
+    m_audioTrackSummary->setText((o.dynamicAudioEnabled() ? "Audio groups: " : "Audio tracks: ") + (audioNames.isEmpty() ? "none" :
+        audioNames.join(mixed ? " + " : " · ")) + (mixed ? " (mixed)" : ""));
+    m_fourTrackSetup->setVisible(!o.fourTrackAudio && !o.dynamicAudioEnabled());
+    m_fourTrackSetup->setEnabled(!active && !stopping);
+    m_fourTrackSetup->setToolTip(active ? "Stop capture before setting up four tracks" :
+        "Choose separate PC, Game, Music and Microphone recording tracks");
     m_audioSettings->setText(o.applicationAudio ? "Application audio settings" : "Audio settings");
     m_action->setVisible(active && !o.continuousRecording);
     m_action->setText(saving ? "Saving…" : QString("Save %1 sec").arg(o.bufferSeconds));
@@ -520,12 +638,14 @@ void Dashboard::showPage(QWidget *page, int width) {
     const bool chrome = page != m_player;
     m_chrome->setVisible(chrome);
     m_footer->setVisible(chrome);
-    m_divider->setVisible(chrome);
     m_back->setVisible(!dashboard);
     m_settingsButton->setVisible(dashboard);
     m_layers->setVisible(dashboard);
     m_panelWidth = width;
     m_panelHeight = dashboard ? 740 : 780;
+    m_panel->setProperty("floating", dashboard); // home: cards float on the dimmed screen like the Windows overlay
+    m_panel->style()->unpolish(m_panel); m_panel->style()->polish(m_panel);
+    m_divider->setVisible(chrome && !dashboard);
     m_pages->setCurrentWidget(page);
     m_notice->setVisible(dashboard && !m_notice->text().isEmpty());
     positionPanel();
@@ -544,14 +664,17 @@ void Dashboard::positionPanel() {
         return;
     }
     const bool editing = m_pages->currentWidget() == m_player && m_player->editing();
+    const bool chromeShown = !m_chrome->isHidden();
+    const int top = chromeShown ? 72 : 12, availableHeight = qMax(0, height() - top - 12);
+    if (chromeShown) { m_chrome->setGeometry(28, 18, qMax(0, width() - 56), 40); m_chrome->raise(); }
     const auto panelWidth = editing ? qMax(0, width() - 24) : qBound(0, width() - 24, m_panelWidth);
-    const auto panelHeight = editing ? qMax(0, height() - 24) : qBound(0, height() - 24, m_panelHeight);
+    const auto panelHeight = editing ? availableHeight : qBound(0, availableHeight, m_panelHeight);
     const bool narrow = width() < 800;
     m_homeLayout->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
     const int controlsHeight = qBound(0, panelHeight - 245, m_controlScroll->widget()->sizeHint().height());
     m_controlScroll->setMinimumHeight(narrow ? controlsHeight : 0);
     m_controlScroll->setMaximumHeight(narrow ? controlsHeight : QWIDGETSIZE_MAX);
-    m_panel->setGeometry((width() - panelWidth) / 2, (height() - panelHeight) / 2, panelWidth, panelHeight);
+    m_panel->setGeometry((width() - panelWidth) / 2, top + (availableHeight - panelHeight) / 2, panelWidth, panelHeight);
 }
 
 void Dashboard::escape() {
@@ -586,6 +709,6 @@ void Dashboard::closeEvent(QCloseEvent *event) {
 
 void Dashboard::paintEvent(QPaintEvent *) {
     QPainter painter(this);
-    painter.fillRect(rect(), QColor(11, 13, 15, 154));
+    painter.fillRect(rect(), QColor(8, 10, 12, 205));
 }
 } // namespace Shadowless

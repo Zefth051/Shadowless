@@ -65,6 +65,12 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     connect(&m_tray, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) { if (reason == QSystemTrayIcon::Trigger) command("toggle"); });
     connect(m_dashboard.get(), &Dashboard::hideRequested, this, &Controller::hide);
     connect(m_dashboard.get(), &Dashboard::saveReplay, this, &Controller::saveReplay);
+    connect(m_dashboard.get(), &Dashboard::recordingPauseRequested, this, [this] {
+        if (m_quitting || m_stopping || m_saving || m_afterGame || m_engine.busy() ||
+            !m_engine.running() || !m_options.continuousRecording) return;
+        m_engine.setRecordingPaused(!m_engine.recordingPaused());
+        refresh();
+    });
     connect(m_dashboard.get(), &Dashboard::recordingMode, this, [this](bool recording) {
         if (m_quitting || m_stopping || m_saving || m_engine.busy() || m_afterGame) return;
         if (m_engine.active()) {
@@ -83,7 +89,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     connect(m_dashboard.get(), &Dashboard::audioChanged, this, [this](bool microphone, bool enabled) {
         bool &captured = microphone ? m_options.microphone : m_options.systemAudio;
         bool &muted = microphone ? m_options.levels.microphoneMuted : m_options.levels.systemMuted;
-        if (captured) muted = !enabled;
+        if (captured || (!microphone && m_options.fourTrackAudio)) muted = !enabled;
         else if (!m_engine.active() && enabled) { captured = true; muted = false; }
         updateAudioLevels();
     });
@@ -95,7 +101,43 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         else m_options.levels.systemVolume = volume;
         updateAudioLevels();
     });
-    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active(), m_shortcutKeys, m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch()); });
+    connect(m_dashboard.get(), &Dashboard::roleVolumeChanged, this, [this](int track, int volume) {
+        if (!((track == 2 && (m_options.fourTrackAudio || m_options.dynamicAudioEnabled()))
+              || (track == 3 && m_options.fourTrackAudio))) return;
+        if (track == 2) m_options.levels.gameVolume = volume;
+        else m_options.levels.musicVolume = volume;
+        updateAudioLevels();
+    });
+    connect(m_dashboard.get(), &Dashboard::roleAudioChanged, this, [this](int track, bool enabled) {
+        if (!((track == 2 && (m_options.fourTrackAudio || m_options.dynamicAudioEnabled()))
+              || (track == 3 && m_options.fourTrackAudio))) return;
+        if (track == 2) m_options.levels.gameMuted = !enabled;
+        else m_options.levels.musicMuted = !enabled;
+        updateAudioLevels();
+    });
+    const auto updateApplicationAudio = [this](const QString &name, bool game, bool included) {
+        if (m_engine.active() && !m_engine.setApplicationAudioState(name, game, included)) { refresh(); return; }
+        m_options.applicationGame.insert(name, game); m_options.applicationIncluded.insert(name, included);
+        m_saveLevels.start(); refresh();
+    };
+    connect(&m_engine, &GsrCapture::applicationAudioDiscovered, this, [this, updateApplicationAudio](const QString &name, bool game) {
+        // Shadowless's own player is never a clip source; games are recognized automatically.
+        if (name.contains("shadowless", Qt::CaseInsensitive)) { updateApplicationAudio(name, false, false); return; }
+        const bool detected = game || isKnownAudioGame(name)
+            || (!m_presenceGame.isEmpty() && name.compare(m_presenceGame, Qt::CaseInsensitive) == 0);
+        updateApplicationAudio(name, m_options.applicationGame.value(name, detected), m_options.applicationIncluded.value(name, true));
+    });
+    connect(m_dashboard.get(), &Dashboard::fourTrackSetupRequested, this, [this] {
+        if (m_engine.active()) return;
+        auto staged = m_options;
+        staged.applicationAudio = staged.fourTrackAudio = true;
+        staged.pcTrack = 1; staged.microphoneTrack = 4; staged.microphone = true;
+        m_dashboard->settingsPage()->edit(staged, m_indicatorEnabled, false, m_shortcutKeys,
+            m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch());
+        m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence());
+        m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression());
+    });
+    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active(), m_shortcutKeys, m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch()); m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence()); m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression()); });
     connect(m_dashboard.get(), &Dashboard::overlayEnabled, this, [this](bool enabled) {
         auto scene = m_scene;
         scene.enabled = enabled;
@@ -113,6 +155,8 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
             if (page->launchAtLogin() != previousLaunch) configureAutostart(previousLaunch, QCoreApplication::applicationFilePath());
             page->showError(error); return;
         }
+        m_settings.setDiscordPresence(page->discordPresence());
+        m_settings.setIdleCompression(page->idleCompression()); m_compressor.setRoot(m_options.outputDirectory); m_compressor.setEnabled(page->idleCompression());
         m_indicatorPosition = position;
         OverlaySurface::setPosition(m_indicator.get(), position);
         if (m_accent != accent) setAccent(accent);
@@ -158,6 +202,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_saving = false; m_recordingSave = false; m_dashboard->notice(message); refresh();
     });
     connect(&m_engine, &GsrCapture::recordingChanged, this, [this] { refresh(); });
+    connect(&m_engine, &GsrCapture::recordingPauseChanged, this, [this] { refresh(); });
     connect(&m_engine, &GsrCapture::clipSaved, this, [this](const QString &path, bool recording) {
         QString error;
         const auto saved = m_options.organizeByGame ? routeClip(m_options.outputDirectory, path,
@@ -176,6 +221,26 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     connect(&m_validation, &QFutureWatcher<QString>::finished, this, [this] {
         m_validating = false; const auto error = m_validation.result(); finishApply(error.isEmpty(), error);
     });
+    connect(&m_presenceGameQuery, &QFutureWatcher<QString>::finished, this, [this] {
+        m_presenceGame = m_engine.running() ? m_presenceGameQuery.result() : QString();
+        if (!m_quitting) refresh();
+    });
+    m_presencePoll.setInterval(5000);
+    connect(&m_presencePoll, &QTimer::timeout, this, [this] {
+        if (!m_quitting && m_engine.running() && !m_presenceGameQuery.isRunning())
+            m_presenceGameQuery.setFuture(QtConcurrent::run(&currentGame));
+    });
+    if (QGuiApplication::platformName() == "wayland") { m_presence.start(); m_presencePoll.start(); }
+    m_compressor.setRoot(m_options.outputDirectory); m_compressor.setEnabled(m_settings.idleCompression());
+    connect(&m_idleGameQuery, &QFutureWatcher<QString>::finished, this, [this] {
+        m_compressor.setBusy(m_quitting || m_saving || m_validating || m_engine.replayRecording() || !m_idleGameQuery.result().isEmpty());
+    });
+    m_idlePoll.setInterval(15000);
+    connect(&m_idlePoll, &QTimer::timeout, this, [this] {
+        if (m_quitting) m_compressor.setBusy(true);
+        else if (m_settings.idleCompression() && !m_idleGameQuery.isRunning()) m_idleGameQuery.setFuture(QtConcurrent::run(&currentGame));
+    });
+    m_idlePoll.start();
     refresh(); if (!background) show(); m_shortcuts.start();
     if (m_settings.launchAtLogin()) {
         const auto error = configureAutostart(true, QCoreApplication::applicationFilePath());
@@ -207,14 +272,25 @@ void Controller::refresh() {
     m_dashboard->setOverlayBusy(m_validating || m_overlays.busy() || m_pending.has_value() || m_stopping);
     m_dashboard->settingsPage()->setCaptureActive(m_engine.active() || bool(m_afterGame));
     m_dashboard->updateState(m_options, m_scene, m_engine.active(), m_engine.running(), m_saving, m_stopping,
-                             m_engine.replayRecording(), m_engine.busy());
+                             m_engine.replayRecording(), m_engine.busy(), m_engine.recordingPaused(),
+                             m_engine.recordingPausePending(), m_engine.recordingPauseKnown());
     const bool recording = m_options.continuousRecording || m_engine.replayRecording();
+    if (!m_engine.running()) m_presenceGame.clear();
+    const bool clippingGame = m_settings.discordPresence() && m_engine.running() && !m_presenceGame.isEmpty();
+    m_presence.setState(!clippingGame ? DiscordPresence::Idle :
+                        !recording ? DiscordPresence::InstantClip :
+                        !m_engine.recordingPauseKnown() || m_engine.recordingPausePending() ? DiscordPresence::Unknown :
+                        m_engine.recordingPaused() ? DiscordPresence::Paused : DiscordPresence::Recording, m_presenceGame);
     m_recordingAction->setVisible(m_engine.running() && !m_options.continuousRecording);
     m_recordingAction->setEnabled(!m_engine.busy() && !m_stopping);
     m_recordingAction->setText(m_engine.replayRecording() ? "Stop recording" : "Start recording");
-    m_tray.setToolTip(m_engine.running() ? (recording ? "Shadowless · Recording" : "Shadowless · Replay buffering") : "Shadowless · Capture off");
+    const QString recordingStatus = !m_engine.recordingPauseKnown() ? "Recording pause state unknown" :
+                                    m_engine.recordingPausePending() ? "Changing recording pause state…" :
+                                    m_engine.recordingPaused() ? "Recording paused" : "Recording";
+    m_tray.setToolTip(m_engine.running() ? (recording ? "Shadowless · " + recordingStatus : "Shadowless · Replay buffering") : "Shadowless · Capture off");
     if (!m_quitting && m_indicatorEnabled && m_engine.running()) {
-        m_indicator->setState(m_saving ? StatusIndicator::Saving : recording ? StatusIndicator::Recording : StatusIndicator::Buffering);
+        m_indicator->setState(m_saving ? StatusIndicator::Saving : !m_engine.recordingPauseKnown() ? StatusIndicator::Unknown :
+                              m_engine.recordingPaused() ? StatusIndicator::Paused : recording ? StatusIndicator::Recording : StatusIndicator::Buffering);
         if (!m_indicator->isVisible()) OverlaySurface::show(m_indicator.get());
     } else m_indicator->hide();
 }
@@ -317,7 +393,7 @@ void Controller::quit() {
     if (m_quitting) return;
     m_dashboard->overlayEditor()->flush();
     if (m_saveLevels.isActive()) { m_saveLevels.stop(); persist(); }
-    m_quitting = true; m_dashboard->hide(); m_indicator->hide();
+    m_quitting = true; m_compressor.setBusy(true); m_presence.stop(); m_dashboard->hide(); m_indicator->hide();
     m_notification->dismiss();
     if (m_options.continuousRecording || m_engine.replayRecording()) m_recordingSave = true;
     if (m_engine.active()) { m_stopping = true; m_engine.stop(); }

@@ -57,6 +57,7 @@ bool gsr_audio_input_tracks_add(gsr_audio_input_tracks *self, const gsr_merged_a
 void gsr_audio_input_tracks_deinit(gsr_audio_input_tracks *self);
 
 bool gsr_audio_inputs_has_app_audio(const gsr_merged_audio_inputs *self);
+size_t gsr_audio_inputs_num_capture_sources(const gsr_merged_audio_inputs *self);
 bool gsr_audio_inputs_should_use_amix(const gsr_merged_audio_inputs *self);
 bool gsr_audio_input_tracks_has_app_audio(const gsr_audio_input_tracks *self);
 bool gsr_audio_input_tracks_should_use_amix(const gsr_audio_input_tracks *self);

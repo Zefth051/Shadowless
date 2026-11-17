@@ -1,4 +1,6 @@
 #include "clip_player.h"
+#include "clip_waveform.h"
+#include "clip_label.h"
 #include "../player/mpv_player.h"
 #include "../player/media_tools.h"
 #include <QApplication>
@@ -7,6 +9,8 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHideEvent>
@@ -31,12 +35,6 @@
 #include <limits>
 
 namespace Shadowless {
-class AudioTrackButton : public QCheckBox {
-public:
-    using QCheckBox::QCheckBox;
-protected:
-    bool hitButton(const QPoint &point) const override { return rect().contains(point); }
-};
 class ClipTimeEdit : public ClickToAdjust<QDoubleSpinBox> {
 public:
     ClipTimeEdit() {
@@ -105,7 +103,7 @@ protected:
         if(duration<=0) return;
         const int left=int(in*width()/duration),right=int(out*width()/duration);
         p.fillRect(QRect(0,0,left,height()),QColor(0,0,0,150)); p.fillRect(QRect(right,0,width()-right,height()),QColor(0,0,0,150));
-        p.setPen(QPen(window()->palette().color(QPalette::Accent),3)); p.drawRect(QRect(left,1,qMax(1,right-left-1),height()-3));
+        p.setPen(QPen(window()->palette().color(QPalette::Accent),1)); p.drawRect(QRect(left,1,qMax(1,right-left-1),height()-3));
         p.setPen(QPen(Qt::white,2)); const int x=int(position*width()/duration); p.drawLine(x,0,x,height());
         for(bool start:{true,false}) {
             const auto handle=handleRect(start);
@@ -155,19 +153,6 @@ private:
         } else if(seek) seek(ms);
     }
 };
-class Waveform : public QWidget {
-public:
-    QVector<float> peaks;
-    explicit Waveform(QWidget *p=nullptr):QWidget(p) { setFixedHeight(32); }
-protected:
-    void paintEvent(QPaintEvent *) override {
-        QPainter p(this); p.setRenderHint(QPainter::Antialiasing); p.setPen(Qt::NoPen);
-        p.setBrush(palette().color(QPalette::Base)); p.drawRoundedRect(rect(),5,5);
-        p.setPen(isEnabled()?window()->palette().color(QPalette::Accent):palette().color(QPalette::Mid));
-        p.drawLine(0,height()/2,width(),height()/2);
-        for(int i=0;i<peaks.size();++i) { int x=i*width()/peaks.size(),h=qRound(qBound(0.f,peaks[i]*3.f,1.f)*(height()/2.-1)); p.drawLine(x,height()/2-h,x,height()/2+h); }
-    }
-};
 namespace {
 QString clockText(qint64 ms) {
     if(ms>=3600000) return QString("%1:%2:%3").arg(ms/3600000).arg(ms/60000%60,2,10,QChar('0')).arg(ms/1000%60,2,10,QChar('0'));
@@ -176,6 +161,16 @@ QString clockText(qint64 ms) {
 QPushButton *button(const QString &text,const char *name,QHBoxLayout *layout) { auto *b=new QPushButton(text); b->setObjectName(name); layout->addWidget(b); return b; }
 void playerIcon(QPushButton *button,const QString &icon,const QString &label) {
     button->setText({}); button->setIcon(QIcon(":/shadowless/icons/"+icon+".svg")); button->setIconSize(QSize(18,18));
+    if(button->objectName()=="clipPlayPause") {
+        // The accent-filled button needs an icon that contrasts with the accent, not the muted grey used elsewhere.
+        QFile file(":/shadowless/icons/"+icon+".svg");
+        if(file.open(QIODevice::ReadOnly)) {
+            const bool darkAccent=button->palette().color(QPalette::Accent).lightness()<140;
+            const auto svg=QString::fromUtf8(file.readAll()).replace("#a7b4bd",darkAccent?"#ffffff":"#0e1114").toUtf8();
+            const qreal ratio=button->devicePixelRatioF(); QPixmap pixmap; pixmap.loadFromData(svg,"SVG");
+            if(!pixmap.isNull()) { pixmap=pixmap.scaled((QSizeF(18,18)*ratio).toSize(),Qt::KeepAspectRatio,Qt::SmoothTransformation); pixmap.setDevicePixelRatio(ratio); button->setIcon(QIcon(pixmap)); }
+        }
+    }
     button->setToolTip(label); button->setAccessibleName(label); button->setProperty("transport",true); button->setFixedSize(34,34);
 }
 }
@@ -189,17 +184,25 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     auto *heading=new QLabel("Replay player"); heading->setObjectName("brand"); header->addWidget(heading);
     m_title=new QLabel; m_title->setTextFormat(Qt::PlainText); m_title->setProperty("muted",true); m_title->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred); header->addWidget(m_title,1);
     layout->addWidget(m_header);
-    auto *body=new QHBoxLayout; body->setSpacing(16); auto *playback=new QVBoxLayout; playback->setSpacing(10); body->addLayout(playback,1);
-    auto *video=new QWidget; m_videoLayout=new QGridLayout(video); m_videoLayout->setContentsMargins(0,0,0,0); m_videoLayout->setSpacing(8);
-    m_videoLayout->setRowStretch(0,1); m_videoLayout->addWidget(m_player,0,0); playback->addWidget(video,1);
-    m_recentPanel=new QWidget; m_recentPanel->setObjectName("clipSidebar"); m_recentPanel->setFixedWidth(220); auto *recentLayout=new QVBoxLayout(m_recentPanel); recentLayout->setContentsMargins(12,12,12,12);
+    auto *body=new QHBoxLayout; body->setSpacing(20); auto *playback=new QVBoxLayout; playback->setSpacing(16); body->addLayout(playback,1);
+    m_video=new QWidget; m_video->setMinimumSize(320,200); m_player->setParent(m_video); m_video->installEventFilter(this); playback->addWidget(m_video,1);
+    m_recentPanel=new QWidget; m_recentPanel->setObjectName("clipSidebar"); m_recentPanel->setFixedWidth(220); auto *recentLayout=new QVBoxLayout(m_recentPanel); recentLayout->setContentsMargins(14,14,14,14); recentLayout->setSpacing(10);
     auto *recentTitle=new QLabel("All clips"); recentTitle->setObjectName("sectionTitle"); recentLayout->addWidget(recentTitle);
-    m_recent=new QListWidget; m_recent->setObjectName("clipRecent"); m_recent->setTextElideMode(Qt::ElideRight); m_recent->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); m_recent->setIconSize(QSize(48,28)); recentLayout->addWidget(m_recent,1); body->addWidget(m_recentPanel); layout->addLayout(body,1);
-    m_controls=new QWidget; auto *transport=new QVBoxLayout(m_controls); transport->setContentsMargins(0,0,0,0);
+    m_gameFilter=new QComboBox; m_gameFilter->setObjectName("clipGameFilter"); m_gameFilter->setAccessibleName("Filter clips by game");
+    m_gameFilter->addItem("All games",QString()); recentLayout->addWidget(m_gameFilter);
+    m_modeFilter=new QComboBox; m_modeFilter->setObjectName("clipModeFilter"); m_modeFilter->setAccessibleName("Filter clips by recording mode");
+    m_modeFilter->addItem("All recording modes",QString()); m_modeFilter->addItem("Instant clips","replay");
+    m_modeFilter->addItem("Recordings","recording"); m_modeFilter->addItem("Other clips","unknown"); recentLayout->addWidget(m_modeFilter);
+    for(auto *filter:{m_gameFilter,m_modeFilter}) { filter->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon); filter->setMinimumContentsLength(12); }
+    connect(m_gameFilter,&QComboBox::currentIndexChanged,this,&ClipPlayer::filterClips);
+    connect(m_modeFilter,&QComboBox::currentIndexChanged,this,&ClipPlayer::filterClips);
+    m_recent=new QListWidget; m_recent->setObjectName("clipRecent"); m_recent->setTextElideMode(Qt::ElideRight); m_recent->setWordWrap(true); m_recent->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); m_recent->setIconSize(QSize(48,28)); recentLayout->addWidget(m_recent,1); body->addWidget(m_recentPanel); layout->addLayout(body,1);
+    m_recentEmpty=new QLabel("No clips match these filters."); m_recentEmpty->setObjectName("clipFilterEmpty"); m_recentEmpty->setWordWrap(true); m_recentEmpty->setProperty("muted",true); recentLayout->insertWidget(recentLayout->indexOf(m_recent),m_recentEmpty); m_recentEmpty->hide();
+    m_controls=new QWidget; auto *transport=new QVBoxLayout(m_controls); transport->setContentsMargins(0,0,0,0); transport->setSpacing(12);
     m_controls->setObjectName("clipControls");
     m_seek=new PlaybackSlider; m_seek->setObjectName("clipSeek"); m_seek->setAccessibleName("Playback position"); m_seek->setRange(0,0); m_seek->setSingleStep(1000); m_seek->setPageStep(5000); m_seek->setTracking(false); transport->addWidget(m_seek);
-    auto *controls=new QHBoxLayout; controls->setSpacing(7);
-    m_time=new QLabel("00:00 / 00:00"); m_time->setObjectName("clipTime"); m_time->setFixedWidth(210); controls->addWidget(m_time); controls->addStretch();
+    auto *controls=new QHBoxLayout; controls->setSpacing(10);
+    m_time=new QLabel("00:00 / 00:00"); m_time->setObjectName("clipTime"); m_time->setFixedWidth(220); controls->addWidget(m_time); controls->addStretch();
     auto *navigationWidget=new QWidget; auto *navigation=new QHBoxLayout(navigationWidget); navigation->setContentsMargins(0,0,0,0); navigation->setSpacing(7); controls->addWidget(navigationWidget);
     m_next=button("Next","clipNext",navigation); playerIcon(m_next,"skip-previous","Next replay (Page Up)");
     auto *rewind=button("","clipSeekBack",navigation); playerIcon(rewind,"back","Back 5 seconds (Left)");
@@ -207,18 +210,19 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     auto *forward=button("","clipSeekForward",navigation); playerIcon(forward,"forward","Forward 5 seconds (Right)");
     m_previous=button("Previous","clipPrevious",navigation); playerIcon(m_previous,"skip-next","Previous replay (Page Down)");
     controls->addStretch();
-    auto *utilitiesWidget=new QWidget; utilitiesWidget->setFixedWidth(210); auto *utilities=new QHBoxLayout(utilitiesWidget); utilities->setContentsMargins(0,0,0,0); utilities->setSpacing(6); controls->addWidget(utilitiesWidget);
+    auto *utilitiesWidget=new QWidget; utilitiesWidget->setFixedWidth(220); auto *utilities=new QHBoxLayout(utilitiesWidget); utilities->setContentsMargins(0,0,0,0); utilities->setSpacing(6); controls->addWidget(utilitiesWidget);
     m_speed=new QComboBox; m_speed->setObjectName("clipSpeed"); m_speed->setAccessibleName("Playback speed");
     for(double speed:{.25,.5,.75,1.,1.25,1.5,2.}) m_speed->addItem(QString::number(speed)+"×",speed);
-    m_speed->setCurrentIndex(3); m_speed->setFixedWidth(60); utilities->addWidget(m_speed);
-    m_mute=new QCheckBox; m_mute->setObjectName("clipMute"); m_mute->setIcon(QIcon(":/shadowless/icons/speaker.svg")); m_mute->setToolTip("Mute (M)"); m_mute->setAccessibleName("Mute"); utilities->addWidget(m_mute); m_volume=new QSlider(Qt::Horizontal); m_volume->setRange(0,100); m_volume->setValue(80); m_volume->setFixedWidth(70); m_volume->setAccessibleName("Playback volume"); utilities->addWidget(m_volume);
+    m_speed->setCurrentIndex(3); m_speed->setFixedWidth(72); utilities->addWidget(m_speed);
+    m_mute=new QPushButton; m_mute->setObjectName("clipMute"); m_mute->setCheckable(true); playerIcon(m_mute,"speaker","Mute (M)"); m_mute->setAccessibleName("Mute"); m_mute->setFixedSize(30,30); utilities->addWidget(m_mute); m_volume=new QSlider(Qt::Horizontal); m_volume->setRange(0,100); m_volume->setValue(80); m_volume->setFixedWidth(60); m_volume->setAccessibleName("Playback volume"); utilities->addWidget(m_volume);
     m_edit=button("Edit clip","clipTrim",header); m_edit->setCheckable(true);
-    m_fullscreenButton=button("Fullscreen","clipFullscreen",utilities); playerIcon(m_fullscreenButton,"fullscreen","Fullscreen (F)"); transport->addLayout(controls); m_videoLayout->addWidget(m_controls,1,0);
-    m_audio=new QWidget; m_trackLayout=new QVBoxLayout(m_audio); m_trackLayout->setContentsMargins(0,0,0,0); m_trackLayout->setSpacing(6);
-    m_trackLayout->setAlignment(Qt::AlignTop);
-    m_audioScroll=new QScrollArea; m_audioScroll->setObjectName("clipAudioTracks"); m_audioScroll->setWidgetResizable(true);
+    m_fullscreenButton=button("Fullscreen","clipFullscreen",utilities); playerIcon(m_fullscreenButton,"fullscreen","Fullscreen (F)"); transport->addLayout(controls); m_controls->setParent(m_video);
+    m_audio=new ClipAudioTracks;
+    m_audio->selectionChanged=[this] { m_player->setAudioTracks(m_audio->selectedIds()); };
+    m_audio->layoutChanged=[this] { m_audioScroll->setFixedHeight(qMin(m_audio->visibleRowCount(),6)*52+6); };
+    m_audioScroll=new QScrollArea; m_audioScroll->setObjectName("clipAudioTracks"); m_audioScroll->setWidgetResizable(true); m_audioScroll->setFrameShape(QFrame::NoFrame);
     m_audioScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); m_audioScroll->setWidget(m_audio); m_audioScroll->hide(); playback->addWidget(m_audioScroll);
-    m_editing=new QWidget; auto *editing=new QVBoxLayout(m_editing); editing->setContentsMargins(0,0,0,0); editing->setSpacing(6);
+    m_editing=new QWidget; auto *editing=new QVBoxLayout(m_editing); editing->setContentsMargins(0,0,0,0); editing->setSpacing(12);
     auto *videoLabel=new QLabel("VIDEO RANGE"); videoLabel->setObjectName("sectionTitle"); editing->addWidget(videoLabel);
     m_timeline=new ClipTimeline; editing->addWidget(m_timeline);
     auto *range=new QHBoxLayout; range->setSpacing(8); range->addWidget(new QLabel("Start")); m_in=new ClipTimeEdit; m_in->setObjectName("clipIn"); m_in->setAccessibleName("Trim start"); range->addWidget(m_in); auto *setIn=button("Set here","clipSetIn",range); setIn->setToolTip("Set start to playback position (I)");
@@ -235,13 +239,14 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     auto *jobs=new QHBoxLayout; jobs->addWidget(m_mix); m_jobStatus=new QLabel; m_jobStatus->setTextFormat(Qt::PlainText); jobs->addWidget(m_jobStatus,1); m_cancel=button("Cancel job","clipCancel",jobs); m_export=button("Save trimmed copy…","clipExport",jobs); m_export->setToolTip("Original video quality. Cuts may start at the preceding keyframe. Selected audio stays separate unless merged."); editing->addLayout(jobs); playback->addWidget(m_editing); m_editing->hide(); m_cancel->hide();
     m_error=new QLabel; m_error->setTextFormat(Qt::PlainText); m_error->setWordWrap(true); playback->addWidget(m_error);
     connect(backButton,&QPushButton::clicked,this,&ClipPlayer::back);
+    connect(m_player,&MpvPlayer::aspectChanged,this,&ClipPlayer::layoutVideo);
     connect(m_play,&QPushButton::clicked,this,[this] { m_player->pause(!m_player->paused()); showControls(); });
     connect(m_next,&QPushButton::clicked,this,[this] { navigate(-1); }); connect(m_previous,&QPushButton::clicked,this,[this] { navigate(1); });
     connect(rewind,&QPushButton::clicked,this,[this] { m_player->seek(m_player->position()-5000); });
     connect(forward,&QPushButton::clicked,this,[this] { m_player->seek(m_player->position()+5000); });
     connect(m_recent,&QListWidget::itemClicked,this,[this](QListWidgetItem *item) { const auto path=item->data(Qt::UserRole).toString(); if(path==m_player->source()) m_player->pause(!m_player->paused()); else open(path); });
     connect(m_recent,&QListWidget::itemActivated,this,[this](QListWidgetItem *item) { const auto path=item->data(Qt::UserRole).toString(); if(path!=m_player->source()) open(path); });
-    connect(m_seek,&QSlider::valueChanged,m_player,&MpvPlayer::seek); connect(m_volume,&QSlider::valueChanged,m_player,&MpvPlayer::setVolume); connect(m_mute,&QCheckBox::toggled,m_player,&MpvPlayer::setMuted);
+    connect(m_seek,&QSlider::valueChanged,m_player,&MpvPlayer::seek); connect(m_volume,&QSlider::valueChanged,m_player,&MpvPlayer::setVolume); connect(m_mute,&QPushButton::toggled,m_player,&MpvPlayer::setMuted); connect(m_mute,&QPushButton::toggled,this,[this](bool muted){ m_mute->setIcon(QIcon(muted?":/shadowless/icons/speaker-off.svg":":/shadowless/icons/speaker.svg")); });
     connect(m_seek,&QSlider::sliderMoved,this,[this](int ms) { m_time->setText(clockText(ms)+" / "+clockText(m_player->duration())); });
     connect(m_seek,&QSlider::sliderPressed,this,[this] { m_resumeAfterScrub=!m_player->paused(); m_player->pause(true); });
     connect(m_seek,&QSlider::sliderReleased,this,[this] { if(m_resumeAfterScrub) m_player->pause(false); m_resumeAfterScrub=false; });
@@ -253,7 +258,7 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
         else playback->insertWidget(playback->indexOf(m_editing),m_audioScroll);
         m_editingEnabled=enabled; m_editing->setVisible(enabled&&!m_fullscreen); showControls();
         if(enabled) analyze(); else { m_analyzePending=false; if(!m_exporting) m_tools->stop(); }
-        for(int id:m_waveforms.keys()) m_waveforms[id]->setVisible(enabled);
+        m_audio->setEditing(enabled); showControls();
         updateState(); emit editingChanged(enabled);
     });
     const auto updateRange=[this] { m_timeline->in=qRound64(m_in->value()*1000); m_timeline->out=qRound64(m_out->value()*1000); m_timeline->update(); updateState(); };
@@ -264,13 +269,15 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     connect(m_export,&QPushButton::clicked,this,&ClipPlayer::chooseExport); connect(m_cancel,&QPushButton::clicked,m_tools,&MediaTools::stop);
     connect(m_tools,&MediaTools::metadataReady,this,[this](const MediaInfo &info) {
         if(!isVisible() || !m_editingEnabled || m_analyzePending || info.path!=QFileInfo(m_player->source()).absoluteFilePath()) return;
+        m_audioTitles.clear(); for(const auto &stream:info.audioStreams) m_audioTitles.append(stream.title);
+        updateTracks();
         m_metadataReady=true; m_timeline->duration=info.durationMs; m_in->setMaximum(info.durationMs/1000.); m_out->setMaximum(info.durationMs/1000.); m_in->setValue(0); m_out->setValue(info.durationMs/1000.); updateState();
     });
     connect(m_tools,&MediaTools::thumbnailsReady,this,[this](const QVector<QImage> &images) { if(isVisible()&&m_editingEnabled&&!m_analyzePending&&m_metadataReady) { m_timeline->images=images; m_timeline->update(); } });
     connect(m_tools,&MediaTools::waveformReady,this,[this](int ordinal,const QVector<float> &peaks) {
         if(!isVisible()||!m_editingEnabled||m_analyzePending||!m_metadataReady) return;
         const auto tracks=m_player->audioTracks(); if(ordinal<0||ordinal>=tracks.size()) return;
-        auto *wave=static_cast<Waveform *>(m_waveforms.value(tracks[ordinal].id)); if(wave) { wave->peaks=peaks; wave->update(); }
+        m_audio->setPeaks(tracks[ordinal].id,peaks);
     });
     connect(m_tools,&MediaTools::failed,this,[this](const QString &message) { m_error->setText(message); m_jobStatus->setText("Job failed"); });
     connect(m_tools,&MediaTools::cancelled,this,[this] { m_jobStatus->setText("Cancelled"); });
@@ -283,11 +290,46 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     m_idle.setSingleShot(true); m_idle.setInterval(2400); connect(&m_idle,&QTimer::timeout,this,[this] { if(m_fullscreen&&!m_player->paused()&&!m_controls->underMouse()&&m_pages->currentIndex()==0) { m_controls->hide(); m_player->setCursor(Qt::BlankCursor); } });
     qApp->installEventFilter(this); updateState();
 }
-void ClipPlayer::setClips(const QStringList &paths) {
-    m_clips=paths; m_highlightedSource.clear(); m_recent->clear(); for(const auto &path:paths) { auto *item=new QListWidgetItem(QIcon(":/shadowless/icons/film.svg"),QFileInfo(path).completeBaseName(),m_recent); item->setData(Qt::UserRole,path); item->setToolTip(path); item->setSizeHint(QSize(0,52)); } updateState();
+void ClipPlayer::setClips(const QStringList &paths,const QString &directory) {
+    m_clips=paths;
+    if(!directory.isEmpty()) m_clipDirectory=QDir(directory).absolutePath();
+    for(const auto &path:m_thumbnails.keys()) if(!paths.contains(path)) m_thumbnails.remove(path);
+    const auto selected=m_gameFilter->currentData().toString();
+    const QSignalBlocker blocker(m_gameFilter);
+    m_gameFilter->clear(); m_gameFilter->addItem("All games",QString());
+    QStringList folders;
+    for(const auto &path:paths) { const auto folder=QFileInfo(path).absolutePath(); if(!folders.contains(folder)) folders.append(folder); }
+    folders.sort(Qt::CaseInsensitive);
+    for(const auto &folder:folders) {
+        const auto label=folder==m_clipDirectory?QString("Desktop / Unidentified"):
+            m_clipDirectory.isEmpty()?QFileInfo(folder).fileName():QDir(m_clipDirectory).relativeFilePath(folder);
+        m_gameFilter->addItem(label,folder);
+    }
+    m_gameFilter->setCurrentIndex(qMax(0,m_gameFilter->findData(selected)));
+    filterClips();
+}
+void ClipPlayer::filterClips() {
+    const auto folder=m_gameFilter->currentData().toString(),mode=m_modeFilter->currentData().toString();
+    m_visibleClips.clear(); m_recent->clear(); m_highlightedSource.clear();
+    for(const auto &path:m_clips) {
+        const QFileInfo file(path);
+        if(!folder.isEmpty() && file.absolutePath()!=folder) continue;
+        const auto name=file.fileName();
+        const QString type=name.startsWith("Replay_",Qt::CaseInsensitive)?"replay":
+            name.startsWith("Recording_",Qt::CaseInsensitive)?"recording":"unknown";
+        if(!mode.isEmpty() && mode!=type) continue;
+        m_visibleClips.append(path);
+        const auto icon=m_thumbnails.contains(path)?QIcon(m_thumbnails.value(path)):QIcon(":/shadowless/icons/film.svg");
+        auto *item=new QListWidgetItem(icon,clipWhen(file),m_recent); item->setData(Qt::AccessibleTextRole,clipTitle(file)+" "+clipWhen(file));
+        item->setData(Qt::UserRole,path); item->setToolTip(path); item->setSizeHint(QSize(0,52));
+    }
+    m_recentEmpty->setVisible(m_visibleClips.isEmpty());
+    updateState();
 }
 void ClipPlayer::setThumbnail(const QString &path,const QPixmap &image) {
-    const int index=m_clips.indexOf(path);
+    if(!m_clips.contains(path)) return;
+    m_thumbnails.insert(path,image);
+    const int index=m_visibleClips.indexOf(path);
     if(index>=0) m_recent->item(index)->setIcon(QIcon(image));
 }
 void ClipPlayer::open(const QString &path) {
@@ -295,18 +337,26 @@ void ClipPlayer::open(const QString &path) {
     m_edit->setChecked(false);
     m_analyzePending=false; m_metadataReady=false; m_tools->stop(); m_error->clear(); m_jobStatus->clear();
     m_timeline->images.clear(); m_timeline->duration=0; m_timeline->update();
-    m_tracks.clear();
-    m_waveforms.clear();
-    while(auto *item=m_trackLayout->takeAt(0)) { delete item->widget(); delete item; }
+    m_audio->clear();
+    m_audioTitles.clear();
+    if(m_metadataTools) m_metadataTools->stop();
+    auto *metadata=new MediaTools(this); m_metadataTools=metadata;
+    connect(metadata,&MediaTools::finished,metadata,&QObject::deleteLater);
+    connect(metadata,&MediaTools::metadataReady,this,[this](const MediaInfo &info) {
+        if(info.path!=QFileInfo(m_player->source()).absoluteFilePath()) return;
+        m_audioTitles.clear(); for(const auto &stream:info.audioStreams) m_audioTitles.append(stream.title);
+        updateTracks();
+    });
+    metadata->analyze(path,true);
     if(!m_clips.contains(path)) { auto paths=m_clips; paths.prepend(path); setClips(paths); }
     m_title->setText(QFileInfo(path).fileName()); m_title->setToolTip(path); m_player->open(path); m_player->setVolume(m_volume->value()); m_player->setMuted(m_mute->isChecked()); m_player->setSpeed(m_speed->currentData().toDouble());
     m_pages->setCurrentIndex(0); showControls(); updateState(); if(m_editingEnabled) analyze();
 }
-void ClipPlayer::navigate(int delta) { const int index=m_clips.indexOf(m_player->source()); if(index>=0 && index+delta>=0 && index+delta<m_clips.size()) open(m_clips[index+delta]); }
+void ClipPlayer::navigate(int delta) { const int index=m_visibleClips.indexOf(m_player->source()); if(index>=0 && index+delta>=0 && index+delta<m_visibleClips.size()) open(m_visibleClips[index+delta]); }
 void ClipPlayer::updateState() {
     m_player->setPlaybackRange(m_editingEnabled&&m_metadataReady?qRound64(m_in->value()*1000):0,
                               m_editingEnabled&&m_metadataReady?qRound64(m_out->value()*1000):0);
-    const int index=m_clips.indexOf(m_player->source()); m_next->setEnabled(index>0&&!m_exporting); m_previous->setEnabled(index>=0&&index+1<m_clips.size()&&!m_exporting); m_recent->setEnabled(!m_exporting);
+    const int index=m_visibleClips.indexOf(m_player->source()); m_next->setEnabled(index>0&&!m_exporting); m_previous->setEnabled(index>=0&&index+1<m_visibleClips.size()&&!m_exporting); m_recent->setEnabled(!m_exporting);
     m_edit->setEnabled(!m_exporting); m_in->setEnabled(!m_exporting); m_out->setEnabled(!m_exporting); m_mix->setEnabled(!m_exporting);
     playerIcon(m_play,m_player->paused()?"play":"pause",m_player->paused()?"Play (Space)":"Pause (Space)"); m_play->setEnabled(m_player->loaded());
     m_time->setText(clockText(m_seek->isSliderDown()?m_seek->sliderPosition():m_player->position())+" / "+clockText(m_player->duration()));
@@ -317,32 +367,19 @@ void ClipPlayer::updateState() {
     if(m_player->paused()) showControls();
 }
 void ClipPlayer::updateTracks() {
-    const auto tracks=m_player->audioTracks(); QVector<int> ids; for(const auto &track:tracks) ids.append(track.id);
-    bool changed=false;
-    for(int id:m_tracks.keys()) if(!ids.contains(id)) { auto *row=m_tracks.take(id)->parentWidget(); m_waveforms.remove(id); delete row; changed=true; }
-    for(int i=0;i<tracks.size();++i) {
-        const auto &track=tracks[i];
-        const auto title=fontMetrics().elidedText(track.title,Qt::ElideRight,150);
-        if(m_tracks.contains(track.id)) { m_tracks[track.id]->setText(title); continue; }
-        auto *row=new QWidget; row->setObjectName("clipAudioRow"); auto *line=new QHBoxLayout(row); line->setContentsMargins(6,4,6,4); line->setSpacing(12);
-        auto *check=new AudioTrackButton(title); check->setObjectName(QString("clipTrack%1").arg(i)); check->setProperty("clipAudioTrack",true); check->setFixedSize(190,32); check->setCursor(Qt::PointingHandCursor); check->setChecked(true); check->setAccessibleName(track.title); check->setToolTip(track.title+"\nInclude in playback and export"); line->addWidget(check); m_tracks.insert(track.id,check);
-        auto *wave=new Waveform; line->addWidget(wave,1); m_trackLayout->addWidget(row); m_waveforms.insert(track.id,wave); wave->setVisible(m_editingEnabled); changed=true;
-        connect(check,&QCheckBox::toggled,this,[this,wave](bool checked) { wave->setEnabled(checked); wave->update(); QVector<int> selected; for(const auto &t:m_player->audioTracks()) if(m_tracks.value(t.id)&&m_tracks[t.id]->isChecked()) selected.append(t.id); m_player->setAudioTracks(selected); });
-    }
-    m_audioScroll->setFixedHeight(qMin(tracks.size(),4)*46);
-    m_audioScroll->setVisible(!tracks.isEmpty()&&!m_fullscreen);
-    if(changed) { QVector<int> selected; for(const auto &t:tracks) if(m_tracks[t.id]->isChecked()) selected.append(t.id); m_player->setAudioTracks(selected); }
+    const auto tracks=m_player->audioTracks(); QVector<QPair<int,QString>> sources;
+    for(int i=0;i<tracks.size();++i) sources.append({tracks[i].id,i<m_audioTitles.size()&&!m_audioTitles[i].isEmpty()?m_audioTitles[i]:tracks[i].title});
+    m_audio->setTracks(sources);
+    m_audioScroll->setFixedHeight(qMin(m_audio->visibleRowCount(),6)*52+6);
+    m_audioScroll->setVisible(m_editingEnabled&&!tracks.isEmpty()&&!m_fullscreen);
 }
-void ClipPlayer::showControls() { m_header->setVisible(!m_fullscreen); m_controls->show(); m_recentPanel->setVisible(!m_fullscreen); m_edit->setVisible(!m_fullscreen); m_audioScroll->setVisible(!m_fullscreen&&!m_tracks.isEmpty()); m_player->unsetCursor(); if(m_fullscreen&&!m_player->paused()) m_idle.start(); else m_idle.stop(); }
+void ClipPlayer::showControls() { m_header->setVisible(!m_fullscreen); m_controls->show(); m_recentPanel->setVisible(!m_fullscreen); m_edit->setVisible(!m_fullscreen); m_audioScroll->setVisible(m_editingEnabled&&!m_fullscreen&&!m_audio->empty()); m_player->unsetCursor(); if(m_fullscreen&&!m_player->paused()) m_idle.start(); else m_idle.stop(); }
 void ClipPlayer::setFullscreen(bool enabled) {
     if(m_fullscreen==enabled) return;
     m_fullscreen=enabled;
-    m_videoLayout->removeWidget(m_controls);
-    m_videoLayout->addWidget(m_controls,enabled?0:1,0,enabled?Qt::AlignBottom:Qt::Alignment{});
-    m_videoLayout->setSpacing(enabled?0:8);
     m_controls->layout()->setContentsMargins(enabled?12:0,enabled?8:0,enabled?12:0,enabled?8:0);
     m_controls->setStyleSheet(enabled?"QWidget#clipControls { background: rgba(16, 20, 22, 220); }":"");
-    m_controls->raise();
+    m_controls->raise(); layoutVideo();
     m_fullscreenButton->setAccessibleName(enabled?"Exit fullscreen":"Fullscreen"); m_fullscreenButton->setToolTip(enabled?"Exit fullscreen (Esc)":"Fullscreen (F)");
     m_editing->setVisible(!enabled&&m_editingEnabled); m_error->setVisible(!enabled); showControls(); emit fullscreenChanged(enabled);
 }
@@ -368,7 +405,7 @@ void ClipPlayer::chooseExport() {
     connect(picker,&QFileDialog::accepted,this,[this,picker] {
         const QString path=picker->selectedFiles().value(0); m_pages->setCurrentIndex(0); m_pages->removeWidget(picker); picker->deleteLater(); if(path.isEmpty()) return;
         ExportRequest request; request.sourcePath=m_player->source(); request.destinationPath=path; request.inMs=qRound64(m_in->value()*1000); request.outMs=qRound64(m_out->value()*1000); request.mixAudio=m_mix->isChecked(); request.overwrite=QFileInfo::exists(path);
-        const auto tracks=m_player->audioTracks(); for(int i=0;i<tracks.size();++i) if(m_tracks.value(tracks[i].id)&&m_tracks[tracks[i].id]->isChecked()) request.audioTracks.append(i);
+        request.audioTracks=m_audio->selectedOrdinals();
         const auto start=[this,request] {
             if(m_player->source()!=request.sourcePath || !isVisible()) return;
             m_error->clear(); m_exporting=m_tools->exportClip(request); if(m_exporting) { m_cancel->show(); emit exportingChanged(true); } updateState();
@@ -389,13 +426,24 @@ void ClipPlayer::hideEvent(QHideEvent *event) {
     if(m_pages->currentIndex()!=0) QMetaObject::invokeMethod(m_pages->currentWidget(),"reject");
     setFullscreen(false); QWidget::hideEvent(event);
 }
+// Video and controls sit together, centered, so a tall window does not leave a gap between them.
+void ClipPlayer::layoutVideo() {
+    const QSize area=m_video->size(); const int gap=10, ch=m_controls->sizeHint().height();
+    if(m_fullscreen) { m_player->setGeometry(0,0,area.width(),area.height()); m_controls->setGeometry(0,area.height()-ch,area.width(),ch); m_controls->raise(); return; }
+    const double aspect=m_player->aspect(); const int availH=qMax(1,area.height()-ch-gap);
+    int w=area.width(), h=qRound(w/aspect); if(h>availH) { h=availH; w=qRound(h*aspect); }
+    const int top=(area.height()-(h+gap+ch))/2, cw=qMin(area.width(),qMax(w,520));
+    m_player->setGeometry((area.width()-w)/2,top,w,h);
+    m_controls->setGeometry((area.width()-cw)/2,top+h+gap,cw,ch);
+}
 bool ClipPlayer::eventFilter(QObject *watched,QEvent *event) {
+    if(watched==m_video&&event->type()==QEvent::Resize) layoutVideo();
     auto *widget=qobject_cast<QWidget *>(watched); if(!isVisible()||!widget||(widget!=this&&!isAncestorOf(widget))) return QWidget::eventFilter(watched,event);
     if(event->type()==QEvent::MouseMove||event->type()==QEvent::MouseButtonPress) showControls();
     if(event->type()!=QEvent::KeyPress||m_pages->currentIndex()!=0) return QWidget::eventFilter(watched,event);
     if(qobject_cast<QLineEdit *>(widget)||qobject_cast<QAbstractSpinBox *>(widget)||qobject_cast<QComboBox *>(widget)) return QWidget::eventFilter(watched,event);
     const auto *key=static_cast<QKeyEvent *>(event); if(key->modifiers()&(Qt::ControlModifier|Qt::AltModifier|Qt::MetaModifier)) return false;
-    if(key->key()==Qt::Key_Space && (qobject_cast<QCheckBox *>(widget)||qobject_cast<QAbstractItemView *>(widget))) return false;
+    if(key->key()==Qt::Key_Space && (qobject_cast<QCheckBox *>(widget)||widget==m_mute||qobject_cast<QAbstractItemView *>(widget))) return false;
     if(key->key()>=Qt::Key_Left && key->key()<=Qt::Key_Down && (qobject_cast<QSlider *>(widget)||qobject_cast<QAbstractItemView *>(widget))) return false;
     if(m_exporting && (key->key()==Qt::Key_PageUp||key->key()==Qt::Key_PageDown)) return true;
     switch(key->key()) {

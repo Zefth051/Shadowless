@@ -6,7 +6,7 @@
 namespace Shadowless {
 class StatusIndicator : public QWidget {
 public:
-    enum State { Buffering, Recording, Saving, Saved };
+    enum State { Buffering, Recording, Saving, Saved, Paused, Unknown };
     StatusIndicator();
     void setState(State state);
     void saved();

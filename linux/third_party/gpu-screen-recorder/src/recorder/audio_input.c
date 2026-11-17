@@ -253,19 +253,19 @@ bool gsr_audio_inputs_has_app_audio(const gsr_merged_audio_inputs *self) {
     return false;
 }
 
-/* Should use amix if more than 1 audio device and 0 application audio, merged */
-bool gsr_audio_inputs_should_use_amix(const gsr_merged_audio_inputs *self) {
-    int num_audio_devices = 0;
-    int num_app_audio = 0;
-
+/* Application nodes share one private recording stream; device inputs remain independent. */
+size_t gsr_audio_inputs_num_capture_sources(const gsr_merged_audio_inputs *self) {
+    size_t devices = 0;
+    bool applications = false;
     for(size_t i = 0; i < self->num_items; ++i) {
-        if(self->items[i].type == GSR_AUDIO_INPUT_TYPE_DEVICE)
-            ++num_audio_devices;
-        else if(self->items[i].type == GSR_AUDIO_INPUT_TYPE_APPLICATION)
-            ++num_app_audio;
+        if(self->items[i].type == GSR_AUDIO_INPUT_TYPE_DEVICE) ++devices;
+        else applications = true;
     }
+    return devices + (applications ? 1 : 0);
+}
 
-    return num_audio_devices > 1 && num_app_audio == 0;
+bool gsr_audio_inputs_should_use_amix(const gsr_merged_audio_inputs *self) {
+    return gsr_audio_inputs_num_capture_sources(self) > 1;
 }
 
 bool gsr_audio_input_tracks_has_app_audio(const gsr_audio_input_tracks *self) {

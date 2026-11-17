@@ -1,6 +1,7 @@
 #include "../../include/recorder/audio_capture.h"
 #include "../../include/recorder/error.h"
 #include "../../include/recorder/audio_codec.h"
+#include "../../include/recorder/audio_gain.h"
 #include "../../include/utils.h"
 #include "../../include/log.h"
 
@@ -187,7 +188,16 @@ static void* audio_device_thread(void *userdata) {
     const double audio_fps = (double)track->codec_context->sample_rate / (double)track->codec_context->frame_size;
     const int64_t timeout_ms = llround(1000.0 / audio_fps);
     const double timeout_sec = 1000.0 / audio_fps / 1000.0;
-    int64_t num_received_frames = 0;
+    int64_t num_received_frames = track->initial_frames;
+    const char *levels_path = getenv("SHADOWLESS_AUDIO_LEVELS_FILE");
+    const char *microphone_source = getenv("SHADOWLESS_MICROPHONE_SOURCE");
+    const bool is_microphone = microphone_source && microphone_source[0]
+        && device->audio_input.type == GSR_AUDIO_INPUT_TYPE_DEVICE
+        && strcmp(device->audio_input.name, microphone_source) == 0;
+    const char *four_tracks_value = getenv("SHADOWLESS_FOUR_TRACK_AUDIO");
+    const bool four_tracks = four_tracks_value && strcmp(four_tracks_value, "1") == 0;
+    gsr_audio_gains gains = {1.0, 1.0, 1.0, 1.0};
+    double next_gain_update = 0.0;
 
     /* The sound device is opened before the recording starts, so it can contain old audio from before the recording started.
        Discard it so the recording doesn't start with old audio. */
@@ -290,6 +300,12 @@ static void* audio_device_thread(void *userdata) {
             else
                 device->frame->data[0] = (uint8_t*)sound_buffer;
 
+            if(time_before_read_seconds >= next_gain_update) {
+                gsr_audio_gain_read(levels_path, &gains);
+                next_gain_update = time_before_read_seconds + 0.06;
+            }
+            gsr_audio_gain_apply(device->frame, (track->dynamic_source ? (atomic_load(&track->game) ? gains.game : gains.system) : gsr_audio_role_gain(track->name, four_tracks, is_microphone, &gains)));
+
             pthread_mutex_lock(&self->filter_mutex);
 
             if(track->graph) {
@@ -347,7 +363,7 @@ static void* amix_thread(void *userdata) {
     while(atomic_load(self->running)) {
         pthread_mutex_lock(&self->filter_mutex);
         for(size_t i = 0; i < self->num_tracks; ++i) {
-            gsr_audio_track *track = &self->tracks[i];
+            gsr_audio_track *track = self->tracks[i];
             if(!track->sink)
                 continue;
 
@@ -379,7 +395,8 @@ void gsr_audio_capture_deinit(gsr_audio_capture *self) {
     gsr_audio_capture_join_threads(self);
 
     for(size_t i = 0; i < self->num_tracks; ++i) {
-        gsr_audio_track_deinit(&self->tracks[i]);
+        gsr_audio_track_deinit(self->tracks[i]);
+        free(self->tracks[i]);
     }
 
     if(self->tracks) {
@@ -401,24 +418,18 @@ void gsr_audio_capture_deinit(gsr_audio_capture *self) {
 }
 
 bool gsr_audio_capture_add_track(gsr_audio_capture *self, const gsr_audio_track *track) {
-    if(!gsr_array_ensure_capacity((void**)&self->tracks, self->num_tracks, &self->capacity_tracks, sizeof(gsr_audio_track)))
+    if(!gsr_array_ensure_capacity((void**)&self->tracks, self->num_tracks, &self->capacity_tracks, sizeof(gsr_audio_track*)))
         return false;
 
-    self->tracks[self->num_tracks] = *track;
+    gsr_audio_track *allocated = malloc(sizeof(*allocated));
+    if(!allocated) return false;
+    *allocated = *track;
+    self->tracks[self->num_tracks] = allocated;
     ++self->num_tracks;
     return true;
 }
 
-int gsr_audio_capture_start(gsr_audio_capture *self, int audio_max_frame_size, bool uses_amix) {
-    const size_t audio_buffer_size = audio_max_frame_size * 4 * 2; /* max 4 bytes/sample, 2 channels */
-    self->empty_audio = calloc(1, audio_buffer_size);
-    if(!self->empty_audio) {
-        gsr_log(GSR_LOG_LEVEL_ERROR, "failed to create empty audio");
-        return GSR_ERROR_GENERIC;
-    }
-
-    for(size_t i = 0; i < self->num_tracks; ++i) {
-        gsr_audio_track *track = &self->tracks[i];
+int gsr_audio_capture_start_track(gsr_audio_capture *self, gsr_audio_track *track) {
         for(size_t j = 0; j < track->num_audio_devices; ++j) {
             gsr_audio_device_capture *device = &track->audio_devices[j];
             device->thread_userdata.audio_capture = self;
@@ -430,6 +441,20 @@ int gsr_audio_capture_start(gsr_audio_capture *self, int audio_max_frame_size, b
             }
             device->thread_created = true;
         }
+    return GSR_ERROR_OK;
+}
+
+int gsr_audio_capture_start(gsr_audio_capture *self, int audio_max_frame_size, bool uses_amix) {
+    const size_t audio_buffer_size = audio_max_frame_size * 4 * 2; /* max 4 bytes/sample, 2 channels */
+    self->empty_audio = calloc(1, audio_buffer_size);
+    if(!self->empty_audio) {
+        gsr_log(GSR_LOG_LEVEL_ERROR, "failed to create empty audio");
+        return GSR_ERROR_GENERIC;
+    }
+
+    for(size_t i = 0; i < self->num_tracks; ++i) {
+        if(gsr_audio_capture_start_track(self, self->tracks[i]) != GSR_ERROR_OK)
+            return GSR_ERROR_GENERIC;
     }
 
     if(uses_amix) {
@@ -445,7 +470,7 @@ int gsr_audio_capture_start(gsr_audio_capture *self, int audio_max_frame_size, b
 
 void gsr_audio_capture_join_threads(gsr_audio_capture *self) {
     for(size_t i = 0; i < self->num_tracks; ++i) {
-        gsr_audio_track *track = &self->tracks[i];
+        gsr_audio_track *track = self->tracks[i];
         for(size_t j = 0; j < track->num_audio_devices; ++j) {
             gsr_audio_device_capture *device = &track->audio_devices[j];
             if(device->thread_created) {
@@ -466,7 +491,7 @@ void gsr_audio_capture_flush(gsr_audio_capture *self) {
 
     pthread_mutex_lock(&self->filter_mutex);
     for(size_t i = 0; i < self->num_tracks; ++i) {
-        gsr_audio_track *track = &self->tracks[i];
+        gsr_audio_track *track = self->tracks[i];
         if(!track->codec_context)
             continue;
 
@@ -539,17 +564,24 @@ int gsr_audio_track_init_device_inputs(gsr_audio_track *self, const gsr_merged_a
 }
 
 #ifdef GSR_APP_AUDIO
-int gsr_audio_track_init_application_input(gsr_audio_track *self, const gsr_merged_audio_inputs *merged_audio_inputs, AVCodecContext *audio_codec_context, int num_channels, double num_audio_frames_shift, gsr_pipewire_audio *pipewire_audio) {
-    const int alloc_result = audio_track_alloc_devices(self, 1);
-    if(alloc_result != GSR_ERROR_OK)
-        return alloc_result;
-
-    gsr_audio_device_capture *device = &self->audio_devices[0];
-    device->frame = create_audio_frame(audio_codec_context);
-    if(!device->frame)
-        return GSR_ERROR_GENERIC;
-    device->frame->pts = -audio_codec_context->frame_size * num_audio_frames_shift;
-    ++self->num_audio_devices;
+int gsr_audio_track_init_application_input(gsr_audio_track *self, const gsr_merged_audio_inputs *merged_audio_inputs, AVCodecContext *audio_codec_context, int num_channels, double num_audio_frames_shift, gsr_pipewire_audio *pipewire_audio, AVFilterContext **src_filter_ctx, bool use_amix) {
+    /* Keep devices (especially the mic) separate until PCM gain has been applied. */
+    gsr_audio_input capture_sources[GSR_MAX_AUDIO_SOURCES_PER_TRACK] = {0};
+    const size_t num_sources = gsr_audio_inputs_num_capture_sources(merged_audio_inputs);
+    if(num_sources > GSR_MAX_AUDIO_SOURCES_PER_TRACK) return GSR_ERROR_GENERIC;
+    size_t num_devices = 0;
+    for(size_t i = 0; i < merged_audio_inputs->num_items; ++i) {
+        if(merged_audio_inputs->items[i].type == GSR_AUDIO_INPUT_TYPE_DEVICE)
+            capture_sources[num_devices++] = merged_audio_inputs->items[i];
+    }
+    gsr_merged_audio_inputs sources = {0};
+    sources.items = capture_sources;
+    sources.num_items = num_sources;
+    const int init_result = gsr_audio_track_init_device_inputs(self, &sources, audio_codec_context,
+        num_channels, num_audio_frames_shift, src_filter_ctx, use_amix);
+    if(init_result != GSR_ERROR_OK) return init_result;
+    gsr_audio_device_capture *device = &self->audio_devices[num_devices];
+    device->audio_input.type = GSR_AUDIO_INPUT_TYPE_APPLICATION;
 
     char random_str[8];
     if(!generate_random_characters_standard_alphabet(random_str, sizeof(random_str))) {
@@ -565,24 +597,17 @@ int gsr_audio_track_init_application_input(gsr_audio_track *self, const gsr_merg
         return GSR_ERROR_GENERIC;
     }
 
-    const char **audio_devices_sources = calloc(merged_audio_inputs->num_items, sizeof(const char*));
     const char **app_names = calloc(merged_audio_inputs->num_items, sizeof(const char*));
-    if(!audio_devices_sources || !app_names) {
-        free(audio_devices_sources);
-        free(app_names);
+    if(!app_names) {
         gsr_log(GSR_LOG_LEVEL_ERROR, "failed to allocate application audio names");
         return GSR_ERROR_GENERIC;
     }
 
-    size_t num_audio_devices_sources = 0;
     size_t num_app_names = 0;
     bool app_audio_inverted = false;
     for(size_t i = 0; i < merged_audio_inputs->num_items; ++i) {
         const gsr_audio_input *audio_input = &merged_audio_inputs->items[i];
-        if(audio_input->type == GSR_AUDIO_INPUT_TYPE_DEVICE) {
-            audio_devices_sources[num_audio_devices_sources] = audio_input->name;
-            ++num_audio_devices_sources;
-        } else if(audio_input->type == GSR_AUDIO_INPUT_TYPE_APPLICATION) {
+        if(audio_input->type == GSR_AUDIO_INPUT_TYPE_APPLICATION) {
             app_names[num_app_names] = audio_input->name;
             ++num_app_names;
             app_audio_inverted = audio_input->inverted;
@@ -590,12 +615,6 @@ int gsr_audio_track_init_application_input(gsr_audio_track *self, const gsr_merg
     }
 
     int result = GSR_ERROR_OK;
-    if(num_audio_devices_sources > 0) {
-        if(!gsr_pipewire_audio_add_link_from_sources_to_stream(pipewire_audio, audio_devices_sources, num_audio_devices_sources, combined_sink_name)) {
-            gsr_log(GSR_LOG_LEVEL_ERROR, "failed to add application audio link");
-            result = GSR_ERROR_GENERIC;
-        }
-    }
 
     if(result == GSR_ERROR_OK) {
         const bool link_added = app_audio_inverted
@@ -607,7 +626,6 @@ int gsr_audio_track_init_application_input(gsr_audio_track *self, const gsr_merg
         }
     }
 
-    free(audio_devices_sources);
     free(app_names);
     return result;
 }

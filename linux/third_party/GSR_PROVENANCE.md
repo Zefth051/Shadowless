@@ -41,3 +41,45 @@ uses these markers to release its overlay during required authentication.
 Direct privileged/capability launches and portal capture emit neither marker;
 failed authentication is cleared when the recorder exits. No authorization
 policy or credential handling is added.
+
+Audio track titles are also written as `handler_name` in `src/recorder/recorder.c`
+and `src/recorder/muxer.c`, preserving named application tracks in MP4 as well as
+Matroska for recording and replay saves. Application capture retains upstream PipeWire inclusion/exclusion links to private
+recording streams. `audio_input.c`, `audio_capture.c`, their headers and
+`include/recorder/audio_gain.h` keep microphone/device PCM separate from the
+application stream until gain is applied and then mix when requested. The app
+atomically writes linear PC/system, microphone, Game and Music gains to its private runtime file;
+`SHADOWLESS_AUDIO_LEVELS_FILE` and `SHADOWLESS_MICROPHONE_SOURCE` select that file
+and microphone role. `SHADOWLESS_FOUR_TRACK_AUDIO=1` enables independent Game/Music
+gain selection by the named track; other modes retain system gain for all
+application audio. The first two gain values remain compatible with older engine
+or app versions; absent Game/Music gains default to unity. Each capture thread
+refreshes gains at most every 60 ms.
+Malformed updates retain the preceding values. No virtual Audio/Source devices
+are created and no real device or playback volume is changed. The hardware-free
+PCM and mixed-input regressions are in `tests/packaging/test_audio_gain.py`; live
+four-source isolation remains an opt-in hardware test.
+
+Dynamic desktop audio (`SHADOWLESS_DYNAMIC_AUDIO=1`) uses stable application
+tracks plus an actual unassigned desktop remainder and separate microphone.
+There are at most 64 application identities, with two additional slots reserved
+for remainder and microphone. Late PipeWire enumeration and source/codec opening
+run on a worker that owns one unpublished track; the capture thread registers
+completed tracks without restarting video. Shutdown joins that worker before
+track/encoder teardown. Replay saves snapshot tracks and codec parameters, map
+stable source IDs to contiguous output streams, and preserve the video clock
+origin for late/reopened sources. Replay retention also expires old packets when
+the reserved late-source capacity has not yet filled.
+
+Continuous/simultaneous recording writes application stems into private spool
+files and performs final remux on a worker. Only validated successful remux
+replaces the recording and removes stems. Packet write failures remain sticky
+per destination, even if later packets/trailer/close succeed; failure retains
+recording and spools. `shadowless-audio-finalizing: progress` is emitted when
+finalization begins and at most every two seconds while packet copying advances,
+allowing the launcher to distinguish progress from a stalled finalization.
+Atomic application choice JSON, structured discovery events and App/Game track
+titles follow the dynamic-audio plan. Hardware-free lifecycle, failed-write,
+retention and real MP4/Matroska media regressions live in
+`tests/packaging/test_dynamic_audio.py`; live PipeWire graph and device timing
+validation remains required on a desktop audio server.

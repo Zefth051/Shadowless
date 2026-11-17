@@ -9,6 +9,8 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QUuid>
+#include <unistd.h>
+#include <QSet>
 
 namespace Shadowless {
 namespace {
@@ -34,6 +36,17 @@ const QHash<QString, QString> &catalog() {
     }();
     return names;
 }
+}
+bool isKnownAudioGame(const QString &name) {
+    static const auto names = [] {
+        QSet<QString> result;
+        for (auto it = catalog().cbegin(); it != catalog().cend(); ++it)
+            if (!it.value().isEmpty()) result.insert(it.value().toCaseFolded());
+        return result;
+    }();
+    const auto key = executableName(name);
+    return names.contains(name.trimmed().toCaseFolded()) || !catalog().value(key).isEmpty()
+        || !catalog().value(key + ".exe").isEmpty();
 }
 QString gameForClients(const QJsonArray &clients) {
     for (const auto &client : clients) {
@@ -68,8 +81,36 @@ QString gameForClients(const QJsonArray &clients) {
     }
     return {};
 }
+QString gameForProcesses(const QString &processDirectory) {
+    QString matched;
+    const QDir processes(processDirectory);
+    for (const auto &entry : processes.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        bool numeric;
+        entry.fileName().toUInt(&numeric);
+        if (!numeric || entry.ownerId() != geteuid()) continue;
+        const QDir process(entry.filePath());
+        const auto executable = executableName(QFileInfo(process.filePath("exe")).symLinkTarget());
+        QStringList candidates{executable};
+        if (executable.startsWith("wine")) {
+            QFile cmdline(process.filePath("cmdline"));
+            if (cmdline.open(QIODevice::ReadOnly))
+                for (const auto &argument : cmdline.read(16384).split('\0')) {
+                    const auto text = QString::fromUtf8(argument);
+                    if (text.endsWith(".exe", Qt::CaseInsensitive)) candidates.append(text);
+                }
+        }
+        for (const auto &candidate : candidates) {
+            const auto key = executableName(candidate);
+            const auto name = catalog().value(key, catalog().value(key + ".exe"));
+            if (name.isEmpty()) continue;
+            if (!matched.isEmpty() && matched != name) return {};
+            matched = name;
+        }
+    }
+    return matched;
+}
 QString currentGame() {
-    if (!isHyprlandDesktop()) return {};
+    if (!isHyprlandDesktop()) return gameForProcesses("/proc");
     QProcess query;
     query.start("hyprctl", {"-j", "clients"});
     if (!query.waitForStarted(500) || !query.waitForFinished(1000)) {

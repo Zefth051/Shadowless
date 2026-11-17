@@ -1,6 +1,7 @@
 #pragma once
 #include "../capture/audio.h"
 #include <QWidget>
+#include <QFutureWatcher>
 class QCheckBox;
 class QComboBox;
 class QSpinBox;
@@ -19,6 +20,10 @@ public:
     void edit(const GsrOptions &options, bool indicator, bool active, const QStringList &keys, const QString &accent = "violet", const QString &position = "top-right", bool launchAtLogin = false, bool startReplayOnLaunch = false);
     bool launchAtLogin() const;
     bool startReplayOnLaunch() const;
+    bool discordPresence() const;
+    void setDiscordPresence(bool enabled);
+    bool idleCompression() const;
+    void setIdleCompression(bool enabled);
     void showError(const QString &error);
     void showVideo();
     void showStorage();
@@ -41,7 +46,7 @@ private:
     QCheckBox *m_system, *m_microphone, *m_separate, *m_indicator;
     QLineEdit *m_folder, *m_customAccent;
     QCheckBox *m_organizeByGame;
-    QCheckBox *m_launchAtLogin, *m_startReplayOnLaunch;
+    QCheckBox *m_launchAtLogin, *m_startReplayOnLaunch, *m_discordPresence, *m_idleCompression;
     QLabel *m_error, *m_shortcuts, *m_activeNotice;
     QList<QKeySequenceEdit *> m_keys;
     QTableWidget *m_applications;
@@ -50,6 +55,8 @@ private:
     AudioCatalog m_audioCatalog;
     QFutureWatcher<AudioCatalog> m_audioProbe;
     void focusSection(QWidget *field);
+    void updateActiveSection();
+    QList<QPair<QPushButton *, QWidget *>> m_sectionLinks;
     void refreshAudio();
     void populateAudio(const QString &output, const QString &input, const QMap<QString, int> &tracks);
     QMap<QString, int> applicationTracks() const;

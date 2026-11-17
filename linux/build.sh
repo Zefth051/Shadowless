@@ -22,5 +22,7 @@ QT_QPA_PLATFORM=offscreen ./tests/playback/shadowless-playback-tests
 QT_QPA_PLATFORM=offscreen ./tests/preview/shadowless-preview-tests
 ./tests/desktop_entry/shadowless-desktop-entry-check
 ./tests/updates/shadowless-update-tests
+./tests/discord/shadowless-discord-tests
+./tests/compression/shadowless-compression-tests
 # The fake shortcut portal must never share the user desktop bus.
 dbus-run-session -- ./tests/shortcuts/shadowless-shortcut-tests

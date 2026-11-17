@@ -4,6 +4,7 @@
 #include <QKeySequence>
 #include <QWidget>
 class QBoxLayout;
+class QVBoxLayout;
 class QFrame;
 class QLabel;
 class QProgressBar;
@@ -25,7 +26,8 @@ public:
     SettingsPage *settingsPage() const { return m_settings; }
     OverlayEditor *overlayEditor() const { return m_editor; }
     void updateState(const GsrOptions &options, const OverlayScene &scene, bool active, bool ready, bool saving, bool stopping,
-                     bool replayRecording = false, bool busy = false);
+                     bool replayRecording = false, bool busy = false, bool paused = false,
+                     bool pausePending = false, bool pauseKnown = true);
     void notice(const QString &message);
     void setOverlayBusy(bool busy);
     void setShortcutKeys(const QStringList &keys);
@@ -36,8 +38,12 @@ public:
 signals:
     void saveReplay();
     void recordingMode(bool continuous);
+    void recordingPauseRequested();
     void audioChanged(bool microphone, bool enabled);
     void volumeChanged(bool microphone, int volume);
+    void roleVolumeChanged(int track, int volume);
+    void roleAudioChanged(int track, bool enabled);
+    void fourTrackSetupRequested();
     void settingsRequested();
     void editorRequested();
     void overlayEnabled(bool enabled);
@@ -61,11 +67,12 @@ private:
     OverlayCanvas *m_overlayPreview;
     QLabel *m_status, *m_detail, *m_disk, *m_notice, *m_footer, *m_layerStatus;
     QProgressBar *m_diskUsage;
-    QPushButton *m_action, *m_replay, *m_record, *m_layers, *m_layerToggle;
+    QPushButton *m_action, *m_replay, *m_record, *m_layers, *m_layerToggle, *m_pause;
     QPushButton *m_systemAudio, *m_microphone, *m_back, *m_settingsButton, *m_folder, *m_openFolder, *m_format;
-    QPushButton *m_audioSettings;
-    QSlider *m_systemVolume, *m_microphoneVolume;
-    QLabel *m_systemPercent, *m_microphonePercent;
+    QPushButton *m_audioSettings, *m_gameAudio, *m_musicAudio, *m_fourTrackSetup;
+    QLabel *m_audioTrackSummary;
+    QSlider *m_systemVolume, *m_microphoneVolume, *m_gameVolume, *m_musicVolume;
+    QLabel *m_systemPercent, *m_microphonePercent, *m_gamePercent, *m_musicPercent;
     QString m_directory;
     QKeySequence m_overlayKey;
     int m_panelWidth = 1034, m_panelHeight = 680;

@@ -34,3 +34,7 @@ HEADERS += ../../ui/clip_player.h
 
 SOURCES += ../../capture/replay_paths.cpp ../../ui/clip_notification.cpp
 HEADERS += ../../capture/replay_paths.h ../../ui/clip_notification.h
+HEADERS += ../../ui/clip_waveform.h
+
+SOURCES += ../../app/discord_presence.cpp ../../app/idle_compressor.cpp
+HEADERS += ../../app/discord_presence.h ../../app/idle_compressor.h

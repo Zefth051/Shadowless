@@ -26,7 +26,7 @@ class MediaTools : public QObject {
 public:
     explicit MediaTools(QObject *parent = nullptr);
     ~MediaTools() override;
-    bool analyze(const QString &path);
+    bool analyze(const QString &path, bool metadataOnly = false);
     bool exportClip(const ExportRequest &request);
     bool busy() const { return m_busy; }
     void stop();

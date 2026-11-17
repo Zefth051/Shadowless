@@ -1,5 +1,7 @@
 #include "../../include/recorder/muxer.h"
 #include "../../include/recorder/audio_codec.h"
+#include "../../include/recorder/dynamic_audio.h"
+#include "../../include/recorder/audio_spool.h"
 #include "../../include/ffmpeg_utils.h"
 #include "../../include/utils.h"
 #include "../../include/log.h"
@@ -7,8 +9,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <libavutil/opt.h>
+#include <libavutil/time.h>
 #include <libavutil/mastering_display_metadata.h>
 
 static void gsr_recording_output_deinit(gsr_recording_output *self) {
@@ -163,7 +167,7 @@ bool gsr_recording_output_start(gsr_recording_output *self, const char *filename
     }
 
     for(size_t i = 0; i < audio_capture->num_tracks; ++i) {
-        const gsr_audio_track *audio_track = &audio_capture->tracks[i];
+        const gsr_audio_track *audio_track = audio_capture->tracks[i];
         AVStream *audio_stream = create_stream(av_format_context, audio_track->codec_context);
         if(!audio_stream) {
             gsr_recording_output_deinit(self);
@@ -171,8 +175,10 @@ bool gsr_recording_output_start(gsr_recording_output *self, const char *filename
             return false;
         }
 
-        if(audio_track->name[0] != '\0' && !settings->exclude_metadata)
+        if(audio_track->name[0] != '\0' && !settings->exclude_metadata) {
             av_dict_set(&audio_stream->metadata, "title", audio_track->name, 0);
+            av_dict_set(&audio_stream->metadata, "handler_name", audio_track->name, 0);
+        }
         avcodec_parameters_from_context(audio_stream->codecpar, audio_track->codec_context);
 
         self->audio_streams[i].audio_track = audio_track;
@@ -217,7 +223,7 @@ bool gsr_recording_output_start(gsr_recording_output *self, const char *filename
 bool gsr_recording_output_stop(gsr_recording_output *self) {
     bool trailer_written = true;
     if(gsr_av_format_context_write_trailer(self->av_format_context) != 0) {
-        //trailer_written = false;
+        trailer_written = false;
     }
 
     const bool closed = avio_close(self->av_format_context->pb) == 0;
@@ -269,7 +275,7 @@ bool gsr_create_new_recording_filepath_from_timestamp(char *filepath, size_t fil
 
 gsr_recording_audio_stream* gsr_recording_output_get_audio_stream_by_index(gsr_recording_output *self, int stream_index) {
     for(size_t i = 0; i < self->num_audio_streams; ++i) {
-        if(self->audio_streams[i].stream->index == stream_index)
+        if(self->audio_streams[i].audio_track->stream_index == stream_index)
             return &self->audio_streams[i];
     }
     return NULL;
@@ -279,9 +285,201 @@ size_t calculate_estimated_replay_buffer_packets(int64_t replay_buffer_size_secs
     if(replay_buffer_size_secs == -1)
         return 0;
 
+    const char *dynamic = getenv("SHADOWLESS_DYNAMIC_AUDIO");
+    const size_t num_tracks = dynamic && strcmp(dynamic, "1") == 0
+        ? GSR_MAX_DYNAMIC_AUDIO_TRACKS : audio_inputs->num_items;
     int audio_fps = 0;
-    if(audio_inputs->num_items > 0)
+    if(num_tracks > 0)
         audio_fps = GSR_AUDIO_SAMPLE_RATE / audio_codec_get_frame_size(audio_codec);
 
-    return replay_buffer_size_secs * (fps + audio_fps * audio_inputs->num_items);
+    return replay_buffer_size_secs * (fps + audio_fps * num_tracks);
+}
+
+
+typedef struct {
+    AVFormatContext *context;
+    AVPacket *packet;
+    int *stream_map;
+    bool finished;
+    int64_t origin_us;
+    int64_t end_us;
+} gsr_audio_spool_input;
+
+static bool audio_spool_read_packet(gsr_audio_spool_input *input, bool stem, int64_t *next_progress_us) {
+    av_packet_unref(input->packet);
+    for(;;) {
+        const int result = av_read_frame(input->context, input->packet);
+        if(result == AVERROR_EOF) {
+            input->finished = true;
+            return true;
+        }
+        if(result < 0)
+            return false;
+        const int64_t now_us = av_gettime_relative();
+        if(now_us >= *next_progress_us) {
+            gsr_log(GSR_LOG_LEVEL_INFO, "shadowless-audio-finalizing: progress");
+            *next_progress_us = now_us + 2000000;
+        }
+        const int index = input->packet->stream_index;
+        if(index < 0 || (unsigned)index >= input->context->nb_streams)
+            return false;
+        if(input->stream_map[index] < 0) {
+            av_packet_unref(input->packet);
+            continue;
+        }
+        if(stem) {
+            AVStream *stream = input->context->streams[index];
+            const int64_t pts = input->packet->pts != AV_NOPTS_VALUE ? input->packet->pts : input->packet->dts;
+            if(pts == AV_NOPTS_VALUE)
+                return false;
+            const int64_t time_us = av_rescale_q(pts, stream->time_base, AV_TIME_BASE_Q);
+            if(time_us < input->origin_us || time_us >= input->end_us) {
+                av_packet_unref(input->packet);
+                continue;
+            }
+        }
+        return true;
+    }
+}
+
+bool gsr_audio_spools_finalize(const char *base_filepath, const char **spool_paths,
+        const char **names, size_t count, int64_t origin_us) {
+    if(!base_filepath || !base_filepath[0] || (count && (!spool_paths || !names)) || count > GSR_MAX_DYNAMIC_AUDIO_TRACKS)
+        return false;
+    if(count == 0)
+        return true;
+
+    gsr_log(GSR_LOG_LEVEL_INFO, "shadowless-audio-finalizing: progress");
+    int64_t next_progress_us = av_gettime_relative() + 2000000;
+    bool success = false;
+    bool temporary_created = false;
+    AVFormatContext *output = NULL, *validation = NULL;
+    gsr_audio_spool_input *inputs = calloc(count + 1, sizeof(*inputs));
+    char temporary[PATH_MAX] = {0};
+    if(!inputs)
+        return false;
+    const int written = snprintf(temporary, sizeof(temporary), "%s.dynamic-XXXXXX", base_filepath);
+    if(written < 0 || (size_t)written >= sizeof(temporary))
+        goto cleanup;
+    const AVOutputFormat *format = av_guess_format(NULL, base_filepath, NULL);
+    if(!format || avformat_alloc_output_context2(&output, format, NULL, temporary) < 0)
+        goto cleanup;
+
+    for(size_t i = 0; i <= count; ++i) {
+        gsr_audio_spool_input *input = &inputs[i];
+        const char *path = i == 0 ? base_filepath : spool_paths[i - 1];
+        if(!path || avformat_open_input(&input->context, path, NULL, NULL) < 0
+                || avformat_find_stream_info(input->context, NULL) < 0)
+            goto cleanup;
+        if(i == 0 && (input->context->duration == AV_NOPTS_VALUE || input->context->duration <= 0))
+            goto cleanup;
+        if(origin_us > INT64_MAX - inputs[0].context->duration)
+            goto cleanup;
+        input->origin_us = i == 0 ? 0 : origin_us;
+        input->end_us = origin_us + inputs[0].context->duration;
+        input->stream_map = malloc(input->context->nb_streams * sizeof(*input->stream_map));
+        input->packet = av_packet_alloc();
+        if(!input->stream_map || !input->packet)
+            goto cleanup;
+        unsigned included = 0;
+        for(unsigned j = 0; j < input->context->nb_streams; ++j) {
+            AVStream *from = input->context->streams[j];
+            input->stream_map[j] = -1;
+            if(i > 0 && from->codecpar->codec_type != AVMEDIA_TYPE_AUDIO)
+                continue;
+            AVStream *to = avformat_new_stream(output, NULL);
+            if(!to || avcodec_parameters_copy(to->codecpar, from->codecpar) < 0)
+                goto cleanup;
+            to->codecpar->codec_tag = 0;
+            to->time_base = from->time_base;
+            to->avg_frame_rate = from->avg_frame_rate;
+            to->sample_aspect_ratio = from->sample_aspect_ratio;
+            to->disposition = from->disposition;
+            if(av_dict_copy(&to->metadata, from->metadata, 0) < 0)
+                goto cleanup;
+            if(i > 0 && names[i - 1]) {
+                if(av_dict_set(&to->metadata, "title", names[i - 1], 0) < 0
+                        || av_dict_set(&to->metadata, "handler_name", names[i - 1], 0) < 0)
+                    goto cleanup;
+            }
+            input->stream_map[j] = to->index;
+            ++included;
+        }
+        if(included == 0)
+            goto cleanup;
+        if(i == 0 && av_dict_copy(&output->metadata, input->context->metadata, 0) < 0)
+            goto cleanup;
+        if(!audio_spool_read_packet(input, i > 0, &next_progress_us))
+            goto cleanup;
+    }
+
+    const int fd = mkstemp(temporary);
+    if(fd < 0)
+        goto cleanup;
+    close(fd);
+    temporary_created = true;
+    if(avio_open(&output->pb, temporary, AVIO_FLAG_WRITE) < 0 || avformat_write_header(output, NULL) < 0)
+        goto cleanup;
+
+    for(;;) {
+        size_t next = count + 1;
+        int64_t next_dts = INT64_MAX;
+        for(size_t i = 0; i <= count; ++i) {
+            gsr_audio_spool_input *input = &inputs[i];
+            if(input->finished)
+                continue;
+            AVPacket *packet = input->packet;
+            const int64_t dts = packet->dts != AV_NOPTS_VALUE ? packet->dts : packet->pts;
+            if(dts == AV_NOPTS_VALUE)
+                goto cleanup;
+            const int64_t normalized = av_rescale_q(dts,
+                input->context->streams[packet->stream_index]->time_base, AV_TIME_BASE_Q) - input->origin_us;
+            if(next == count + 1 || normalized < next_dts) {
+                next = i;
+                next_dts = normalized;
+            }
+        }
+        if(next == count + 1)
+            break;
+        gsr_audio_spool_input *input = &inputs[next];
+        AVPacket *packet = input->packet;
+        AVStream *from = input->context->streams[packet->stream_index];
+        AVStream *to = output->streams[input->stream_map[packet->stream_index]];
+        const int64_t offset = av_rescale_q(input->origin_us, AV_TIME_BASE_Q, from->time_base);
+        if(packet->pts != AV_NOPTS_VALUE) packet->pts -= offset;
+        if(packet->dts != AV_NOPTS_VALUE) packet->dts -= offset;
+        av_packet_rescale_ts(packet, from->time_base, to->time_base);
+        packet->stream_index = to->index;
+        packet->pos = -1;
+        if(av_interleaved_write_frame(output, packet) < 0 || !audio_spool_read_packet(input, next > 0, &next_progress_us))
+            goto cleanup;
+    }
+    if(av_write_trailer(output) < 0 || avio_closep(&output->pb) < 0)
+        goto cleanup;
+    if(avformat_open_input(&validation, temporary, NULL, NULL) < 0
+            || avformat_find_stream_info(validation, NULL) < 0
+            || validation->nb_streams != output->nb_streams
+            || validation->duration <= 0 || validation->duration == AV_NOPTS_VALUE)
+        goto cleanup;
+    avformat_close_input(&validation);
+    if(rename(temporary, base_filepath) != 0)
+        goto cleanup;
+    success = true;
+
+cleanup:
+    if(!success)
+        gsr_log(GSR_LOG_LEVEL_ERROR, "dynamic audio finalization failed; recording and audio spools preserved: %s", base_filepath);
+    avformat_close_input(&validation);
+    if(output) {
+        if(output->pb) avio_closep(&output->pb);
+        avformat_free_context(output);
+    }
+    for(size_t i = 0; i <= count; ++i) {
+        av_packet_free(&inputs[i].packet);
+        avformat_close_input(&inputs[i].context);
+        free(inputs[i].stream_map);
+    }
+    free(inputs);
+    if(!success && temporary_created) unlink(temporary);
+    return success;
 }

@@ -136,16 +136,15 @@ void gsr_encoder_receive_packets(gsr_encoder *self, AVCodecContext *codec_contex
             const int64_t packet_pts_timestamp = gsr_encoder_get_packet_timestamp(codec_context, av_packet->pts, pts);
             const int64_t packet_dts_timestamp = gsr_encoder_get_packet_timestamp(codec_context, av_packet->dts, pts);
 
-            if(self->first_pts == -1)
-                self->first_pts = packet_dts_timestamp;
+            /* Codec timestamps already use the shared capture clock. */
 
             /* Flushing the encoder drains several packets at once, which all have to get their own timestamp.
                |frame_size| is 0 for video, which uses the timestamp of the packet instead */
             pts += codec_context->frame_size;
 
             av_packet->stream_index = stream_index;
-            av_packet->pts = packet_pts_timestamp - self->first_pts;
-            av_packet->dts = packet_dts_timestamp - self->first_pts;
+            av_packet->pts = packet_pts_timestamp;
+            av_packet->dts = packet_dts_timestamp;
 
             if(self->replay_buffer) {
                 pthread_mutex_lock(&self->replay_mutex);
@@ -191,6 +190,7 @@ void gsr_encoder_receive_packets(gsr_encoder *self, AVCodecContext *codec_contex
                 av_packet->pts = packet_pts;
                 av_packet->dts = packet_dts;
 
+                av_packet->stream_index = recording_destination->stream->index;
                 av_packet_rescale_ts(av_packet, codec_context->time_base, recording_destination->stream->time_base);
                 // TODO: Is av_interleaved_write_frame needed?. Answer: might be needed for mkv but dont use it! it causes frames to be inconsistent, skipping frames and duplicating frames.
                 // TODO: av_interleaved_write_frame might be needed for cfr, or always for flv
@@ -198,6 +198,7 @@ void gsr_encoder_receive_packets(gsr_encoder *self, AVCodecContext *codec_contex
                 if(ret >= 0)
                     gsr_av_format_context_mark_packet_written(recording_destination->format_context);
                 if(ret < 0) {
+                    recording_destination->write_failed = true;
                     char error_buffer[AV_ERROR_MAX_STRING_SIZE];
                     if(av_strerror(ret, error_buffer, sizeof(error_buffer)) < 0)
                         snprintf(error_buffer, sizeof(error_buffer), "Unknown error");
@@ -245,6 +246,7 @@ size_t gsr_encoder_add_recording_destination(gsr_encoder *self, AVCodecContext *
     recording_destination->has_received_keyframe = false;
     recording_destination->first_frame_ts_filepath = NULL;
     recording_destination->first_frame_ts_written = false;
+    recording_destination->write_failed = false;
 
     ++self->recording_destination_id_counter;
     ++self->num_recording_destinations;
@@ -258,12 +260,12 @@ bool gsr_encoder_remove_recording_destination(gsr_encoder *self, size_t id) {
     pthread_mutex_lock(&self->file_write_mutex);
     for(size_t i = 0; i < self->num_recording_destinations; ++i) {
         if(self->recording_destinations[i].id == id) {
+            found = !self->recording_destinations[i].write_failed;
             free(self->recording_destinations[i].first_frame_ts_filepath);
             self->recording_destinations[i].first_frame_ts_filepath = NULL;
             self->recording_destinations[i].first_frame_ts_written = false;
             self->recording_destinations[i] = self->recording_destinations[self->num_recording_destinations - 1];
             --self->num_recording_destinations;
-            found = true;
             break;
         }
     }

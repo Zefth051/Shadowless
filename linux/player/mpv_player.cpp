@@ -88,7 +88,7 @@ bool MpvPlayer::initialize() {
     const std::pair<const char *, const char *> options[]{
         {"config", "no"}, {"terminal", "no"}, {"input-default-bindings", "no"},
         {"input-vo-keyboard", "no"}, {"osc", "no"}, {"load-scripts", "no"},
-        {"vo", "libmpv"}, {"hwdec", m_software ? "no" : "auto-safe"}, {"vd-lavc-threads", "2"},
+        {"vo", "libmpv"}, {"background", "color"}, {"background-color", "#101416"}, {"hwdec", m_software ? "no" : "auto-safe"}, {"vd-lavc-threads", "2"},
         // Use required pipewire-pulse; libmpv 0.41 native PipeWire initialization can deadlock.
         {"ao", "pulse"},
         {"ad-lavc-threads", "1"}, {"demuxer-max-bytes", "32MiB"},
@@ -112,6 +112,7 @@ bool MpvPlayer::initialize() {
     mpv_observe_property(m_mpv, 0, "pause", MPV_FORMAT_FLAG);
     mpv_observe_property(m_mpv, 0, "track-list", MPV_FORMAT_NODE);
     mpv_observe_property(m_mpv, 0, "hwdec-current", MPV_FORMAT_STRING);
+    mpv_observe_property(m_mpv, 0, "video-params/aspect", MPV_FORMAT_DOUBLE);
     if (m_software) initializeRender();
     else if (m_surface->context()) {
         m_surface->makeCurrent(); initializeRender(); m_surface->doneCurrent();
@@ -216,7 +217,8 @@ void MpvPlayer::setAudioTracks(const QVector<int> &ids) {
         m_audioReloadPending = false;
         QString graph;
         if (m_selectedTracks.size() > 1) {
-            for (int id : m_selectedTracks) graph += QString("[aid%1]").arg(id);
+            for (int id : m_selectedTracks) graph += QString("[aid%1]aresample=async=1:first_pts=0[a%1];").arg(id);
+            for (int id : m_selectedTracks) graph += QString("[a%1]").arg(id);
             graph += QString("amix=inputs=%1:normalize=0:dropout_transition=0,alimiter=limit=0.95:level=disabled[ao]").arg(m_selectedTracks.size());
         }
         // Reload this clip at the same position: libmpv 0.41 can lose video on an in-place audio graph refresh.
@@ -261,6 +263,10 @@ void MpvPlayer::events() {
                 }
             }
         }
+        else if (qstrcmp(prop->name, "video-params/aspect") == 0 && prop->format == MPV_FORMAT_DOUBLE) {
+            const double aspect = *static_cast<double *>(prop->data);
+            if (aspect > .2 && aspect < 5. && !qFuzzyCompare(aspect, m_aspect)) { m_aspect = aspect; emit aspectChanged(); }
+        }
         else if (qstrcmp(prop->name, "pause") == 0 && prop->format == MPV_FORMAT_FLAG) m_paused = *static_cast<int *>(prop->data);
         else if (qstrcmp(prop->name, "hwdec-current") == 0 && prop->format == MPV_FORMAT_STRING) m_hardwareDecoder = QString::fromUtf8(*static_cast<char **>(prop->data));
         else if (qstrcmp(prop->name, "track-list") == 0 && prop->format == MPV_FORMAT_NODE) {
@@ -290,7 +296,7 @@ void MpvPlayer::renderSoftware() {
 }
 void MpvPlayer::paintEvent(QPaintEvent *) {
     if (!m_software) return;
-    QPainter painter(this); painter.fillRect(rect(), Qt::black);
+    QPainter painter(this); painter.fillRect(rect(), QColor(16, 20, 22)); // matches the window so letterbox bars are not black
     if (!m_frame.isNull()) painter.drawImage(rect(), m_frame);
 }
 void MpvPlayer::mouseDoubleClickEvent(QMouseEvent *) { emit doubleClicked(); }

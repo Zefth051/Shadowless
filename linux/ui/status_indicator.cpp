@@ -16,12 +16,13 @@ StatusIndicator::StatusIndicator() : m_rotation(this), m_feedback(this) {
     setState(Buffering);
 }
 void StatusIndicator::setState(State state) {
-    if (state == Buffering || state == Recording) {
+    if (state == Buffering || state == Recording || state == Paused || state == Unknown) {
         m_resume = state;
         if (m_feedback.isActive()) return;
     } else m_feedback.stop();
     m_state = state;
     setAccessibleDescription(state == Buffering ? "Replay buffering" : state == Recording ? "Recording" :
+                             state == Paused ? "Recording paused" : state == Unknown ? "Recording pause state unknown" :
                              state == Saving ? "Saving clip" : "Clip saved");
     animate();
     update();
@@ -32,7 +33,7 @@ void StatusIndicator::saved() {
     m_feedback.start();
 }
 void StatusIndicator::animate() {
-    if (!isVisible()) { m_rotation.stop(); return; }
+    if (!isVisible() || m_state == Paused || m_state == Unknown) { m_rotation.stop(); return; }
     const int duration = m_state == Saved ? 230 : m_state == Saving ? 1050 : 2200;
     m_rotation.setLoopCount(m_state == Saved ? 1 : -1);
     if (m_rotation.duration() != duration) { m_rotation.stop(); m_rotation.setDuration(duration); }
@@ -58,6 +59,12 @@ void StatusIndicator::paintEvent(QPaintEvent *) {
     p.setBrush(Qt::NoBrush);
     p.setPen(QPen(QColor("#344047"), 1.5));
     p.drawEllipse(QPointF(0, 0), 9, 9);
+    if (m_state == Paused || m_state == Unknown) {
+        p.setPen(Qt::NoPen); p.setBrush(QColor("#f2c242"));
+        if (m_state == Paused) { p.drawRoundedRect(QRectF(-4,-5,2.5,10),1,1); p.drawRoundedRect(QRectF(1.5,-5,2.5,10),1,1); }
+        else { p.drawRoundedRect(QRectF(-1,-5,2,6),1,1); p.drawEllipse(QPointF(0,4),1,1); }
+        return;
+    }
     const auto color = m_state == Saving ? QColor("#f2c242") :
                        m_state == Recording ? QColor("#ff6666") : palette().color(QPalette::Accent);
     p.setPen(QPen(color, 2.1, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
