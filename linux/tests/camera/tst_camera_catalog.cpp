@@ -169,6 +169,36 @@ private slots:
         QCOMPARE(devices[0].bus, "usb");
         QVERIFY(devices[0].likelyUsable());
     }
+    // v4l2loopback class entries have no `device` link and live under /sys/devices/virtual: classify by the real path,
+    // even when the card label gives no hint, and never claim a producer is feeding it.
+    void virtualEntryWithoutNameHintIsALoopback() {
+        Tree t;
+        const QString backing = t.temp.filePath("realsys/devices/virtual/video4linux/video7");
+        QVERIFY(QDir().mkpath(backing));
+        QVERIFY(Tree::write(backing + "/name", "Studio Cam\n") && Tree::write(backing + "/index", "0\n"));
+        QVERIFY(QFile::link(backing, t.sys + "/video7"));
+        QVERIFY(Tree::write(t.dev + "/video7", {}));
+        const auto devices = CameraCatalog(t.sys, t.dev, {t.probe().isCharDevice, t.probe().canReadWrite, {}}).scan();
+        QCOMPARE(devices.size(), 1);
+        QCOMPARE(devices[0].bus, "virtual");
+        QCOMPARE(devices[0].kind, Kind::VirtualLoopback);
+        QCOMPARE(devices[0].usability, Usability::NoProducerUnknown);
+        QVERIFY(!devices[0].likelyUsable());
+        QVERIFY(devices[0].bridgeHint.isEmpty());   // no bridge is guessed from an unrelated name
+    }
+    // Codec/ISP nodes look like cameras from sysfs: without a camera bus or driver nothing is claimed as usable.
+    void unidentifiedNodeIsNeverLikelyUsable() {
+        Tree t;
+        const QString entry = t.sys + "/video3";
+        QVERIFY(QDir().mkpath(entry));
+        QVERIFY(Tree::write(entry + "/name", "Mystery\n") && Tree::write(entry + "/index", "0\n") && Tree::write(t.dev + "/video3", {}));
+        const auto devices = t.scan();
+        QCOMPARE(devices.size(), 1);
+        QCOMPARE(devices[0].kind, Kind::Unknown);
+        QCOMPARE(devices[0].usability, Usability::Unknown);
+        QVERIFY(!devices[0].likelyUsable());
+        QVERIFY(devices[0].detected);                 // detected is not the same as usable
+    }
     void emptyAndMissingRoot() {
         Tree t;
         QVERIFY(t.scan().isEmpty());

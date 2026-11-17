@@ -41,12 +41,17 @@ The conservative rule is that `likelyUsable()` is true only for
    same nonempty resolved `device` target. UVC metadata nodes motivate this
    heuristic; it does not prove the node carries metadata. A sibling need only
    exist in sysfs, even if that sibling has no accessible device node.
-4. `NoProducerUnknown`: an otherwise accessible loopback candidate. The reason
-   explains that a producer cannot be verified without opening the device.
-   `likelyUsable()` is **false** for these candidates.
-5. `Unknown`: the index is missing, negative, overflowing, or malformed.
-6. `LikelyUsable`: an accessible character device with a valid index, without
-   the preceding exclusions. Its reason still states that capture is unverified.
+4. `NoProducerUnknown`: an otherwise accessible loopback candidate: a known
+   bridge name, the `v4l2loopback` driver, or a class entry whose real path is
+   under `/sys/devices/virtual` (loopback entries have no `device` link, so a
+   custom card label gives no hint). The reason explains that a producer cannot
+   be verified without opening the device. `likelyUsable()` is **false**.
+5. `Unknown`: the index is missing, negative, overflowing, or malformed, or the
+   bus and driver do not identify a camera (codec and ISP nodes look like
+   cameras from sysfs). `likelyUsable()` is **false**.
+6. `LikelyUsable`: an accessible character device with a valid index on a USB,
+   PCI or platform bus or the `uvcvideo` driver, without the preceding
+   exclusions. Its reason still states that capture is unverified.
 
 The catalog cannot prove capture support, producer activity, format compatibility,
 frame delivery, device availability, or exclusive access without opening and
@@ -92,20 +97,24 @@ they must not enter diagnostics or telemetry. The module itself has no logging.
 - How should hotplug, permission changes, busy devices, and producer loss appear
   in the UI? The catalog currently offers synchronous snapshots only.
 - Should portal/PipeWire camera access precede direct V4L2 on supported desktops?
-- Who registers the standalone test project in the shared Linux build? This task
-  intentionally leaves `linux/Shadowless.pro` and build registration unchanged.
 
 ## Validation
 
-Build outside the checkout:
+The suite is registered in `linux/Shadowless.pro` and run by `linux/build.sh`
+(`tests/camera/tst_camera_catalog`). To build it alone outside the checkout:
 
 ```sh
-mkdir -p /tmp/build-t4
-cd /tmp/build-t4
+mkdir -p /tmp/build-camera
+cd /tmp/build-camera
 qmake6 /ABS/linux/tests/camera/CameraCatalogTests.pro
 make -j8
 QT_QPA_PLATFORM=offscreen ./tst_camera_catalog
 ```
+
+A read-only scan on a development machine with one UVC webcam reported two
+entries, the capture node as likely usable and its index-1 sibling as a
+secondary node, which matches the hardware. That is a sanity check of the
+heuristic on one device, not validation of capture.
 
 The suite uses fake sysfs/device trees, real symlinks, and injected probes. It
 also scans the real `/sys/class/video4linux` without opt-in, asserting only

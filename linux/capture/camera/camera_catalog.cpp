@@ -121,13 +121,16 @@ QVector<CameraDevice> CameraCatalog::scan() const
                 camera.index = index;
         }
         const QString target = m_probe.resolveLink(entry + QStringLiteral("/device"));
-        camera.bus = busFor(target);
+        // Virtual devices (v4l2loopback and friends) have no `device` link; their class entry itself lives under
+        // /sys/devices/virtual, so use the entry's real path to classify the bus when there is no device link.
+        const QString real = target.isEmpty() ? m_probe.resolveLink(entry) : QString();
+        camera.bus = busFor(target.isEmpty() ? real : target);
         QString driverTarget = m_probe.resolveLink(entry + QStringLiteral("/device/driver"));
         if (driverTarget.isEmpty())
             driverTarget = m_probe.resolveLink(entry + QStringLiteral("/driver"));
         camera.driver = QFileInfo(driverTarget).fileName();
         camera.bridgeHint = bridgeFor(camera.name, camera.driver);
-        if (!camera.bridgeHint.isEmpty())
+        if (!camera.bridgeHint.isEmpty() || camera.bus == QStringLiteral("virtual"))
             camera.kind = Kind::VirtualLoopback;
         else if (camera.driver == QStringLiteral("uvcvideo") || camera.bus == QStringLiteral("usb")
                  || camera.bus == QStringLiteral("pci") || camera.bus == QStringLiteral("platform"))
@@ -155,6 +158,10 @@ QVector<CameraDevice> CameraCatalog::scan() const
         } else if (camera.index < 0) {
             camera.usability = Usability::Unknown;
             camera.reason = QStringLiteral("The sysfs index is missing or malformed; usability is unknown.");
+        } else if (camera.kind == Kind::Unknown) {
+            // Not a recognizable camera bus or driver (codec/ISP nodes look the same from sysfs): do not claim usability.
+            camera.usability = Usability::Unknown;
+            camera.reason = QStringLiteral("The bus and driver do not identify a camera; usability is unknown.");
         } else {
             camera.usability = Usability::LikelyUsable;
             camera.reason = QStringLiteral("Character device with read and write access; capture support is unverified without opening.");
