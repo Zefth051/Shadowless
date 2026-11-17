@@ -83,7 +83,28 @@ try {
         throw "FFmpeg archive SHA-256 mismatch. Expected $expectedArchiveSha256; found $actualHash."
     }
 
-    Expand-Archive -LiteralPath $archive -DestinationPath $extract
+    # Expand-Archive fails on some Windows PowerShell 5.1 runners (missing
+    # ZipFile.ExtractToDirectory overload); extract with .NET directly and
+    # reject entries that would escape the destination.
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $null = New-Item -ItemType Directory -Force -Path $extract
+    $extractRoot = [IO.Path]::GetFullPath($extract).TrimEnd('\') + '\'
+    $zip = [IO.Compression.ZipFile]::OpenRead($archive)
+    try {
+        if ($zip.Entries.Count -eq 0) { throw "FFmpeg archive is empty." }
+        foreach ($entry in $zip.Entries) {
+            $target = [IO.Path]::GetFullPath((Join-Path $extract $entry.FullName))
+            if (-not $target.StartsWith($extractRoot, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "FFmpeg archive entry escapes destination: $($entry.FullName)"
+            }
+            if ($entry.FullName.EndsWith('/')) {
+                $null = New-Item -ItemType Directory -Force -Path $target
+                continue
+            }
+            $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target)
+            [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
+        }
+    } finally { $zip.Dispose() }
     $ffmpeg = Get-ChildItem -LiteralPath $extract -Filter ffmpeg.exe -Recurse |
         Select-Object -First 1
     if (-not $ffmpeg) {
