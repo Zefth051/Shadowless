@@ -665,13 +665,10 @@ try {
         $recordingModeButton = Find-AutomationElement -Root $root `
             -AutomationId "DashboardRecordingModeButton"
         Invoke-AutomationElement -Element $recordingModeButton
-        Start-Sleep -Seconds 2
-        $captureToggle = Find-AutomationElement -Root $root -AutomationId "ReplayToggle"
-        Invoke-AutomationElement -Element $captureToggle
         Start-Sleep -Seconds 6
         Capture-Window -Root $root `
             -Path (Join-Path $OutputDirectory "shadowless-feature-recording.png")
-        Invoke-AutomationElement -Element $captureToggle
+        Invoke-AutomationElement -Element $recordingModeButton
         Start-Sleep -Seconds 3
         $generatedRecordingPaths = @(
             Get-ChildItem -LiteralPath $recordingDirectory -File -ErrorAction SilentlyContinue |
@@ -681,10 +678,6 @@ try {
                 } |
                 Select-Object -ExpandProperty FullName
         )
-        $replayModeButton = Find-AutomationElement -Root $root `
-            -AutomationId "DashboardReplayModeButton"
-        Invoke-AutomationElement -Element $replayModeButton
-        Start-Sleep -Seconds 2
     }
 
     if (-not $SkipPlayer) {

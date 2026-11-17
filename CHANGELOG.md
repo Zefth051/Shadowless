@@ -4,6 +4,14 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+### Improved
+
+- **Settings reachable beneath notifications:** Overlay notifications are now fully click-through at both the native and WPF level, so the Settings button can always be used, including right after turning Instant Clip off.
+
+### Known limitations
+
+- The cause of the reported delay entering Settings was identified by code analysis only; it needs confirmation on Windows 11. Windows CI builds this change but cannot exercise the UI.
+
 ## [0.3.2] - 2026-11-16
 
 ### Added

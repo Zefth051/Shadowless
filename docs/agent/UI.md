@@ -20,7 +20,9 @@ overlay notifications, and recording indicator.
   entry. Escape returns to the dashboard. The dashboard card toggles composition
   live without removing layers. Shares theme tokens and previews the OBS texture directly.
   Master/layer toggles apply live; hidden/minimized editors detach their display.
-- `OverlayNotificationWindow`: click-through transient notifications.
+- `OverlayNotificationWindow`: click-through transient notifications. Both native
+  `WM_NCHITTEST` (`HTTRANSPARENT`) and WPF hit testing pass input through,
+  including to the Settings button underneath a topmost notification.
 - `ReplayStatusIndicatorWindow`: optional capture status surface.
 - `DisplayIdentifierWindow`: numbered display overlay.
 - `Themes/Theme.xaml` and `ThemeManager`: shared resources and accent selection.
@@ -28,6 +30,9 @@ overlay notifications, and recording indicator.
 
 ## Invariants
 
+- Opening the control overlay and entering Settings never wait for the capture
+  pipeline gate. Capture actions disable individual operation controls only;
+  Settings navigation and the window stay enabled during replay shutdown.
 - Settings edits are staged. Done applies; Cancel discards. Closing dirty
   settings shows the save/discard notice and keeps the window open.
 - Entering settings dismisses the previous dashboard notice. Validation and
@@ -46,8 +51,10 @@ overlay notifications, and recording indicator.
 - Settings apply failures name the failing option or operation and retain the
   original error. Capture restart failures list the changed capture options when
   the encoder cannot identify a single cause. File write failures identify the config file.
-- Main replay/recording selector applies immediately and shows only controls
-  relevant to the selected mode.
+- Dashboard Instant Clip opens an enable/disable and save menu. Recording opens
+  a menu with start, pause, resume and stop actions; both outputs can run
+  together. Menu availability follows active outputs and paused state. Enter or
+  Space opens each menu; arrow keys and Escape use native WPF menu navigation.
 - Dashboard audio icons mute/unmute without disabling capture or resetting the
   buffer. Adjacent labels/percentages open live volume sliders; microphone controls
   also remain available in advanced mode. Enabling a disabled source still rebuilds capture.

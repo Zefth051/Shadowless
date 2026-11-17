@@ -83,35 +83,41 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="OverlayModeTile" TargetType="RadioButton">
+        <Style x:Key="OverlayModeTile" TargetType="Button">
             <Setter Property="Background" Value="{StaticResource BgSurfaceBrush}"/>
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource DividerBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
+                    <ControlTemplate TargetType="Button">
                         <Border x:Name="Tile" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="16">
-                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Grid Width="64" Height="64" Margin="0,0,0,20">
-                                    <Ellipse x:Name="TileRing" Stroke="{TemplateBinding Foreground}" StrokeThickness="4"
-                                             StrokeDashArray="32,6" StrokeStartLineCap="Round"/>
-                                    <Ellipse Width="18" Height="18" Fill="{TemplateBinding Foreground}"/>
-                                </Grid>
-                                <ContentPresenter HorizontalAlignment="Center" RecognizesAccessKey="True"
-                                                  TextElement.FontSize="16" TextElement.FontWeight="SemiBold"/>
-                            </StackPanel>
+                            <Grid>
+                                <Path Data="{StaticResource IconChevron}" Width="10" Height="6" Stretch="Uniform"
+                                      HorizontalAlignment="Right" VerticalAlignment="Top"
+                                      Stroke="{TemplateBinding Foreground}" StrokeThickness="2"/>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Grid Width="64" Height="64" Margin="0,0,0,20">
+                                        <Ellipse x:Name="TileRing" Stroke="{TemplateBinding Foreground}" StrokeThickness="4"
+                                                 StrokeDashArray="32,6" StrokeStartLineCap="Round"/>
+                                        <Ellipse Width="18" Height="18" Fill="{TemplateBinding Foreground}"/>
+                                    </Grid>
+                                    <ContentPresenter HorizontalAlignment="Center" RecognizesAccessKey="True"
+                                                      TextElement.FontSize="16" TextElement.FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="Tag" Value="recording">
+                            <Trigger Property="Name" Value="DashboardRecordingModeButton">
                                 <Setter TargetName="TileRing" Property="StrokeDashArray" Value=""/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tile" Property="Opacity" Value="0.9"/>
                                 <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
                                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
+                            <Trigger Property="Tag" Value="active">
                                 <Setter Property="Background" Value="{DynamicResource AccentChipBgBrush}"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource AccentDimBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
@@ -288,11 +294,7 @@
                                        Style="{StaticResource SecondaryText}" Margin="0,3,0,0"
                                        TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
-                        <ToggleButton x:Name="ReplayToggle" Grid.Column="2"
-                                      AutomationProperties.AutomationId="ReplayToggle"
-                                      Style="{StaticResource ToggleSwitch}"
-                                      VerticalAlignment="Center"
-                                      Click="ReplayToggle_Click"/>
+
                     </Grid>
                 </Border>
 
@@ -326,25 +328,51 @@
                         Style="{StaticResource SegmentStrip}"
                         Height="192" Margin="0,16,0,0" Padding="0" Background="Transparent" BorderThickness="0">
                     <UniformGrid x:Name="DashboardCaptureModeOptions" Rows="1">
-                        <RadioButton x:Name="DashboardReplayModeButton"
-                                     AutomationProperties.AutomationId="DashboardReplayModeButton"
-                                     GroupName="DashboardCaptureMode"
-                                     Tag="replay"
-                                     Content="{DynamicResource L.Capture.Replay}"
-                                     Margin="0,0,8,0" Style="{StaticResource OverlayModeTile}"
-                                     Click="DashboardCaptureMode_Click"/>
-                        <RadioButton x:Name="DashboardRecordingModeButton"
-                                     AutomationProperties.AutomationId="DashboardRecordingModeButton"
-                                     GroupName="DashboardCaptureMode"
-                                     Tag="recording"
-                                     Content="{DynamicResource L.Capture.Recording}"
-                                     Margin="8,0,0,0" Style="{StaticResource OverlayModeTile}"
-                                     Click="DashboardCaptureMode_Click"/>
+                        <Button x:Name="DashboardReplayModeButton"
+                                AutomationProperties.AutomationId="DashboardReplayModeButton"
+                                AutomationProperties.Name="{DynamicResource L.Capture.Replay}"
+                                Margin="0,0,8,0" Style="{StaticResource OverlayModeTile}"
+                                Click="CaptureMenu_Click">
+                            <TextBlock Text="{DynamicResource L.Capture.Replay}" TextWrapping="Wrap" TextAlignment="Center"/>
+                            <Button.ContextMenu>
+                                <ContextMenu Style="{StaticResource TrayMenu}" Opened="CaptureMenu_Opened">
+                                    <MenuItem x:Name="EnableInstantClipMenuItem" Header="{DynamicResource L.Capture.EnableInstantClip}"
+                                              Tag="enable" Style="{StaticResource TrayMenuItem}" Click="InstantClipMenu_Click"/>
+                                    <MenuItem x:Name="DisableInstantClipMenuItem" Header="{DynamicResource L.Capture.DisableInstantClip}"
+                                              Tag="disable" Style="{StaticResource TrayMenuItem}" Click="InstantClipMenu_Click"/>
+                                    <MenuItem x:Name="SaveReplayMenuItem" Header="{DynamicResource L.Hotkey.SaveReplay}"
+                                              Style="{StaticResource TrayMenuItem}" Click="SaveReplay_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <Button x:Name="DashboardRecordingModeButton"
+                                AutomationProperties.AutomationId="DashboardRecordingModeButton"
+                                AutomationProperties.Name="{DynamicResource L.Capture.Recording}"
+                                Margin="8,0,0,0" Style="{StaticResource OverlayModeTile}" Click="CaptureMenu_Click">
+                            <TextBlock Text="{DynamicResource L.Capture.Recording}"
+                                       TextWrapping="Wrap" TextAlignment="Center"/>
+                            <Button.ContextMenu>
+                                <ContextMenu Style="{StaticResource TrayMenu}" Opened="CaptureMenu_Opened">
+                                    <MenuItem x:Name="StartRecordingMenuItem" Header="{DynamicResource L.Capture.StartRecording}"
+                                              Tag="start" Style="{StaticResource TrayMenuItem}" Click="RecordingMenu_Click"/>
+                                    <MenuItem x:Name="PauseRecordingMenuItem" Header="{DynamicResource L.Capture.PauseRecording}"
+                                              Tag="pause" Style="{StaticResource TrayMenuItem}" Click="PauseRecording_Click"/>
+                                    <MenuItem x:Name="ResumeRecordingMenuItem" Header="{DynamicResource L.Capture.ResumeRecording}"
+                                              Tag="resume" Style="{StaticResource TrayMenuItem}" Click="PauseRecording_Click"/>
+                                    <MenuItem x:Name="StopRecordingMenuItem" Header="{DynamicResource L.Capture.StopRecording}"
+                                              Tag="stop" Style="{StaticResource TrayMenuItem}" Click="RecordingMenu_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
                     </UniformGrid>
                 </Border>
 
                 <Grid x:Name="DashboardAudioSourceHost" Margin="0,14,0,0"
                       Height="42" ClipToBounds="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="42"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="8"/>
@@ -427,6 +455,7 @@
                     </Border>
 
                     <Border x:Name="PerAppAudioSourcePanel"
+                            Grid.Row="1" Grid.ColumnSpan="3" Margin="0,8,0,0"
                             Visibility="Collapsed" Opacity="0"
                             Background="Transparent">
                         <Border.RenderTransform>
@@ -511,11 +540,6 @@
                     </Grid>
                 </Button>
 
-                <Button x:Name="PauseRecordingButton" Style="{StaticResource SubtleButton}"
-                        Visibility="Collapsed" Height="32" Margin="0,8,0,0"
-                        Content="{DynamicResource L.Capture.PauseRecording}"
-                        AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}"
-                        Click="PauseRecording_Click"/>
                 <TextBlock x:Name="RecordingPauseHint" Visibility="Collapsed" Margin="2,6,2,0"
                            Text="{DynamicResource L.Capture.PausedHint}" TextWrapping="Wrap"
                            Style="{StaticResource SecondaryText}"/>
@@ -1544,6 +1568,15 @@
                                                 Tag="toggle" Click="HotkeyCapture_Click"/>
                                     </Grid>
                                 </StackPanel>
+                                <Border Style="{StaticResource RowDivider}"/>
+                                <Grid Margin="13,11">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource L.Hotkey.PauseRecording}" Style="{StaticResource RowLabelText}"
+                                               TextWrapping="Wrap" Margin="0,0,12,0" VerticalAlignment="Center"/>
+                                    <Button x:Name="PauseHotkeyButton" Grid.Column="1" Style="{StaticResource SubtleButton}"
+                                            MinWidth="128" Tag="pause" Click="HotkeyCapture_Click"
+                                            AutomationProperties.Name="{DynamicResource L.Hotkey.PauseRecording}"/>
+                                </Grid>
                                 <Border Style="{StaticResource RowDivider}"/>
                                 <Grid Margin="13,11">
                                     <Grid.ColumnDefinitions>

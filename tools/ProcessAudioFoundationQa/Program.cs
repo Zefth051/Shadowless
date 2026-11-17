@@ -125,6 +125,7 @@ internal static class Program
             Run("reconciler thread ownership", ReconcilerThreadOwnership);
             Run("reconciler clean shutdown", ReconcilerCleanShutdown);
             Run("advanced config normalization", AdvancedConfigNormalization);
+            Run("advanced system audio allocation", AdvancedSystemAudioAllocation);
             Run("config clone copy and equality", ConfigCloneCopyAndEquality);
             Run("audio levels preserve pipeline classification", AudioLevelsPreservePipeline);
             Run("old config remains simple", OldConfigRemainsSimple);
@@ -492,7 +493,7 @@ internal static class Program
         };
         Equal("Track 1 - Microphone", ObsReplayEngine.BuildAudioTrackName(advanced, 1));
         Equal("Track 2 - kingdomcome", ObsReplayEngine.BuildAudioTrackName(advanced, 2));
-        Equal("Track 3", ObsReplayEngine.BuildAudioTrackName(advanced, 3));
+        Equal("Track 3 - System", ObsReplayEngine.BuildAudioTrackName(advanced, 3));
 
         Equal(
             "kingdomcome",
@@ -873,6 +874,39 @@ internal static class Program
             item.Key.ProcessId == 20).Value);
     }
 
+    private static void AdvancedSystemAudioAllocation()
+    {
+        var config = new Config { AudioRoutingMode = "advanced" };
+        config.Normalize();
+        Equal(true, config.CaptureSystemAudio);
+        Equal(1, config.AdvancedSystemAudioTrack);
+        Equal(1, ObsReplayEngine.AudioTrackCount(config));
+        Equal("Track 1 - System", ObsReplayEngine.BuildAudioTrackName(config, 1));
+        Equal(true, ObsReplayEngine.ShouldMonitorProcessAudio(config, AdvancedProcessAudioAvailability.Available));
+        config.CaptureMicrophone = true;
+        config.AdvancedMicrophoneTrack = 1;
+        config.ProcessAudioRoutes = [new() { Executable = "game.exe", Track = 2 }];
+        Equal(3, config.AdvancedSystemAudioTrack);
+        Equal(3, ObsReplayEngine.AudioTrackCount(config));
+        config.CaptureSystemAudio = false;
+        config.Normalize();
+        Equal(false, config.CaptureSystemAudio);
+        Equal(2, ObsReplayEngine.AudioTrackCount(config));
+        config.ProcessAudioRoutes.Clear();
+        config.CaptureMicrophone = false;
+        Equal(false, ObsReplayEngine.ShouldMonitorProcessAudio(config, AdvancedProcessAudioAvailability.Available));
+        config.CaptureSystemAudio = true;
+        config.ProcessAudioRoutes = Enumerable.Range(1, 6).Select(track =>
+            new ProcessAudioRoute { Executable = $"app{track}.exe", Track = track }).ToList();
+        Equal(0, config.AdvancedSystemAudioTrack);
+        bool rejected = false;
+        try { _ = ObsReplayEngine.AudioTrackCount(config); }
+        catch (InvalidOperationException) { rejected = true; }
+        Equal(true, rejected);
+        config.ProcessAudioRoutes[3].Enabled = false;
+        Equal(4, config.AdvancedSystemAudioTrack);
+    }
+
     private static void MixerBitsAndEncoderContinuity()
     {
         Equal(1u, ObsReplayEngine.MixerBit(1));
@@ -895,6 +929,10 @@ internal static class Program
 
         config.CaptureMicrophone = false;
         Equal(4, ObsReplayEngine.AudioTrackCount(config));
+        config.ProcessAudioRoutes.Add(new() { Executable = "disabled.exe", Track = 6, Enabled = false });
+        Equal(4, ObsReplayEngine.AudioTrackCount(config));
+        config.ProcessAudioRoutes.ForEach(route => route.Enabled = false);
+        Equal(1, ObsReplayEngine.AudioTrackCount(config));
     }
 
     private static void SimpleAudioTopologyRegression()
@@ -1041,17 +1079,17 @@ internal static class Program
         Equal(
             AdvancedProcessAudioAvailability.UnsupportedWindowsVersion,
             ObsReplayEngine.DetectProcessAudioAvailability(
-                new Version(10, 0, 19040),
+                new Version(10, 0, 20347),
                 sourceRegistered: true));
         Equal(
             AdvancedProcessAudioAvailability.SourceUnavailable,
             ObsReplayEngine.DetectProcessAudioAvailability(
-                new Version(10, 0, 19041),
+                new Version(10, 0, 20348),
                 sourceRegistered: false));
         Equal(
             AdvancedProcessAudioAvailability.Available,
             ObsReplayEngine.DetectProcessAudioAvailability(
-                new Version(10, 0, 19041),
+                new Version(10, 0, 20348),
                 sourceRegistered: true));
 
         var simple = new Config { AudioRoutingMode = "simple" };

@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">Монітор захоплення не знайдено.</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">Не вдалося запустити підсистему відео: код {0}.</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">Не вдалося запустити аудіопідсистему.</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">Для розширеної маршрутизації звуку програм потрібна Windows 10 версії 2004 або новіша.</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">Для маршрутизації звуку програм потрібна збірка Windows 20348 або новіша (Windows 11 або Windows Server 2022).</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">Джерело розширеного звуку програм недоступне. Перевстановіть або оновіть Shadowless.</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">Не знайдено сумісного апаратного відеокодера. Оновити графічний драйвер.</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">{0} недоступний на {1}; вибрано {2}.</sys:String>
@@ -374,7 +374,7 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">Виберіть застосунок або ввімкніть мікрофон.</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">Процесів: {0}</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">Звук застосунків</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Перед збереженням виберіть застосунок або ввімкніть мікрофон.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Перед збереженням увімкніть системний звук, виберіть програму або увімкніть мікрофон.</sys:String>
 
 
   <sys:String x:Key="L.Capture.Mode">Режим захоплення</sys:String>
@@ -485,4 +485,11 @@
   <sys:String x:Key="L.Settings.Capture">Параметри захоплення</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Статус гри в Discord</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">Показувати розпізнану гру в Discord лише під час захоплення. Час захоплення не передається.</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">Увімкнути миттєвий повтор</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">Вимкнути миттєвий повтор</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">Дії із записом</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">Призупинити/відновити запис</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">Система + вибрані програми</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">Система записує весь звук, крім вибраних програм, на першу вільну доріжку (1–6).</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">Усі шість звукових доріжок зайняті. Змініть призначення програми або мікрофона, щоб звільнити доріжку, або вимкніть системний звук.</sys:String>
 </ResourceDictionary>

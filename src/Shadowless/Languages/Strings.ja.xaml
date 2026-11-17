@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">キャプチャ モニターが見つかりません。</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">ビデオ サブシステムの起動に失敗しました: コード {0}。</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">オーディオ サブシステムの起動に失敗しました。</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">アプリ別の高度な音声ルーティングには Windows 10 バージョン 2004 以降が必要です。</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">アプリ別の音声ルーティングには Windows ビルド 20348 以降（Windows 11 または Windows Server 2022）が必要です。</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">高度なアプリ音声ソースを利用できません。Shadowless を再インストールまたは更新してください。</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">互換性のあるハードウェアビデオエンコーダが見つかりません。グラフィックドライバーを更新してください。</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">{0} は {1} では利用できません。 {2} を選択しました。</sys:String>
@@ -420,7 +420,7 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">アプリを選択するか、マイクを有効にしてください。</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">{0} プロセス</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">アプリ音声</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">保存する前にアプリを選択するか、マイクを有効にしてください。</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">保存する前に、システム音声を有効にするか、アプリを選択するか、マイクを有効にしてください。</sys:String>
   <sys:String x:Key="L.Library.AllGames">すべてのゲーム</sys:String>
   <sys:String x:Key="L.Library.NoGame">ゲームなし</sys:String>
   <sys:String x:Key="L.Library.AllModes">すべての録画モード</sys:String>
@@ -484,4 +484,11 @@
   <sys:String x:Key="L.Settings.Capture">キャプチャ設定</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Discord リッチプレゼンス</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">キャプチャ中のみ、認識されたゲームを Discord に表示します。経過時間は共有しません。</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">インスタントクリップを有効にする</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">インスタントクリップを無効にする</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">録画操作</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">録画の一時停止/再開</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">システム + 選択したアプリ</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">システムは選択したアプリ以外のすべての音声を、最初の空きトラック（1～6）に録音します。</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">6つの音声トラックがすべて使用中です。アプリまたはマイクの割り当てを変更してトラックを空けるか、システム音声を無効にしてください。</sys:String>
 </ResourceDictionary>

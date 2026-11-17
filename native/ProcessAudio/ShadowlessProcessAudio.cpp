@@ -15,6 +15,7 @@
 ******************************************************************************/
 
 #include <obs-module.h>
+#include "InvertSamples.h"
 
 #include <Windows.h>
 #include <audioclient.h>
@@ -147,6 +148,7 @@ public:
         processId_ = static_cast<DWORD>(processId);
         creationTime_ = static_cast<uint64_t>(creationTime);
         excludeTarget_ = obs_data_get_bool(settings, "exclude_target");
+        invertSamples_ = obs_data_get_bool(settings, "invert_samples");
         try {
             stopEvent_ = CreateEventW(nullptr, TRUE, FALSE, nullptr);
             if (!stopEvent_)
@@ -442,6 +444,13 @@ private:
             }
 
             obs_source_audio audio{};
+            if (invertSamples_) {
+                const size_t samples = static_cast<size_t>(
+                    get_audio_channels(audioInfo.speakers)) * frames;
+                inverted_.resize(samples);
+                InvertAudioSamples(reinterpret_cast<const float *>(buffer), inverted_.data(), samples);
+                buffer = reinterpret_cast<BYTE *>(inverted_.data());
+            }
             audio.data[0] = buffer;
             audio.frames = frames;
             audio.speakers = audioInfo.speakers;
@@ -464,6 +473,7 @@ private:
     obs_source_t *source_ = nullptr;
     DWORD processId_ = 0;
     bool excludeTarget_ = false;
+    bool invertSamples_ = false;
     uint64_t creationTime_ = 0;
     HANDLE process_ = nullptr;
     HANDLE stopEvent_ = nullptr;
@@ -473,6 +483,7 @@ private:
     std::mutex workerMutex_;
     std::thread worker_;
     std::vector<BYTE> silence_;
+    std::vector<float> inverted_;
 };
 
 const char *GetSourceName(void *)

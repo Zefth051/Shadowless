@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">未找到捕获显示器。</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">视频子系统启动失败：代码 {0}。</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">音频子系统启动失败。</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">高级应用音频路由需要 Windows 10 版本 2004 或更高版本。</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">应用音频路由需要 Windows 内部版本 20348 或更高版本（Windows 11 或 Windows Server 2022）。</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">高级应用音频源不可用。请重新安装或更新 Shadowless。</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">未找到兼容的硬件视频编码器。请更新显卡驱动。</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">{0} 在 {1} 上不可用；已选择 {2}。</sys:String>
@@ -420,7 +420,7 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">请选择一个应用或启用麦克风。</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">{0} 个进程</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">应用音频</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">保存前请选择一个应用或启用麦克风。</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">保存前请启用系统音频、选择应用或启用麦克风。</sys:String>
   <sys:String x:Key="L.Library.AllGames">所有游戏</sys:String>
   <sys:String x:Key="L.Library.NoGame">无游戏</sys:String>
   <sys:String x:Key="L.Library.AllModes">所有录制模式</sys:String>
@@ -484,4 +484,11 @@
   <sys:String x:Key="L.Settings.Capture">捕获设置</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Discord 丰富状态</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">仅在捕获期间在 Discord 上显示已识别的游戏。不分享已用时间。</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">启用即时剪辑</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">禁用即时剪辑</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">录制操作</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">暂停/继续录制</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">系统 + 所选应用</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">系统将录制所选应用之外的所有音频，并使用第一条空闲音轨（1–6）。</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">全部六条音轨均已占用。请更改应用或麦克风的音轨分配以释放音轨，或关闭系统音频。</sys:String>
 </ResourceDictionary>

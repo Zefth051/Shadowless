@@ -92,6 +92,19 @@ internal static class DashboardAudioLevelsQa
                     "Closing the popup discarded the last microphone volume.");
                 config.AudioRoutingMode = "advanced";
                 window.UpdateRuntimeState(false);
+                Require(Control<Button>("SystemVolumeButton").IsVisible &&
+                    Control<ToggleButton>("SystemSourceChip").IsVisible &&
+                    Control<ToggleButton>("SystemSourceChip").IsEnabled,
+                    "Advanced mode hid or disabled the system controls.");
+                Control<ToggleButton>("SystemSourceChip").IsChecked = false;
+                Click("SystemSourceChip");
+                await Settled();
+                Require(config.SystemAudioMuted && config.CaptureSystemAudio && config.SystemAudioVolume == 37,
+                    "Advanced system mute changed the capture topology or lost volume.");
+                Control<ToggleButton>("SystemSourceChip").IsChecked = true;
+                Click("SystemSourceChip");
+                await Settled();
+                Require(!config.SystemAudioMuted, "Advanced system unmute failed.");
                 Require(Control<Button>("MicrophoneVolumeButton").IsVisible,
                     "Advanced mode hid the microphone volume control.");
                 Control<ToggleButton>("MicSourceChip").IsChecked = false;

@@ -1,6 +1,30 @@
 using Shadowless;
 
 int passed = 0;
+var advancedSystem = new Config
+{
+    AudioRoutingMode = "advanced", CaptureMicrophone = true, AdvancedMicrophoneTrack = 1,
+    ProcessAudioRoutes = [new() { Executable = "game.exe", Track = 2 }],
+};
+advancedSystem.Normalize();
+Check(advancedSystem.CaptureSystemAudio && advancedSystem.AdvancedSystemAudioTrack == 3,
+    "Advanced system capture defaults on and uses a free track without moving app/mic tracks");
+advancedSystem.CaptureSystemAudio = false;
+advancedSystem.Normalize();
+Check(!advancedSystem.CaptureSystemAudio && advancedSystem.AdvancedSystemAudioTrack == 0,
+    "Advanced system capture preserves an explicit opt-out");
+advancedSystem.CaptureSystemAudio = true;
+advancedSystem.ProcessAudioRoutes = Enumerable.Range(2, 5)
+    .Select(track => new ProcessAudioRoute { Executable = $"app{track}.exe", Track = track }).ToList();
+Check(advancedSystem.AdvancedSystemAudioTrack == 0,
+    "A full six-track allocation must report no available system track");
+advancedSystem.ProcessAudioRoutes[0].Enabled = false;
+Check(advancedSystem.AdvancedSystemAudioTrack == 2,
+    "Disabled app routes release their track for system audio");
+var advancedRoundTrip = System.Text.Json.JsonSerializer.Deserialize<Config>(
+    System.Text.Json.JsonSerializer.Serialize(advancedSystem))!;
+Check(advancedRoundTrip.CaptureSystemAudio && advancedRoundTrip.AdvancedSystemAudioTrack == 2,
+    "Advanced system capture and allocation survive persistence");
 string configDirectory = Path.Combine(Path.GetTempPath(), "shadowless-startup-qa-" + Guid.NewGuid());
 AppDataPaths.ConfigFile = Path.Combine(configDirectory, "config.json");
 try

@@ -22,6 +22,9 @@ device-loopback fallback.
 Advanced mode maps executable roots to recording tracks. Selected processes,
 currently audible processes, and other processes are presented separately in
 the routing UI. Microphone receives its own configurable track assignment.
+System stays selectable and defaults on, recording the complement of enabled
+application trees on the first unused track (1–6). All tracks occupied is a
+validation error; app/microphone assignments are never moved automatically.
 
 AAC uses fragmented MP4; Opus uses MKV. Current format capability model allows
 up to six tracks for both.
@@ -42,7 +45,8 @@ up to six tracks for both.
 
 - Normalize routes by executable; duplicate valid routes use one deterministic
   assignment.
-- Unchecked applications are not recorded in advanced mode.
+- Unchecked applications are absent from application tracks; when advanced
+  System is enabled, their audio remains on the System track.
 - Process restarts should reconnect without rebuilding unrelated capture state.
 - Volumes, microphone boost, and persistent mute flags apply through the OBS
   scheduler without rebuilding sources, encoders, or the replay buffer. Muting
@@ -52,7 +56,13 @@ up to six tracks for both.
   output, encoder, and replay history. Separate, advanced, and explicit game
   audio changes retain pipeline restart behavior.
 - Track names describe actual sources and remain short enough for containers.
-- Track count follows highest assigned application/microphone track, up to six.
+- Track count follows the highest enabled application/microphone/System track,
+  up to six. System subtraction clients share its persisted gain and mute.
+- Process loopback requires Windows build 20348 or later. Older builds retain
+  mixed device audio; separate/advanced process routing reports unavailable.
+- A missing selected microphone uses the current default input. Endpoint
+  notifications restore the preferred input live without changing mixer bits,
+  encoders, outputs, or the saved device preference.
 - Unsupported Windows/source states fall back to an explicit unavailable state,
   never silent mixed capture.
 - Before releasing a public internal OBS scene, remove its source from the

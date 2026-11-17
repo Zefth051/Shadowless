@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">캡처 모니터를 찾을 수 없습니다.</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">비디오 하위 시스템을 시작하지 못했습니다: 코드 {0}.</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">오디오 하위 시스템을 시작하지 못했습니다.</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">고급 앱별 오디오 라우팅에는 Windows 10 버전 2004 이상이 필요합니다.</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">앱별 오디오 라우팅에는 Windows 빌드 20348 이상(Windows 11 또는 Windows Server 2022)이 필요합니다.</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">고급 앱 오디오 소스를 사용할 수 없습니다. Shadowless을 다시 설치하거나 업데이트하세요.</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">호환되는 하드웨어 비디오 인코더를 찾을 수 없습니다. 그래픽 드라이버를 업데이트하세요.</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">{1}에서는 {0}을(를) 사용할 수 없습니다. {2}을(를) 선택했습니다.</sys:String>
@@ -420,7 +420,7 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">앱을 선택하거나 마이크를 켜세요.</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">프로세스 {0}개</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">앱 오디오</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">저장하기 전에 앱을 선택하거나 마이크를 켜세요.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">저장하기 전에 시스템 오디오를 켜거나 앱을 선택하거나 마이크를 켜세요.</sys:String>
   <sys:String x:Key="L.Library.AllGames">모든 게임</sys:String>
   <sys:String x:Key="L.Library.NoGame">게임 없음</sys:String>
   <sys:String x:Key="L.Library.AllModes">모든 녹화 모드</sys:String>
@@ -484,4 +484,11 @@
   <sys:String x:Key="L.Settings.Capture">캡처 설정</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Discord 리치 프레즌스</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">캡처 중일 때만 인식된 게임을 Discord에 표시합니다. 경과 시간은 공유하지 않습니다.</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">인스턴트 클립 활성화</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">인스턴트 클립 비활성화</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">녹화 작업</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">녹화 일시 중지/재개</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">시스템 + 선택한 앱</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">시스템은 선택한 앱을 제외한 모든 오디오를 첫 번째 빈 트랙(1–6)에 녹음합니다.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">6개의 오디오 트랙이 모두 사용 중입니다. 앱 또는 마이크 할당을 변경하여 트랙을 비우거나 시스템 오디오를 끄세요.</sys:String>
 </ResourceDictionary>

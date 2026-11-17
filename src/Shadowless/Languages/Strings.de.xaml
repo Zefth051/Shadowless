@@ -333,7 +333,7 @@
   <sys:String x:Key="L.Engine.MonitorMissing">Aufnahmemonitor nicht gefunden.</sys:String>
   <sys:String x:Key="L.Engine.VideoFailed">Das Videosubsystem konnte nicht gestartet werden: Code {0}.</sys:String>
   <sys:String x:Key="L.Engine.AudioFailed">Das Audio-Subsystem konnte nicht gestartet werden.</sys:String>
-  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">Erweitertes App-Audio-Routing erfordert Windows 10 Version 2004 oder neuer.</sys:String>
+  <sys:String x:Key="L.Engine.ProcessAudioUnsupportedWindows">App-Audio-Routing erfordert Windows Build 20348 oder neuer (Windows 11 oder Windows Server 2022).</sys:String>
   <sys:String x:Key="L.Engine.ProcessAudioSourceUnavailable">Die erweiterte App-Audioquelle ist nicht verfügbar. Shadowless neu installieren oder aktualisieren.</sys:String>
   <sys:String x:Key="L.Engine.NoEncoder">Kein kompatibler Hardware-Video-Encoder gefunden. Grafiktreiber aktualisieren.</sys:String>
   <sys:String x:Key="L.Engine.CodecFallback">{0} ist am {1} nicht verfügbar; ausgewählt {2}.</sys:String>
@@ -420,7 +420,7 @@
   <sys:String x:Key="L.AdvancedAudio.SelectAtLeastOne">Mindestens eine App wählen oder Mikrofon aktivieren.</sys:String>
   <sys:String x:Key="L.AdvancedAudio.ProcessCount">{0} Prozesse</sys:String>
   <sys:String x:Key="L.Error.AdvancedAudioTitle">App-Audio</sys:String>
-  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Vor dem Speichern eine App wählen oder Mikrofon aktivieren.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedAudioEmpty">Aktiviere Systemaudio, wähle eine App oder aktiviere das Mikrofon vor dem Speichern.</sys:String>
   <sys:String x:Key="L.Library.AllGames">Alle Spiele</sys:String>
   <sys:String x:Key="L.Library.NoGame">Ohne Spiel</sys:String>
   <sys:String x:Key="L.Library.AllModes">Alle Aufnahmemodi</sys:String>
@@ -484,4 +484,11 @@
   <sys:String x:Key="L.Settings.Capture">Aufnahmeeinstellungen</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresence">Discord Rich Presence</sys:String>
     <sys:String x:Key="L.Settings.DiscordPresenceHint">Zeigt das erkannte Spiel nur während der Aufnahme auf Discord. Die verstrichene Zeit wird nicht geteilt.</sys:String>
+  <sys:String x:Key="L.Capture.EnableInstantClip">Instant Clip aktivieren</sys:String>
+  <sys:String x:Key="L.Capture.DisableInstantClip">Instant Clip deaktivieren</sys:String>
+  <sys:String x:Key="L.Capture.RecordingActions">Aufnahmeaktionen</sys:String>
+  <sys:String x:Key="L.Hotkey.PauseRecording">Aufnahme pausieren/fortsetzen</sys:String>
+  <sys:String x:Key="L.Audio.AdvancedSystemAndApps">System + ausgewählte Apps</sys:String>
+  <sys:String x:Key="L.Help.AdvancedSystemAudio">System nimmt alle Audiosignale außer den ausgewählten Anwendungen auf der ersten freien Spur (1–6) auf.</sys:String>
+  <sys:String x:Key="L.Error.AdvancedSystemTrackFull">Alle sechs Audiospuren sind belegt. Ändere eine App- oder Mikrofonzuordnung, um eine Spur freizugeben, oder deaktiviere Systemaudio.</sys:String>
 </ResourceDictionary>

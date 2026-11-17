@@ -41,6 +41,7 @@ public partial class SettingsWindow : Window
     private string _pendingSaveHotkey;
     private string _pendingToggleHotkey;
     private string _pendingOverlayHotkey;
+    private string _pendingPauseHotkey;
     private Button? _capturingHotkeyButton;
     private bool _updatingUi;
     private bool _runtimeActive;
@@ -75,6 +76,7 @@ public partial class SettingsWindow : Window
 
     public bool Applied { get; private set; }
     internal Action? CaptureOverlayEditorRequested { get; set; }
+    internal Func<bool, Task<bool>>? SetRecordingEnabled { get; set; }
     internal Func<bool, Task<bool>>? SetRecordingPaused { get; set; }
     internal Func<bool, Task<string>>? SetCaptureOverlaysEnabled { get; set; }
 
@@ -144,6 +146,7 @@ public partial class SettingsWindow : Window
         _pendingSaveHotkey = config.Hotkey;
         _pendingToggleHotkey = config.ToggleReplayHotkey;
         _pendingOverlayHotkey = config.OverlayHotkey;
+        _pendingPauseHotkey = config.PauseRecordingHotkey;
         _runtimeActive = runtimeActive;
         _pendingProcessAudioRoutes = CloneProcessAudioRoutes(config.ProcessAudioRoutes);
         _pendingAdvancedMicrophoneTrack = config.AdvancedMicrophoneTrack;
@@ -172,6 +175,12 @@ public partial class SettingsWindow : Window
         };
 
         ResetDeviceLists();
+        if (!string.IsNullOrWhiteSpace(_config.MicrophoneDeviceId))
+            MicDeviceBox.Items.Add(new ComboBoxItem
+            {
+                Tag = _config.MicrophoneDeviceId,
+                Content = Localization.Text("L.Audio.UnknownDevice"),
+            });
         LoadSettingsControls();
         UpdateRuntimeState(runtimeActive);
         RenderUpdateStatus();
@@ -325,6 +334,13 @@ public partial class SettingsWindow : Window
             AudioDeviceBox.Items.Add(new ComboBoxItem { Tag = id, Content = name });
         foreach (var (id, name) in snapshot.CaptureDevices)
             MicDeviceBox.Items.Add(new ComboBoxItem { Tag = id, Content = name });
+        if (!string.IsNullOrWhiteSpace(microphoneDevice) &&
+            !snapshot.CaptureDevices.Any(device => device.Id == microphoneDevice))
+            MicDeviceBox.Items.Add(new ComboBoxItem
+            {
+                Tag = microphoneDevice,
+                Content = Localization.Text("L.Audio.UnknownDevice"),
+            });
         if (snapshot.Monitors.Count > 0)
         {
             _monitors = snapshot.Monitors;
@@ -419,7 +435,7 @@ public partial class SettingsWindow : Window
     private void UpdateCaptureModeState()
     {
         bool recording = string.Equals(
-            GetSelectedRadioTag(DashboardCaptureModeOptions, "replay"),
+            _config.CaptureMode,
             "recording",
             StringComparison.Ordinal);
         ReplayOnlySettings.Visibility = Visibility.Visible;
@@ -449,7 +465,7 @@ public partial class SettingsWindow : Window
         _updatingUi = true;
         try
         {
-            SelectRadioByTag(DashboardCaptureModeOptions, _config.CaptureMode);
+            UpdateCaptureMenuState();
             SelectRadioByTag(BufferOptions, _config.BufferSeconds.ToString());
             SelectByTag(ReplaySizeLimitBox, _config.MaxReplaySizeMb.ToString());
             SelectRadioByTag(FpsOptions, _config.FrameRate.ToString());
@@ -501,6 +517,8 @@ public partial class SettingsWindow : Window
             _pendingSaveHotkey = _config.Hotkey;
             _pendingToggleHotkey = _config.ToggleReplayHotkey;
             _pendingOverlayHotkey = _config.OverlayHotkey;
+            _pendingPauseHotkey = _config.PauseRecordingHotkey;
+            PauseHotkeyButton.Content = _pendingPauseHotkey;
             OverlayHotkeyButton.Content = _pendingOverlayHotkey;
             SaveHotkeyButton.Content = _pendingSaveHotkey;
             ToggleHotkeyButton.Content = _pendingToggleHotkey;
@@ -533,8 +551,7 @@ public partial class SettingsWindow : Window
         else if (!active)
             _availableReplaySeconds = 0;
         _updatingUi = true;
-        SelectRadioByTag(DashboardCaptureModeOptions, _config.CaptureMode);
-        ReplayToggle.IsChecked = active;
+        UpdateCaptureMenuState();
         UpdateCaptureOverlayState();
         SettingsReplayToggle.IsChecked = active;
         _updatingUi = false;
@@ -543,15 +560,16 @@ public partial class SettingsWindow : Window
             _config.AudioRoutingMode,
             "advanced",
             StringComparison.OrdinalIgnoreCase);
+        bool hasApplicationAudio = advancedAudio && _config.ProcessAudioRoutes.Any(route => route.Enabled);
         string primaryAudio = Localization.Text(
             advancedAudio
-                ? "L.Audio.ApplicationAudio"
+                ? _config.CaptureSystemAudio
+                    ? hasApplicationAudio ? "L.Audio.AdvancedSystemAndApps" : "L.Audio.SystemSound"
+                    : "L.Audio.ApplicationAudio"
                 : _config.CaptureSource == "game"
                     ? "L.Audio.GameSound"
                     : "L.Audio.SystemSound");
-        bool hasPrimaryAudio = advancedAudio
-            ? _config.ProcessAudioRoutes.Any(route => route.Enabled)
-            : _config.CaptureSystemAudio;
+        bool hasPrimaryAudio = _config.CaptureSystemAudio || hasApplicationAudio;
         string audio = (hasPrimaryAudio, _config.CaptureMicrophone) switch
         {
             (true, true) when advancedAudio || _config.SeparateAudioTracks =>
@@ -567,6 +585,7 @@ public partial class SettingsWindow : Window
             _config.CaptureMode,
             "recording",
             StringComparison.Ordinal);
+        UpdateCaptureModeState();
         StatusTitleText.Text = Localization.Text(
             active
                 ? recordingMode
@@ -592,21 +611,19 @@ public partial class SettingsWindow : Window
                     : "L.Status.Idle");
         StatusRing.Stroke = FindBrush(active ? "AccentReadableBrush" : "RingIdleBrush");
         StatusDot.Fill = FindBrush(active ? "AccentReadableBrush" : "RingIdleBrush");
-        SaveReplayButton.IsEnabled = active && !_recordingPaused && _availableReplaySeconds > 0;
-        PauseRecordingButton.Visibility = recordingMode ? Visibility.Visible : Visibility.Collapsed;
-        PauseRecordingButton.IsEnabled = active && SetRecordingPaused is not null && _actionInProgress == 0;
-        PauseRecordingButton.Content = Localization.Text(_recordingPaused ? "L.Capture.ResumeRecording" : "L.Capture.PauseRecording");
+        SaveReplayButton.IsEnabled = active && _config.InstantClipEnabled && !_recordingPaused && _availableReplaySeconds > 0;
+        UpdateCaptureMenuState();
         RecordingPauseHint.Visibility = _recordingPaused ? Visibility.Visible : Visibility.Collapsed;
         AnimateRecordingState(active && !_recordingPaused);
 
         RefreshDashboardAudioLevels();
         PrimaryAudioChipText.Text = Localization.Text(
             advancedAudio
-                ? "L.Audio.ApplicationAudio"
+                ? "L.Audio.System"
                 : _config.CaptureSource == "game"
                     ? "L.Audio.Game"
                     : "L.Audio.System");
-        SystemSourceChip.IsEnabled = !advancedAudio && _actionInProgress == 0;
+        SystemSourceChip.IsEnabled = _actionInProgress == 0;
         UpdateDashboardAudioSources(advancedAudio);
 
         string codec = FormatCodec(activeCodec ?? _config.Codec);
@@ -673,7 +690,10 @@ public partial class SettingsWindow : Window
             ? SimpleAudioSourcePanel
             : PerAppAudioSourcePanel;
         outgoing.BeginAnimation(OpacityProperty, null);
-        outgoing.Visibility = Visibility.Collapsed;
+        outgoing.Visibility = ReferenceEquals(outgoing, SimpleAudioSourcePanel)
+            ? Visibility.Visible : Visibility.Collapsed;
+        DashboardAudioSourceHost.Height = advancedAudio ? 92 : 42;
+        SimpleAudioSourcePanel.Opacity = 1;
         incoming.Visibility = Visibility.Visible;
         incoming.Opacity = 0;
         if (incoming.RenderTransform is TranslateTransform translate)
@@ -837,6 +857,21 @@ public partial class SettingsWindow : Window
         {
             return;
         }
+        Config candidate = _config.Clone();
+        if (source.Microphone)
+            candidate.CaptureMicrophone = button.IsChecked == true;
+        else
+        {
+            ProcessAudioRoute? route = candidate.ProcessAudioRoutes.FirstOrDefault(route =>
+                string.Equals(route.Executable, source.Key, StringComparison.OrdinalIgnoreCase));
+            if (route is not null)
+                route.Enabled = button.IsChecked == true;
+        }
+        if (!ValidateAdvancedSystemTrack(candidate))
+        {
+            UpdateRuntimeState(_runtimeActive);
+            return;
+        }
         if (!TryBeginAction())
         {
             UpdateRuntimeState(_runtimeActive);
@@ -898,7 +933,6 @@ public partial class SettingsWindow : Window
     {
         _runtimeActive = false;
         _updatingUi = true;
-        ReplayToggle.IsChecked = true;
         SettingsReplayToggle.IsChecked = true;
         _updatingUi = false;
 
@@ -1072,9 +1106,7 @@ public partial class SettingsWindow : Window
     private Config CreatePendingConfig()
     {
         Config candidate = _config.Clone();
-        candidate.CaptureMode = GetSelectedRadioTag(
-            DashboardCaptureModeOptions,
-            "replay");
+        candidate.CaptureMode = _config.CaptureMode;
         candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
         candidate.StartReplayOnLaunch = StartReplayOnLaunchBox.IsChecked == true;
         candidate.DiscordRichPresenceEnabled = DiscordRichPresenceBox.IsChecked == true;
@@ -1111,14 +1143,13 @@ public partial class SettingsWindow : Window
         candidate.ProcessAudioRoutes = CloneProcessAudioRoutes(
             _pendingProcessAudioRoutes);
         candidate.AdvancedMicrophoneTrack = _pendingAdvancedMicrophoneTrack;
-        if (candidate.AudioRoutingMode == "advanced")
-            candidate.CaptureSystemAudio = false;
         candidate.OutputDirectory = _outputDirectory;
         candidate.OrganizeReplaysByGame = OrganizeByGameBox.IsChecked == true;
         candidate.AccentColor = TryGetAccentColor(out string accent) ? accent : _config.AccentColor;
         candidate.Hotkey = _pendingSaveHotkey;
         candidate.ToggleReplayHotkey = _pendingToggleHotkey;
         candidate.OverlayHotkey = _pendingOverlayHotkey;
+        candidate.PauseRecordingHotkey = _pendingPauseHotkey;
         return candidate;
     }
 
@@ -1180,7 +1211,8 @@ public partial class SettingsWindow : Window
             left.ToggleReplayHotkey,
             right.ToggleReplayHotkey,
             StringComparison.Ordinal) &&
-        string.Equals(left.OverlayHotkey, right.OverlayHotkey, StringComparison.Ordinal);
+        string.Equals(left.OverlayHotkey, right.OverlayHotkey, StringComparison.Ordinal) &&
+        string.Equals(left.PauseRecordingHotkey, right.PauseRecordingHotkey, StringComparison.Ordinal);
 
     private static List<ProcessAudioRoute> CloneProcessAudioRoutes(
         IEnumerable<ProcessAudioRoute>? routes) =>
@@ -1840,33 +1872,6 @@ public partial class SettingsWindow : Window
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
 
-    private async void ReplayToggle_Click(object sender, RoutedEventArgs e)
-    {
-        if (_updatingUi)
-            return;
-        if (!TryBeginAction())
-        {
-            UpdateRuntimeState(_runtimeActive);
-            return;
-        }
-
-        try
-        {
-            bool active = await _setReplayEnabled(ReplayToggle.IsChecked == true);
-            UpdateRuntimeState(active);
-            AnimatePress(ReplayToggle);
-        }
-        catch (Exception exception)
-        {
-            HandleUiActionError("Replay toggle", exception);
-            UpdateRuntimeState(_runtimeActive);
-        }
-        finally
-        {
-            EndAction();
-        }
-    }
-
     private void SaveReplay_Click(object sender, RoutedEventArgs e)
     {
         AnimatePress(SaveReplayButton);
@@ -1879,7 +1884,7 @@ public partial class SettingsWindow : Window
             return;
         try
         {
-            _recordingPaused = await SetRecordingPaused(!_recordingPaused);
+            _recordingPaused = await SetRecordingPaused((sender as MenuItem)?.Tag as string != "resume");
             UpdateRuntimeState(_runtimeActive, recordingPaused: _recordingPaused);
         }
         catch (Exception exception)
@@ -1892,46 +1897,77 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private async void DashboardCaptureMode_Click(object sender, RoutedEventArgs e)
+    private void UpdateCaptureMenuState()
     {
-        if (_updatingUi)
-            return;
+        bool recording = _runtimeActive && _config.CaptureMode == "recording";
+        bool clip = _runtimeActive && _config.InstantClipEnabled;
+        bool ready = _actionInProgress == 0;
+        DashboardReplayModeButton.Tag = clip ? "active" : null;
+        DashboardRecordingModeButton.Tag = recording ? "active" : null;
+        StartRecordingMenuItem.IsEnabled = ready && !recording && SetRecordingEnabled is not null;
+        StopRecordingMenuItem.IsEnabled = ready && recording && SetRecordingEnabled is not null;
+        PauseRecordingMenuItem.IsEnabled = ready && recording && !_recordingPaused && SetRecordingPaused is not null;
+        ResumeRecordingMenuItem.IsEnabled = ready && recording && _recordingPaused && SetRecordingPaused is not null;
+        PauseRecordingMenuItem.InputGestureText = _config.PauseRecordingHotkey;
+        ResumeRecordingMenuItem.InputGestureText = _config.PauseRecordingHotkey;
+        EnableInstantClipMenuItem.IsEnabled = ready && !clip && !_recordingPaused;
+        DisableInstantClipMenuItem.IsEnabled = ready && clip && !_recordingPaused;
+        EnableInstantClipMenuItem.Visibility = clip ? Visibility.Collapsed : Visibility.Visible;
+        DisableInstantClipMenuItem.Visibility = clip ? Visibility.Visible : Visibility.Collapsed;
+        StartRecordingMenuItem.Visibility = recording ? Visibility.Collapsed : Visibility.Visible;
+        StopRecordingMenuItem.Visibility = recording ? Visibility.Visible : Visibility.Collapsed;
+        PauseRecordingMenuItem.Visibility = _recordingPaused ? Visibility.Collapsed : Visibility.Visible;
+        ResumeRecordingMenuItem.Visibility = _recordingPaused ? Visibility.Visible : Visibility.Collapsed;
+        SaveReplayMenuItem.IsEnabled = ready && SaveReplayButton.IsEnabled;
+        SaveReplayMenuItem.InputGestureText = _config.Hotkey;
+    }
 
-        string requestedMode = GetSelectedRadioTag(
-            DashboardCaptureModeOptions,
-            _config.CaptureMode);
-        if (string.Equals(requestedMode, _config.CaptureMode, StringComparison.Ordinal))
-            return;
+    private void CaptureMenu_Opened(object sender, RoutedEventArgs e) => UpdateCaptureMenuState();
 
-        if (!TryBeginAction())
-        {
-            UpdateRuntimeState(_runtimeActive);
+    private void CaptureMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { ContextMenu: { } menu } button)
             return;
-        }
+        UpdateCaptureMenuState();
+        menu.PlacementTarget = button;
+        menu.Placement = PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
 
+    private void RecordingMenu_Click(object sender, RoutedEventArgs e) =>
+        ChangeRecordingEnabled((sender as MenuItem)?.Tag as string == "start");
+
+    private async void ChangeRecordingEnabled(bool enabled)
+    {
+        if (SetRecordingEnabled is null || !TryBeginAction())
+            return;
         try
         {
-            Config candidate = _config.Clone();
-            candidate.CaptureMode = requestedMode;
-            candidate.ReplayEnabled = false;
-            if (!await _applySettings(
-                    candidate,
-                    AutostartBox.IsChecked == true))
-            {
-                UpdateRuntimeState(_runtimeActive);
-                return;
-            }
-
-            Applied = true;
-            UpdateCaptureModeState();
-            UpdateRuntimeState(false);
-            if (sender is FrameworkElement element)
-                AnimatePress(element);
+            await SetRecordingEnabled(enabled);
+            UpdateRuntimeState(_config.ReplayEnabled);
         }
         catch (Exception exception)
         {
-            HandleUiActionError("Capture mode switch", exception);
-            UpdateRuntimeState(_runtimeActive);
+            HandleUiActionError("Recording output", exception);
+        }
+        finally
+        {
+            EndAction();
+        }
+    }
+
+    private async void InstantClipMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryBeginAction())
+            return;
+        try
+        {
+            bool active = await _setReplayEnabled((sender as MenuItem)?.Tag as string == "enable");
+            UpdateRuntimeState(active);
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Instant Clip output", exception);
         }
         finally
         {
@@ -1955,6 +1991,14 @@ public partial class SettingsWindow : Window
             await QueueDashboardAudioLevelsAsync();
             return;
         }
+        Config candidate = _config.Clone();
+        candidate.CaptureSystemAudio |= !microphone;
+        candidate.CaptureMicrophone |= microphone;
+        if (!ValidateAdvancedSystemTrack(candidate))
+        {
+            UpdateRuntimeState(_runtimeActive);
+            return;
+        }
         if (!TryBeginAction())
         {
             UpdateRuntimeState(_runtimeActive);
@@ -1968,6 +2012,16 @@ public partial class SettingsWindow : Window
                 _config.CaptureMicrophone || microphone,
                 _config.SystemAudioDeviceId,
                 _config.MicrophoneDeviceId);
+            if (applied)
+            {
+                _updatingUi = true;
+                SystemAudioBox.IsChecked = _config.CaptureSystemAudio;
+                MicBox.IsChecked = _config.CaptureMicrophone;
+                _updatingUi = false;
+                UpdateAudioDeviceState();
+                UpdateAdvancedAudioSummary();
+                RefreshSettingsDirtyState();
+            }
             UpdateRuntimeState(_runtimeActive);
             AnimatePress((FrameworkElement)sender);
             if (!applied)
@@ -1994,11 +2048,12 @@ public partial class SettingsWindow : Window
         string selectedId = isSystem ? _config.SystemAudioDeviceId : _config.MicrophoneDeviceId;
 
         menu.Items.Clear();
-        if (isSystem && _config.CaptureSource == "game")
+        if (isSystem && (_config.CaptureSource == "game" || _config.AudioRoutingMode == "advanced"))
         {
             menu.Items.Add(new MenuItem
             {
-                Header = Localization.Text("L.Audio.GameCaptured"),
+                Header = Localization.Text(_config.AudioRoutingMode == "advanced"
+                    ? "L.Help.AdvancedSystemAudio" : "L.Audio.GameCaptured"),
                 IsEnabled = false,
                 Style = (Style)FindResource("TrayMenuItem"),
             });
@@ -2125,14 +2180,23 @@ public partial class SettingsWindow : Window
     {
         bool game = GetSelectedTag(CaptureSourceBox, "desktop") == "game";
         bool advanced = GetSelectedTag(AudioTrackModeBox, "mixed") == "advanced";
-        SimpleSystemAudioPanel.Visibility = advanced
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        SimpleSystemAudioPanel.Visibility = Visibility.Visible;
+        SystemAudioBox.ToolTip = advanced ? Localization.Text("L.Help.AdvancedSystemAudio") : null;
         AudioDeviceBox.IsEnabled = !advanced && !game && SystemAudioBox.IsChecked == true;
         SystemVolumeRow.IsEnabled = SystemAudioBox.IsChecked == true;
         MicDeviceBox.IsEnabled = MicBox.IsChecked == true;
         MicVolumeRow.IsEnabled = MicBox.IsChecked == true;
         MicBoostRow.IsEnabled = MicBox.IsChecked == true;
+    }
+
+    private bool ValidateAdvancedSystemTrack(Config candidate)
+    {
+        if (candidate.AudioRoutingMode != "advanced" || !candidate.CaptureSystemAudio ||
+            candidate.AdvancedSystemAudioTrack != 0)
+            return true;
+        ShowError(Localization.Text("L.Error.AdvancedAudioTitle"),
+            Localization.Text("L.Error.AdvancedSystemTrackFull"));
+        return false;
     }
 
     private void AudioTrackModeBox_SelectionChanged(
@@ -2184,13 +2248,21 @@ public partial class SettingsWindow : Window
             return;
         int appCount = _pendingProcessAudioRoutes.Count;
         var tracks = _pendingProcessAudioRoutes
+            .Where(route => route.Enabled)
             .Select(route => route.Track)
             .ToHashSet();
         if (MicBox.IsChecked == true)
             tracks.Add(_pendingAdvancedMicrophoneTrack);
+        if (SystemAudioBox.IsChecked == true)
+        {
+            int systemTrack = Enumerable.Range(1, 6).FirstOrDefault(track => !tracks.Contains(track));
+            if (systemTrack != 0)
+                tracks.Add(systemTrack);
+        }
 
         AdvancedAudioRoutingSummaryText.Text = appCount == 0
-            ? Localization.Text("L.Audio.NoAppsSelected")
+            ? Localization.Text(SystemAudioBox.IsChecked == true
+                ? "L.Help.AdvancedSystemAudio" : "L.Audio.NoAppsSelected")
             : Localization.Format(
                 "L.Audio.RoutingSummary",
                 appCount,
@@ -2341,9 +2413,11 @@ public partial class SettingsWindow : Window
         string hotkey = FormatHotkey(modifiers, key);
         bool captureSave = Equals(_capturingHotkeyButton.Tag, "save");
         bool captureOverlay = Equals(_capturingHotkeyButton.Tag, "overlay");
+        bool capturePause = Equals(_capturingHotkeyButton.Tag, "pause");
         if ((!captureSave && !HotkeyManager.AreDistinct(hotkey, _pendingSaveHotkey)) ||
             (!captureOverlay && !HotkeyManager.AreDistinct(hotkey, _pendingOverlayHotkey)) ||
-            ((captureSave || captureOverlay) && !HotkeyManager.AreDistinct(hotkey, _pendingToggleHotkey)))
+            (!Equals(_capturingHotkeyButton.Tag, "toggle") && !HotkeyManager.AreDistinct(hotkey, _pendingToggleHotkey)) ||
+            (!capturePause && !HotkeyManager.AreDistinct(hotkey, _pendingPauseHotkey)))
         {
             _capturingHotkeyButton.Content =
                 Localization.Text("L.Hotkey.InUse");
@@ -2352,6 +2426,8 @@ public partial class SettingsWindow : Window
 
         if (captureSave)
             _pendingSaveHotkey = hotkey;
+        else if (capturePause)
+            _pendingPauseHotkey = hotkey;
         else if (captureOverlay)
             _pendingOverlayHotkey = hotkey;
         else
@@ -2370,6 +2446,7 @@ public partial class SettingsWindow : Window
         {
             "save" => _pendingSaveHotkey,
             "overlay" => _pendingOverlayHotkey,
+            "pause" => _pendingPauseHotkey,
             _ => _pendingToggleHotkey,
         };
         _capturingHotkeyButton = null;
@@ -2396,7 +2473,11 @@ public partial class SettingsWindow : Window
             CustomAccentBox.SelectAll();
             return;
         }
-        if (!HotkeyManager.IsValid(_pendingSaveHotkey) ||
+        if (!HotkeyManager.IsValid(_pendingPauseHotkey) ||
+            !HotkeyManager.AreDistinct(_pendingPauseHotkey, _pendingSaveHotkey) ||
+            !HotkeyManager.AreDistinct(_pendingPauseHotkey, _pendingToggleHotkey) ||
+            !HotkeyManager.AreDistinct(_pendingPauseHotkey, _pendingOverlayHotkey) ||
+            !HotkeyManager.IsValid(_pendingSaveHotkey) ||
             !HotkeyManager.IsValid(_pendingToggleHotkey) ||
             !HotkeyManager.IsValid(_pendingOverlayHotkey) ||
             !HotkeyManager.AreDistinct(_pendingOverlayHotkey, _pendingSaveHotkey) ||
@@ -2445,7 +2526,8 @@ public partial class SettingsWindow : Window
             return;
         }
         if (advancedAudio &&
-            _pendingProcessAudioRoutes.Count == 0 &&
+            !_pendingProcessAudioRoutes.Any(route => route.Enabled) &&
+            SystemAudioBox.IsChecked != true &&
             MicBox.IsChecked != true)
         {
             ShowError(
@@ -2454,9 +2536,7 @@ public partial class SettingsWindow : Window
             return;
         }
         Config candidate = _config.Clone();
-        candidate.CaptureMode = GetSelectedRadioTag(
-            DashboardCaptureModeOptions,
-            "replay");
+        candidate.CaptureMode = _config.CaptureMode;
         candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
         candidate.StartReplayOnLaunch = StartReplayOnLaunchBox.IsChecked == true;
         candidate.DiscordRichPresenceEnabled = DiscordRichPresenceBox.IsChecked == true;
@@ -2490,8 +2570,7 @@ public partial class SettingsWindow : Window
             candidate.FrameRate = GetSelectedRadioInt(FpsOptions, _config.FrameRate);
             candidate.MonitorIndex = GetSelectedInt(MonitorBox, _config.MonitorIndex);
             candidate.RecordingResolution = GetSelectedTag(ResolutionBox, "source");
-            candidate.CaptureSystemAudio =
-                !advancedAudio && SystemAudioBox.IsChecked == true;
+            candidate.CaptureSystemAudio = SystemAudioBox.IsChecked == true;
             candidate.SystemAudioVolume = (int)Math.Round(SystemVolumeSlider.Value);
             candidate.SystemAudioDeviceId = GetSelectedTag(AudioDeviceBox, "");
             candidate.CaptureMicrophone = MicBox.IsChecked == true;
@@ -2510,7 +2589,10 @@ public partial class SettingsWindow : Window
             candidate.Hotkey = _pendingSaveHotkey;
             candidate.ToggleReplayHotkey = _pendingToggleHotkey;
             candidate.OverlayHotkey = _pendingOverlayHotkey;
+            candidate.PauseRecordingHotkey = _pendingPauseHotkey;
             candidate.Normalize();
+            if (!ValidateAdvancedSystemTrack(candidate))
+                return;
 
             if (!await _applySettings(
                     candidate,
@@ -2552,8 +2634,7 @@ public partial class SettingsWindow : Window
         if (Interlocked.Exchange(ref _actionInProgress, 1) != 0)
             return false;
 
-        ReplayToggle.IsEnabled = false;
-        PauseRecordingButton.IsEnabled = false;
+        UpdateCaptureMenuState();
         CaptureOverlayToggle.IsEnabled = false;
         CaptureOverlaysButton.IsEnabled = false;
         DashboardCaptureModeOptions.IsEnabled = false;
@@ -2573,15 +2654,11 @@ public partial class SettingsWindow : Window
     private void EndAction()
     {
         Interlocked.Exchange(ref _actionInProgress, 0);
-        ReplayToggle.IsEnabled = true;
-        PauseRecordingButton.IsEnabled = _runtimeActive && SetRecordingPaused is not null;
+        UpdateCaptureMenuState();
         CaptureOverlayToggle.IsEnabled = true;
         CaptureOverlaysButton.IsEnabled = true;
         DashboardCaptureModeOptions.IsEnabled = true;
-        SystemSourceChip.IsEnabled = !string.Equals(
-            _config.AudioRoutingMode,
-            "advanced",
-            StringComparison.OrdinalIgnoreCase);
+        SystemSourceChip.IsEnabled = true;
         MicSourceChip.IsEnabled = true;
         SystemVolumeButton.IsEnabled = true;
         MicrophoneVolumeButton.IsEnabled = true;

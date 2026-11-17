@@ -5,7 +5,7 @@
         WindowStyle="None" ResizeMode="NoResize"
         AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" ShowActivated="False" Topmost="True"
-        Focusable="False">
+        Focusable="False" IsHitTestVisible="False">
     <Border x:Name="Card"
             Margin="12"
             Background="#F2161B1E"

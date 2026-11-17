@@ -22,6 +22,28 @@ $player = Read-Text "src\Shadowless\MpvHost.cs"
 $editor = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
 $editorXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
 
+$notification = Read-Text "src\Shadowless\OverlayNotificationWindow.xaml.cs"
+$notificationXaml = Read-Text "src\Shadowless\OverlayNotificationWindow.xaml"
+
+Require $notification 'AddHook\(NotificationWindowProc\)' `
+    "Notification must explicitly pass native hit testing through to Settings."
+Require $notification 'message == WmNcHitTest[\s\S]{0,240}handled = true;\s*return new nint\(-1\);' `
+    "Notification hit testing must return HTTRANSPARENT, including above the Settings button."
+Require $notification 'SendMessage\(hwnd, 0x0084, 0, 0\) == new nint\(-1\)' `
+    "Fullscreen runtime QA must check the native HTTRANSPARENT response."
+Require $notificationXaml 'IsHitTestVisible="False"' `
+    "Passive notifications must not participate in WPF hit testing."
+foreach ($method in @('OpenSettings', 'UpdateUiState')) {
+    $body = [regex]::Match($app, "(?s)    private void $method\(\).*?(?=\r?\n    private )").Value
+    if (-not $body -or $body -match '_pipelineGate|\.Wait\(|GetAwaiter\(') {
+        throw "$method must remain independent of the capture pipeline gate."
+    }
+}
+$beginAction = [regex]::Match($settings, '(?s)    private bool TryBeginAction\(\).*?(?=\r?\n    private )').Value
+if ($beginAction -match '(?m)^\s*(?:SettingsButton|SettingsPanel|DashboardPanel|IsEnabled|this\.IsEnabled)(?:\.IsEnabled)?\s*=\s*false') {
+    throw "Capture actions must keep the Settings window and navigation enabled."
+}
+
 Require $settings 'private void ShowSettings\(\)\s*\{\s*HideNotice\(\);' `
     "Entering settings must dismiss the previous dashboard notice."
 
