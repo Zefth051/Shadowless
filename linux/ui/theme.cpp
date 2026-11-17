@@ -86,6 +86,12 @@ void applyTheme(QWidget *widget, const QString &name) {
         QWidget { color: %1; font-family: sans-serif; font-size: 13px; }
         QDialog, QMenu { background: #111416; }
         QAbstractItemView { background: #111619; alternate-background-color: %3; color: %1; selection-background-color: %10; selection-color: %1; }
+        QMenu#captureMenu { background: #181d20; border: 1px solid %4; border-radius: 14px; padding: 8px; }
+        QMenu#captureMenu::item { padding: 10px 14px 10px 10px; border-radius: 9px; margin: 2px 0; min-height: 22px; }
+        QMenu#captureMenu::item:selected { background: %9; color: %11; }
+        QMenu#captureMenu::item:disabled { color: #6b757d; background: transparent; }
+        QMenu#captureMenu::icon { padding-left: 8px; }
+        QMenu#captureMenu::separator { height: 1px; background: #2a3237; margin: 4px 8px; }
         QMenu::item:selected { background: %10; }
         QLabel { background: transparent; }
         QLabel[muted="true"] { color: %2; font-size: 12px; }
@@ -103,7 +109,8 @@ void applyTheme(QWidget *widget, const QString &name) {
         QWidget#dashboardChrome QPushButton:pressed { background: rgba(14, 17, 20, 240); }
         QFrame#segments { background: #101416; border: 1px solid %4; border-radius: 8px; }
         QFrame#divider { background: #22282c; }
-        QLabel#notice { color: %1; background: #1d2226; padding: 5px 8px; border-radius: 6px; }
+        QLabel#notice { color: %1; background: #1b2024; border: 1px solid #3a2f32; border-left: 3px solid #e0a163; padding: 8px 12px; border-radius: 8px; }
+        QLabel#footer { background: rgba(17, 20, 22, 225); border-radius: 8px; padding: 6px 12px; }
         QLabel#emptyClips { color: %2; background: %3; padding: 14px 12px; border-radius: 8px; }
         QLabel#overlayMark { background: %9; color: %11; border-radius: 10px; font-size: 26px; }
         QLabel#thumbnail { background: #101416; color: %11; border-radius: 5px; }

@@ -67,6 +67,7 @@ private:
     void saveReplay();
     void identifyGame(std::function<void(const QString &)> action);
     void toggleReplayRecording();
+    void togglePause();
     void updateAudioLevels();
     void apply(const OverlayScene &scene);
     bool persist(QString *error = nullptr);

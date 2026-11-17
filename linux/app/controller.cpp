@@ -65,12 +65,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     connect(&m_tray, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) { if (reason == QSystemTrayIcon::Trigger) command("toggle"); });
     connect(m_dashboard.get(), &Dashboard::hideRequested, this, &Controller::hide);
     connect(m_dashboard.get(), &Dashboard::saveReplay, this, &Controller::saveReplay);
-    connect(m_dashboard.get(), &Dashboard::recordingPauseRequested, this, [this] {
-        if (m_quitting || m_stopping || m_saving || m_afterGame || m_engine.busy() ||
-            !m_engine.running() || !m_options.continuousRecording) return;
-        m_engine.setRecordingPaused(!m_engine.recordingPaused());
-        refresh();
-    });
+    connect(m_dashboard.get(), &Dashboard::recordingPauseRequested, this, &Controller::togglePause);
     connect(m_dashboard.get(), &Dashboard::recordingMode, this, [this](bool recording) {
         if (m_quitting || m_stopping || m_saving || m_engine.busy() || m_afterGame) return;
         if (m_engine.active()) {
@@ -165,7 +160,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     });
     connect(m_dashboard->overlayEditor(), &OverlayEditor::changed, this, &Controller::apply);
     connect(&m_shortcuts, &Shortcuts::activated, this, [this](const QString &action) {
-        if (action == "toggle-overlay") command("toggle"); else if (action == "save-replay") command("save"); else if (action == "toggle-capture") toggleCapture();
+        if (action == "toggle-overlay") command("toggle"); else if (action == "save-replay") command("save"); else if (action == "toggle-capture") toggleCapture(); else if (action == "pause-recording") togglePause();
     });
     connect(&m_shortcuts, &Shortcuts::status, m_dashboard.get(), &Dashboard::shortcutStatus);
     const auto updateDesktopPrompt = [this] {
@@ -328,6 +323,12 @@ void Controller::identifyGame(std::function<void(const QString &)> action) {
     if (!m_options.organizeByGame) { action({}); return; }
     m_afterGame = [this, action = std::move(action)] { action(m_gameQuery.result()); };
     m_gameQuery.setFuture(QtConcurrent::run(&currentGame));
+}
+void Controller::togglePause() {
+    if (m_quitting || m_stopping || m_saving || m_afterGame || m_engine.busy() ||
+        !m_engine.running() || !m_options.continuousRecording) return;
+    m_engine.setRecordingPaused(!m_engine.recordingPaused());
+    refresh();
 }
 void Controller::toggleReplayRecording() {
     if (!m_engine.running() || m_engine.busy() || m_afterGame || m_saving || m_stopping || m_options.continuousRecording) return;

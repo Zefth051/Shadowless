@@ -104,8 +104,10 @@ QString Settings::indicatorPosition() const {
 }
 QString Settings::accent() const { return m_store->value("appearance/accent", "violet").toString(); }
 QStringList Settings::shortcutKeys() const {
-    const auto keys = m_store->value("overlay/shortcuts", QStringList{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"}).toStringList();
-    return keys.size() == 3 ? keys : QStringList{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"};
+    const QStringList defaults{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10", "Alt+F9"};
+    auto keys = m_store->value("overlay/shortcuts", defaults).toStringList();
+    if (keys.size() == 3) keys << defaults[3]; // settings written before the pause shortcut existed
+    return keys.size() == 4 ? keys : defaults;
 }
 bool Settings::save(const GsrOptions &o, const OverlayScene &scene, bool indicator, QString *error, const QStringList &keys, const QString &accent, const QString &position) {
     auto &s = *m_store;

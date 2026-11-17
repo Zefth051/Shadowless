@@ -3,6 +3,7 @@
 #include "../overlays/layer.h"
 #include <QKeySequence>
 #include <QWidget>
+class QAction;
 class QBoxLayout;
 class QVBoxLayout;
 class QFrame;
@@ -70,6 +71,7 @@ private:
     QPushButton *m_action, *m_replay, *m_record, *m_layers, *m_layerToggle, *m_pause;
     QPushButton *m_systemAudio, *m_microphone, *m_back, *m_settingsButton, *m_folder, *m_openFolder, *m_format;
     QPushButton *m_audioSettings, *m_gameAudio, *m_musicAudio, *m_fourTrackSetup;
+    QAction *m_replayToggle, *m_replaySave, *m_recordToggle, *m_recordPause;
     QLabel *m_audioTrackSummary;
     QSlider *m_systemVolume, *m_microphoneVolume, *m_gameVolume, *m_musicVolume;
     QLabel *m_systemPercent, *m_microphonePercent, *m_gamePercent, *m_musicPercent;

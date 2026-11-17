@@ -125,8 +125,8 @@ void Shortcuts::response(uint code, const QVariantMap &results, const QDBusMessa
         if (m_session.isEmpty()) { emit status("The shortcut portal returned no session."); return; }
         m_stage = 2;
         const auto token = "shadowless_" + QUuid::createUuid().toString(QUuid::Id128);
-        const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture"};
-        const QStringList descriptions{"Show or hide Shadowless", "Save Shadowless replay", "Start or stop Shadowless capture"};
+        const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture", "pause-recording"};
+        const QStringList descriptions{"Show or hide Shadowless", "Save Shadowless replay", "Start or stop Shadowless capture", "Pause or resume Shadowless recording"};
         PortalShortcuts shortcuts;
         for (int i = 0; i < ids.size(); ++i) {
             HyprBinding binding;
@@ -153,8 +153,8 @@ void Shortcuts::shortcutsChanged(const QDBusObjectPath &session, const PortalSho
     if (!m_hyprland && session.path() == m_session) reportBindings(shortcuts);
 }
 void Shortcuts::reportBindings(const PortalShortcuts &shortcuts) {
-    const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture"};
-    const QStringList labels{"Overlay", "Save replay", "Capture"};
+    const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture", "pause-recording"};
+    const QStringList labels{"Overlay", "Save replay", "Capture", "Pause"};
     QStringList messages;
     for (int i = 0; i < ids.size(); ++i) {
         QString trigger;
@@ -173,7 +173,7 @@ static QByteArray hyprctl(const QStringList &arguments) {
     return process.readAllStandardOutput();
 }
 void Shortcuts::setKeys(const QStringList &keys) {
-    if (keys.size() != 3 || keys == m_keys) return;
+    if (keys.size() != 4 || keys == m_keys) return;
     removeBindings();
     m_keys = keys;
     if (m_registered) { closeSession(); createSession(); }
@@ -182,8 +182,8 @@ void Shortcuts::installBindings() {
     if (!m_hyprland) return;
     QJsonParseError error; auto document = QJsonDocument::fromJson(hyprctl({"-j", "binds"}), &error);
     if (error.error != QJsonParseError::NoError || !document.isArray()) { emit status("Cannot inspect Hyprland bindings. Use the tray or --toggle."); return; }
-    const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture"};
-    const QStringList labels{"Overlay", "Save replay", "Capture"}; QStringList messages;
+    const QStringList ids{"toggle-overlay", "save-replay", "toggle-capture", "pause-recording"};
+    const QStringList labels{"Overlay", "Save replay", "Capture", "Pause"}; QStringList messages;
     auto bindings = document.array();
     const auto legacy = legacyBindingCleanup(bindings);
     if (!legacy.isEmpty()) {
@@ -197,7 +197,7 @@ void Shortcuts::installBindings() {
         }
         bindings = document.array();
     }
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < ids.size(); ++i) {
         HyprBinding binding;
         if (!HyprBinding::parse(m_keys[i], ids[i], &binding)) { messages << labels[i] + ": unsupported shortcut"; continue; }
         const auto available = binding.availability(bindings);

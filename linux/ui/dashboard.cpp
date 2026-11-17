@@ -12,6 +12,10 @@
 #include <QDesktopServices>
 #include <QFrame>
 #include <QKeyEvent>
+#include <QMenu>
+#include <QAction>
+#include <QMouseEvent>
+#include <QVariantAnimation>
 #include <QLabel>
 #include <QBoxLayout>
 #include <QScrollArea>
@@ -32,11 +36,32 @@ namespace {
 class CaptureModeTile : public QPushButton {
 public:
     CaptureModeTile(const QString &title, const QString &detail) : QPushButton(title), m_detail(detail) {
+        setProperty("glowRadius", 12);
+        m_menu = new QMenu(this);
+        m_menu->setObjectName("captureMenu");
+        m_menu->setWindowFlags(m_menu->windowFlags() | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+        m_menu->setAttribute(Qt::WA_TranslucentBackground);
         setFixedHeight(138);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         setAccessibleDescription(detail);
     }
+    QMenu *menu() const { return m_menu; }
 protected:
+    QRect arrowRect() const { return QRect(width() - 38, 6, 32, 28); }
+    // The tile is a menu button: it never toggles by itself, every action lives in the menu.
+    void openMenu() {
+        m_menu->setMinimumWidth(width());
+        m_menu->exec(mapToGlobal(QPoint(0, height() + 6)));
+    }
+    void mouseReleaseEvent(QMouseEvent *event) override {
+        const bool inside = event->button() == Qt::LeftButton && isDown() && rect().contains(event->position().toPoint());
+        setDown(false);
+        if (inside) openMenu();
+    }
+    void keyPressEvent(QKeyEvent *event) override {
+        if (event->key() == Qt::Key_Down || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_Space) { openMenu(); return; }
+        QPushButton::keyPressEvent(event);
+    }
     void paintEvent(QPaintEvent *) override {
         QStyleOptionButton option;
         initStyleOption(&option);
@@ -61,9 +86,57 @@ protected:
         painter.setPen(QColor("#94a0a8"));
         painter.drawText(QRect(12, 102, width() - 24, 20), Qt::AlignCenter,
                          painter.fontMetrics().elidedText(m_detail, Qt::ElideRight, width() - 32));
+        painter.setPen(QPen(QColor("#94a0a8"), 1.8, Qt::SolidLine, Qt::RoundCap));
+        const auto c = arrowRect().center();
+        painter.drawPolyline(QPolygonF{{c.x() - 5., c.y() - 2.}, {c.x() + 0., c.y() + 3.}, {c.x() + 5., c.y() - 2.}});
     }
 private:
     QString m_detail;
+    QMenu *m_menu;
+};
+
+
+// Soft hover / press feedback drawn over a button; Qt style sheets cannot animate, so this fades a tint in and out.
+class ButtonGlow : public QWidget {
+public:
+    explicit ButtonGlow(QAbstractButton *button) : QWidget(button), m_button(button) {
+        setAttribute(Qt::WA_TransparentForMouseEvents);
+        m_fade.setDuration(130); m_fade.setEasingCurve(QEasingCurve::OutCubic);
+        connect(&m_fade, &QVariantAnimation::valueChanged, this, [this](const QVariant &v) { m_level = v.toReal(); update(); });
+        button->installEventFilter(this);
+        setGeometry(button->rect()); raise(); show();
+    }
+protected:
+    bool eventFilter(QObject *, QEvent *event) override {
+        switch (event->type()) {
+        case QEvent::Enter: case QEvent::HoverEnter: go(1); break;
+        case QEvent::Leave: case QEvent::HoverLeave: go(0); break;
+        case QEvent::MouseButtonPress: m_pressed = true; go(2); break;
+        case QEvent::MouseButtonRelease: m_pressed = false; go(m_button->underMouse() ? 1 : 0); break;
+        case QEvent::Resize: setGeometry(m_button->rect()); break;
+        case QEvent::EnabledChange: if (!m_button->isEnabled()) { m_fade.stop(); m_level = 0; update(); } break;
+        default: break;
+        }
+        return false;
+    }
+    void paintEvent(QPaintEvent *) override {
+        if (m_level <= 0.01 || !m_button->isEnabled()) return;
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        const double radius = m_button->property("glowRadius").isValid() ? m_button->property("glowRadius").toDouble() : 8;
+        painter.setPen(Qt::NoPen);
+        // 0..1 lightens on hover, 1..2 darkens on press
+        painter.setBrush(m_level <= 1 ? QColor(255, 255, 255, int(m_level * 22)) : QColor(0, 0, 0, int((m_level - 1) * 70)));
+        painter.drawRoundedRect(QRectF(rect()).adjusted(.5, .5, -.5, -.5), radius, radius);
+    }
+private:
+    void go(qreal target) {
+        m_fade.stop(); m_fade.setStartValue(m_level); m_fade.setEndValue(target); m_fade.start();
+    }
+    QAbstractButton *m_button;
+    QVariantAnimation m_fade;
+    qreal m_level = 0;
+    bool m_pressed = false;
 };
 
 class CaptureSwitch : public QPushButton {
@@ -241,8 +314,13 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     auto *modes = new QHBoxLayout(modePanel);
     modes->setContentsMargins(0, 2, 0, 2);
     modes->setSpacing(12);
-    m_replay = new CaptureModeTile("Instant Clip", "Start / stop instant replay");
-    m_record = new CaptureModeTile("Recording", "Start / stop recording");
+    auto *replayTile = new CaptureModeTile("Instant Clip", "Start / stop instant replay");
+    auto *recordTile = new CaptureModeTile("Recording", "Start / stop recording");
+    m_replay = replayTile; m_record = recordTile;
+    m_replayToggle = replayTile->menu()->addAction(QIcon(":/shadowless/icons/replay.svg"), "Turn Instant Clip on", this, [this] { emit recordingMode(false); });
+    m_replaySave = replayTile->menu()->addAction(QIcon(":/shadowless/icons/film.svg"), "Save replay", this, &Dashboard::saveReplay);
+    m_recordToggle = recordTile->menu()->addAction(QIcon(":/shadowless/icons/record.svg"), "Start recording", this, [this] { emit recordingMode(true); });
+    m_recordPause = recordTile->menu()->addAction(QIcon(":/shadowless/icons/pause.svg"), "Pause recording", this, &Dashboard::recordingPauseRequested);
     for (auto *mode : {m_replay, m_record}) {
         mode->setObjectName("captureMode");
         mode->setCheckable(true);
@@ -444,7 +522,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_notice->setObjectName("notice");
     m_notice->setTextFormat(Qt::PlainText);
     m_notice->setWordWrap(true);
-    m_notice->setMaximumHeight(46);
+    m_notice->setMaximumHeight(80);
     m_notice->hide();
     shell->addWidget(m_notice);
     auto *divider = new QFrame;
@@ -453,20 +531,14 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     divider->setFixedHeight(1);
     shell->addWidget(divider);
     m_footer = new QLabel;
+    m_footer->setObjectName("footer");
     m_footer->setProperty("muted", true);
     shell->addWidget(m_footer);
 
     connect(close, &QPushButton::clicked, this, &Dashboard::hideRequested);
     connect(m_back, &QPushButton::clicked, this, &Dashboard::escape);
     connect(m_action, &QPushButton::clicked, this, &Dashboard::saveReplay);
-    connect(m_replay, &QPushButton::clicked, this, [this](bool checked) {
-        m_replay->setChecked(!checked);
-        emit recordingMode(false);
-    });
-    connect(m_record, &QPushButton::clicked, this, [this](bool checked) {
-        m_record->setChecked(!checked);
-        emit recordingMode(true);
-    });
+
     connect(m_systemAudio, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(false, checked); });
     connect(m_microphone, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(true, checked); });
     connect(m_gameAudio, &QPushButton::clicked, this, [this](bool checked) { emit roleAudioChanged(2, checked); });
@@ -511,7 +583,7 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     auto *escape = new QShortcut(QKeySequence(Qt::Key_Escape), this);
     connect(escape, &QShortcut::activated, this, &Dashboard::escape);
     setAccent("violet");
-    setShortcutKeys({"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"});
+    setShortcutKeys({"Alt+Z", "Ctrl+Shift+F10", "Alt+F10", "Alt+F9"});
     resize(1280, 720);
     home();
     qApp->installEventFilter(this);
@@ -546,6 +618,13 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
                          replayRecording ? "Stop capture and finish the recording" :
                          m_replay->isChecked() ? "Stop instant replay" : "Start instant replay");
     m_record->setToolTip(m_record->isChecked() ? "Stop and save recording" : "Start recording");
+    m_replayToggle->setText(m_replay->isChecked() ? "Turn Instant Clip off" : "Turn Instant Clip on");
+    m_replayToggle->setEnabled(m_replay->isEnabled());
+    m_replaySave->setEnabled(available && ready && !o.continuousRecording);
+    m_recordToggle->setText(m_record->isChecked() ? "Stop and save recording" : "Start recording");
+    m_recordToggle->setEnabled(m_record->isEnabled());
+    m_recordPause->setText(paused ? "Resume recording" : "Pause recording");
+    m_recordPause->setEnabled(m_pause->isVisible() && m_pause->isEnabled());
     auto updateAudio = [active, stopping](QPushButton *button, QSlider *slider, QLabel *percent,
                                            bool enabled, bool muted, int volume) {
         const QSignalBlocker blocker(slider);
@@ -616,7 +695,7 @@ void Dashboard::setShortcutKeys(const QStringList &keys) {
     m_overlayKey = QKeySequence(keys.value(0), QKeySequence::PortableText);
     m_footer->setText(keys.value(0) + "  Show / hide    ·    " + keys.value(1) + "  Save replay");
     m_footer->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
-    m_status->setToolTip(keys.value(2) + "  Start / stop capture");
+    m_status->setToolTip(keys.value(2) + "  Start / stop capture · " + keys.value(3) + "  Pause / resume recording");
 }
 
 void Dashboard::shortcutStatus(const QString &message) {
@@ -663,12 +742,15 @@ void Dashboard::positionPanel() {
         m_panel->setGeometry(rect());
         return;
     }
-    const bool editing = m_pages->currentWidget() == m_player && m_player->editing();
+    const bool onPlayer = m_pages->currentWidget() == m_player;
+    const bool editing = onPlayer && m_player->editing();
     const bool chromeShown = !m_chrome->isHidden();
     const int top = chromeShown ? 72 : 12, availableHeight = qMax(0, height() - top - 12);
     if (chromeShown) { m_chrome->setGeometry(28, 18, qMax(0, width() - 56), 40); m_chrome->raise(); }
-    const auto panelWidth = editing ? qMax(0, width() - 24) : qBound(0, width() - 24, m_panelWidth);
-    const auto panelHeight = editing ? availableHeight : qBound(0, availableHeight, m_panelHeight);
+    // Watching scales with the window (but stays a card); editing takes the whole window.
+    const int playerWidth = qBound(m_panelWidth, width() * 70 / 100, 1200), playerHeight = qBound(m_panelHeight, availableHeight * 80 / 100, 820);
+    const auto panelWidth = editing ? qMax(0, width() - 24) : qBound(0, onPlayer ? playerWidth : m_panelWidth, qMax(0, width() - 24));
+    const auto panelHeight = editing ? availableHeight : qBound(0, onPlayer ? playerHeight : m_panelHeight, availableHeight);
     const bool narrow = width() < 800;
     m_homeLayout->setDirection(narrow ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
     const int controlsHeight = qBound(0, panelHeight - 245, m_controlScroll->widget()->sizeHint().height());
@@ -689,6 +771,14 @@ void Dashboard::escape() {
 }
 
 bool Dashboard::eventFilter(QObject *watched, QEvent *event) {
+    if (event->type() == QEvent::Show) {
+        auto *button = qobject_cast<QPushButton *>(watched);
+        if (button && isAncestorOf(button) && !button->property("glow").toBool() && !dynamic_cast<CaptureSwitch *>(button)) {
+            button->setProperty("glow", true);
+            new ButtonGlow(button);
+        }
+        return false;
+    }
     if (!isVisible() || (event->type() != QEvent::ShortcutOverride && event->type() != QEvent::KeyPress)) return false;
     auto *key = static_cast<QKeyEvent *>(event);
     if (m_overlayKey != QKeySequence(key->keyCombination())) return false;

@@ -353,7 +353,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
     overlay->addRow(note("The indicator is experimental and lets mouse and keyboard input pass through."));
 
     auto *shortcuts = section(bodyLayout, "GLOBAL SHORTCUTS");
-    for (const auto &label : {"Show / hide overlay", "Save replay", "Start / stop capture"}) {
+    for (const auto &label : {"Show / hide overlay", "Save replay", "Start / stop capture", "Pause / resume recording"}) {
         auto *edit = new QKeySequenceEdit;
         edit->setMaximumSequenceLength(1);
         edit->setAccessibleName(label);
@@ -438,7 +438,7 @@ SettingsPage::SettingsPage(const GsrCapabilities &caps, QWidget *parent) : QWidg
         QStringList keys; QSet<QString> distinct;
         for (auto *edit : m_keys) {
             const auto key = edit->keySequence().toString(QKeySequence::PortableText); HyprBinding binding;
-            if (!HyprBinding::parse(key, {}, &binding) || distinct.contains(key)) { m_error->setText("Choose three different shortcuts using letters, digits, function keys, Space, Pause or Print."); return; }
+            if (!HyprBinding::parse(key, {}, &binding) || distinct.contains(key)) { m_error->setText("Choose four different shortcuts using letters, digits, function keys, Space, Pause or Print."); return; }
             distinct.insert(key); keys.append(key);
         }
         auto accent = m_accent->currentData().toString();

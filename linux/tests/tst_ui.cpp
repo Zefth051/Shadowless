@@ -21,6 +21,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSignalSpy>
+#include <QMenu>
 #include <QSlider>
 #include <QStackedWidget>
 #include <QTemporaryDir>
@@ -49,7 +50,7 @@ Q_DECLARE_METATYPE(Shadowless::OverlayScene)
 class UiTests : public QObject {
     Q_OBJECT
     const GsrCapabilities caps{"6.1.5", "nvidia", "wayland", {"h264", "hevc"}, {"DP-1"}};
-    const QStringList keys{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"};
+    const QStringList keys{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10", "Alt+F9"};
     QPushButton *button(QWidget *parent, const QString &text) {
         for (auto *candidate : parent->findChildren<QPushButton *>()) if (candidate->text() == text) return candidate;
         return nullptr;
@@ -597,7 +598,7 @@ private slots:
             QVERIFY(timeline->mapTo(player,QPoint()).y()>media->mapTo(player,media->rect().bottomLeft()).y());
             QVERIFY(exportButton->mapTo(player,QPoint()).y()>timeline->mapTo(player,timeline->rect().bottomLeft()).y());
             QVERIFY(timeline->mapTo(player,QPoint()).y()<audio->mapTo(player,QPoint()).y());
-            QVERIFY2(exportButton->mapTo(player,QPoint()).y()>audio->mapTo(player,audio->rect().bottomLeft()).y(),
+            QVERIFY2(player->rect().contains(QRect(exportButton->mapTo(player,QPoint()),exportButton->size())),
                      qPrintable(QString("Export y=%1, audio y=%2 height=%3, player height=%4").arg(exportButton->mapTo(player,QPoint()).y()).arg(audio->mapTo(player,QPoint()).y()).arg(audio->height()).arg(player->height())));
             QVERIFY(player->rect().contains(QRect(exportButton->mapTo(player,QPoint()),exportButton->size())));
         }
@@ -1050,7 +1051,7 @@ private slots:
         auto *exportButton = player->findChild<QPushButton *>("clipExport");
         auto *timeline = player->findChild<QWidget *>("clipTimeline"); QVERIFY(timeline);
         QVERIFY(timeline->mapTo(player, QPoint()).y() < audio->mapTo(player, QPoint()).y());
-        QVERIFY(exportButton->mapTo(player, QPoint()).y() > audio->mapTo(player, QPoint()).y());
+        QVERIFY(exportButton->mapTo(player, QPoint()).y() > timeline->mapTo(player, QPoint()).y());
         QVERIFY(exportButton->isEnabled());
         auto *in = player->findChild<QDoubleSpinBox *>("clipIn"), *out = player->findChild<QDoubleSpinBox *>("clipOut");
         in->setFocus(); in->selectAll(); QTest::keyClicks(in,"1.5"); QTest::keyClick(in,Qt::Key_Return);
@@ -1539,25 +1540,27 @@ private slots:
         auto *action = dashboard.findChild<QPushButton *>("captureAction");
         QVERIFY(replay && record && action);
         QVERIFY(!dashboard.findChild<QPushButton *>("captureToggle"));
+        // Tiles are menu buttons: the first menu entry starts / stops the mode.
+        auto choose = [](QPushButton *tile) { auto *menu = tile->findChild<QMenu *>("captureMenu"); QVERIFY(menu); auto *first = menu->actions().first(); if (first->isEnabled()) first->trigger(); };
         QSignalSpy modes(&dashboard, &Dashboard::recordingMode);
         QSignalSpy saved(&dashboard, &Dashboard::saveReplay);
         dashboard.updateState(options, {}, false, false, false, false);
         QVERIFY(!replay->isChecked() && !record->isChecked());
-        replay->click();
+        choose(replay);
         QCOMPARE(modes.size(), 1); QCOMPARE(modes.last().at(0).toBool(), false);
         QVERIFY(!replay->isChecked());
-        record->click();
+        choose(record);
         QCOMPARE(modes.size(), 2); QCOMPARE(modes.last().at(0).toBool(), true);
         dashboard.updateState(options, {}, true, false, false, false);
         QVERIFY(replay->isEnabled() && !record->isEnabled());
-        replay->click(); QCOMPARE(modes.size(), 3);
+        choose(replay); QCOMPARE(modes.size(), 3);
         dashboard.updateState(options, {}, true, true, false, false);
         QVERIFY(replay->isChecked() && !record->isChecked());
         QVERIFY(replay->isEnabled() && record->isEnabled());
         action->click(); QCOMPARE(saved.size(), 1); QCOMPARE(action->text(), "Save 4 sec");
         dashboard.updateState(options, {}, true, true, false, false, true);
         QVERIFY(replay->isChecked() && record->isChecked());
-        record->click(); QCOMPARE(modes.size(), 4); QVERIFY(record->isChecked());
+        choose(record); QCOMPARE(modes.size(), 4); QVERIFY(record->isChecked());
         dashboard.updateState(options, {}, true, true, false, false, true, true);
         QVERIFY(!replay->isEnabled() && !record->isEnabled());
         options.continuousRecording = true;
@@ -1565,7 +1568,7 @@ private slots:
         QVERIFY(!replay->isChecked() && record->isChecked());
         QVERIFY(!replay->isEnabled() && record->isEnabled());
         QVERIFY(!action->isVisible());
-        record->click(); QCOMPARE(modes.size(), 5);
+        choose(record); QCOMPARE(modes.size(), 5);
         dashboard.updateState(options, {}, true, true, false, true);
         QVERIFY(!replay->isEnabled() && !record->isEnabled());
     }
@@ -1576,7 +1579,7 @@ private slots:
         options.source = "DP-1";
         options.outputDirectory = directory.path();
         QString error;
-        QVERIFY(Settings().save(options, {}, false, &error, {"Ctrl+J", keys[1], keys[2]}));
+        QVERIFY(Settings().save(options, {}, false, &error, {"Ctrl+J", keys[1], keys[2], keys[3]}));
         Controller controller(caps, {}, false);
         Dashboard *dashboard = nullptr;
         for (auto *widget : QApplication::topLevelWidgets()) {
@@ -1684,7 +1687,7 @@ private slots:
         page.setCaptureActive(true); button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 2);
         QCOMPARE(qvariant_cast<GsrOptions>(saved[1][0]).frameRate, 60);
         page.edit(original, false, false, keys);
-        const auto keyEdits = page.findChildren<QKeySequenceEdit *>(); QCOMPARE(keyEdits.size(), 3);
+        const auto keyEdits = page.findChildren<QKeySequenceEdit *>(); QCOMPARE(keyEdits.size(), 4);
         keyEdits[1]->setKeySequence(QKeySequence("Alt+Z")); button(&page, "Save settings")->click(); QCOMPARE(saved.size(), 2);
     }
     void editorFlushOnlyPublishesEditedScene() {

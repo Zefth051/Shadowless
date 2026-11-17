@@ -33,7 +33,7 @@ private:
     QDBusConnection m_bus;
     int m_stage = 0;
     QTimer m_timeout;
-    QStringList m_keys{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10"};
+    QStringList m_keys{"Alt+Z", "Ctrl+Shift+F10", "Alt+F10", "Alt+F9"};
     QVector<HyprBinding> m_owned;
     QLocalSocket m_events;
     QByteArray m_eventBuffer;

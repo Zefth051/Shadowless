@@ -78,7 +78,7 @@ private slots:
             Shortcuts shortcuts;
             QSignalSpy status(&shortcuts, &Shortcuts::status);
             QSignalSpy approval(&shortcuts, &Shortcuts::approvalChanged);
-            shortcuts.setKeys({"Meta+K", "Ctrl+F9", "Alt+Space"});
+            shortcuts.setKeys({"Meta+K", "Ctrl+F9", "Alt+Space", "Alt+P"});
             shortcuts.start();
             QTRY_COMPARE(portal.bindings.size(), 1);
             QCOMPARE(portal.bindings[0][0].properties.value("preferred_trigger").toString(), QString("LOGO+k"));
@@ -91,7 +91,7 @@ private slots:
             QTRY_COMPARE(approval.size(), 2);
             QCOMPARE(approval.first()[0].toBool(), true);
             QCOMPARE(approval.last()[0].toBool(), false);
-            shortcuts.setKeys({"Alt+J", "Ctrl+F8", "Alt+F9"});
+            shortcuts.setKeys({"Alt+J", "Ctrl+F8", "Alt+F9", "Alt+P"});
             QTRY_COMPARE(portal.bindings.size(), 2);
             QCOMPARE(portal.bindings[1][0].properties.value("preferred_trigger").toString(), QString("ALT+j"));
             QTRY_VERIFY(portal.closed.contains(portal.sessions[0]));
@@ -121,7 +121,7 @@ private slots:
             QTRY_COMPARE(activation.size(), 2);
             QCOMPARE(activation.last()[0].toString(), QString("save-replay"));
             portal.rejectBindings = true;
-            shortcuts.setKeys({"Alt+L", "Ctrl+F8", "Alt+F9"});
+            shortcuts.setKeys({"Alt+L", "Ctrl+F8", "Alt+F9", "Alt+P"});
             QTRY_COMPARE(portal.bindings.size(), 4);
             QTRY_VERIFY(status.last()[0].toString().contains("cancelled or rejected"));
             QCOMPARE(approval.last()[0].toBool(), false);

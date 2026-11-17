@@ -3,6 +3,7 @@
 #include "gsr_capture.h"
 #include <QHash>
 #include <QList>
+#include <QTimer>
 
 namespace Shadowless {
 
@@ -34,7 +35,13 @@ signals:
 
 private:
     QTemporaryDir m_runtime;
+    QTimer m_follow;
+    QString m_selected, m_current, m_sinkModule, m_loopModule;
     bool writeLevels(const AudioLevels &levels);
+    QString desiredMicrophone() const;
+    void routeMicrophone(const QString &source);
+    void followMicrophone();
+    void releaseMicrophone();
 
 };
 
