@@ -4,15 +4,23 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-11-17
+
 ### Fixed
 
 - **Capture failed to start on Windows 10 after updating to 0.3.3:** Saved Advanced audio routing or separate audio tracks need per-application capture, which 0.3.3 limits to Windows build 20348 or newer. Instead of failing, Shadowless now captures mixed audio, shows a non-blocking notice, and keeps your saved audio settings so they apply again on a capable system. Instant Replay and Recording are not blocked.
 - **Recovery messages show the real cause:** When capture cannot start, the retry notice now reports the startup error instead of the generic "Recording module stopped."
 - **Settings:** A saved Advanced audio choice no longer prevents saving other settings on Windows builds that cannot route audio per application.
 
-### Added
+### Improved
 
-- **Startup diagnostics:** `packaging/DiagnoseStartup.ps1` writes a sanitized report (Windows build, capture and audio options, runtime DLL load checks, recent startup errors).
+- **Better diagnostics:** the capture log line now records the Windows build, the audio routing mode and whether the mixed-audio fallback is active, so a startup problem can be understood from `log.txt`.
+
+### Verification status
+
+- **Checked by Windows CI** (windows-2022, build 20348): Release build, full analyzers and the process-audio QA, including simulated Windows 10 (build 19045) and Windows 11 (build 22631) audio-routing cases. CI cannot run on a real Windows 10 PC.
+- **Confirmed regression:** a Windows 10 22H2 (build 19045) PC with an NVIDIA RTX 2060 worked on 0.3.2 and failed to start capture on 0.3.3 with `AdvancedProcessAudioUnavailableException` ("Application audio routing requires Windows build 20348 or later").
+- **Needs testing on real Windows 10 and Windows 11 before this is published:** that PC upgrading 0.3.3 to this build with its saved audio settings; Instant Replay and Recording producing clips with mixed audio and the notice appearing once; the saved audio mode unchanged afterwards; Windows 11 per-application routing unchanged and without the notice.
 
 ## [0.3.3] - 2026-11-17
 

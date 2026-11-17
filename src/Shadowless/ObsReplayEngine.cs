@@ -700,7 +700,11 @@ public sealed partial class ObsReplayEngine : IDisposable
                 $"gpu={Capabilities.AdapterName}, encoder={ActiveEncoder}, " +
                 $"codec={ActiveCodec}, bitrate={ActiveBitrateMbps} Mbps, " +
                 $"fps={_config.FrameRate}, maxSize={_config.MaxReplaySizeMb} MB, " +
-                $"mic={_config.MicrophoneVolume}%+{_config.MicrophoneBoostDb}dB");
+                $"mic={_config.MicrophoneVolume}%+{_config.MicrophoneBoostDb}dB, " +
+                $"windowsBuild={Environment.OSVersion.Version.Build}, " +
+                $"audioRouting={RoutingConfig.AudioRoutingMode}" +
+                $"{(RoutingConfig.SeparateAudioTracks ? "+separate" : "")}, " +
+                $"audioFallback={AudioRoutingFallback?.ToString() ?? "none"}");
         }
         catch
         {

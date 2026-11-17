@@ -2,6 +2,14 @@
 
 This file is a router, not a project encyclopedia. Keep it short.
 
+## Product philosophy (always apply)
+
+Shadowless is simple: install once and it just works; it adapts to the user.
+Read `docs/PRODUCT_PHILOSOPHY.md` (single source of truth) before designing or
+reviewing any feature, installer, setting or permission flow. It includes the
+permanent compatibility rules for Windows 10/11 and Arch Linux/CachyOS
+(requirements and evidence: `docs/COMPATIBILITY.md`).
+
 ## Start here
 
 1. Read `docs/agent/INDEX.md`.

@@ -58,13 +58,18 @@ up to six tracks for both.
 - Track names describe actual sources and remain short enough for containers.
 - Track count follows the highest enabled application/microphone/System track,
   up to six. System subtraction clients share its persisted gain and mute.
-- Process loopback requires Windows build 20348 or later. Older builds retain
-  mixed device audio; separate/advanced process routing reports unavailable.
+- Process loopback requires Windows build 20348 or later. On older builds
+  (Windows 10) and when the process-audio source is missing, saved
+  separate/advanced routing falls back to mixed device audio at capture start
+  (`ObsReplayEngine.ResolveAudioRoutingConfig`). The saved config is never
+  modified; the user sees a one-time non-blocking notice. Selecting Advanced
+  anew in Settings stays blocked while unavailable.
 - A missing selected microphone uses the current default input. Endpoint
   notifications restore the preferred input live without changing mixer bits,
   encoders, outputs, or the saved device preference.
-- Unsupported Windows/source states fall back to an explicit unavailable state,
-  never silent mixed capture.
+- Unsupported Windows/source states never block Instant Replay or Recording and
+  never fall back silently: the engine logs `audioFallback=<reason>` and the app
+  shows a notice (ADR 0002, ADR 0006).
 - Before releasing a public internal OBS scene, remove its source from the
   canvas. OBS 32 retains canvas scene references; leaving them for global
   shutdown can double-destroy child sources during an audio toggle restart.

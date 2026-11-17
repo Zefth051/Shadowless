@@ -26,6 +26,12 @@ task; the command then returns only live state, routes, and validation.
 Valid areas: `overview`, `capture`, `audio`, `player`, `ui`, `distribution`,
 and `release`.
 
+## Product philosophy
+
+Every area follows `docs/PRODUCT_PHILOSOPHY.md` (install once, zero friction,
+graceful degradation, compatibility with Windows 10/11 and Arch/CachyOS).
+Requirements and evidence levels: `docs/COMPATIBILITY.md`; ADRs 0005 and 0006.
+
 ## Source of truth order
 
 1. Current code and executable tests.
