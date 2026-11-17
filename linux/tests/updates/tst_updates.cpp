@@ -89,6 +89,7 @@ private slots:
         QVERIFY(result.has_value());
         QCOMPARE(result->version, "0.2.5");
         QVERIFY(!newestLinuxRelease(releases, "0.2.5"));
+        QVERIFY(!newestLinuxRelease(releases, "0.2.6"));
         for (const auto &bad : {"https://github.com/attacker/Shadowless/releases/download/linux-v0.2.5/file", "http://github.com/Zefth051/Shadowless/releases/download/linux-v0.2.5/file", "https://user@github.com/Zefth051/Shadowless/releases/download/linux-v0.2.5/file"}) {
             auto release = releases[1].toObject(); auto assets = release["assets"].toArray();
             auto asset = assets[0].toObject(); asset["browser_download_url"] = bad;
@@ -97,6 +98,8 @@ private slots:
         }
         auto draft = releases[1].toObject(); draft["draft"] = true;
         QVERIFY(!newestLinuxRelease(QJsonArray{draft}, "0.2.4"));
+        auto prerelease = releases[1].toObject(); prerelease["prerelease"] = true;
+        QVERIFY(!newestLinuxRelease(QJsonArray{prerelease}, "0.2.4"));
         auto noDigest = releases[1].toObject(); auto assets = noDigest["assets"].toArray();
         auto asset = assets[0].toObject(); asset.remove("digest"); assets[0] = asset; noDigest["assets"] = assets;
         QVERIFY(!newestLinuxRelease(QJsonArray{noDigest}, "0.2.4"));

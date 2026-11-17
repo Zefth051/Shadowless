@@ -24,8 +24,7 @@ std::optional<LinuxRelease> newestLinuxRelease(const QJsonArray &releases, const
         const auto release = value.toObject();
         const auto tag = release["tag_name"].toString();
         const auto match = tagPattern.match(tag);
-        if (!match.hasMatch() || release["draft"].toBool()
-            || (release["prerelease"].toBool() && !current.startsWith("0."))) continue;
+        if (!match.hasMatch() || release["draft"].toBool() || release["prerelease"].toBool()) continue;
         const auto version = match.captured(1);
         if (QVersionNumber::fromString(version) <= QVersionNumber::fromString(current)
             || (newest && QVersionNumber::fromString(version) <= QVersionNumber::fromString(newest->version))) continue;
