@@ -62,6 +62,7 @@ public partial class CaptureOverlayEditorWindow : Window
         EmptyText.Visibility = _layers.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (_layers.Count > 0)
             LayerList.SelectedIndex = 0;
+        LoadTransform();
         _updating = false;
         StatusText.Text = Localization.Text("L.Overlays.AutoSave");
         _saveTimer.Tick += async (_, _) =>
@@ -73,7 +74,6 @@ public partial class CaptureOverlayEditorWindow : Window
         Loaded += (_, _) =>
         {
             RefreshPreview();
-            _previewTimer.Start();
         };
         StateChanged += (_, _) => RefreshPreview();
         IsVisibleChanged += (_, _) =>
@@ -116,6 +116,14 @@ public partial class CaptureOverlayEditorWindow : Window
         try
         {
             bool visible = IsVisible && WindowState != WindowState.Minimized;
+            if (!visible)
+            {
+                _previewTimer.Stop();
+                _hasSample = false;
+                Preview.Refresh(false);
+                return;
+            }
+            _previewTimer.Start();
             CaptureOverlayPreviewState state = Preview.Refresh(visible);
             DateTime now = DateTime.UtcNow;
             double seconds = Math.Max(0.001, (now - _lastSample).TotalSeconds);
@@ -147,8 +155,8 @@ public partial class CaptureOverlayEditorWindow : Window
         _pending = true;
         if (_dragging)
             return;
-        if (!_saveTimer.IsEnabled)
-            _saveTimer.Start();
+        _saveTimer.Stop();
+        _saveTimer.Start();
     }
 
     private Task<bool> SavePendingAsync()
@@ -186,6 +194,9 @@ public partial class CaptureOverlayEditorWindow : Window
         bool wasUpdating = _updating;
         _updating = true;
         TransformPanel.IsEnabled = Selected is not null;
+        RaiseButton.IsEnabled = LayerList.SelectedIndex > 0;
+        LowerButton.IsEnabled = LayerList.SelectedIndex >= 0 && LayerList.SelectedIndex < _layers.Count - 1;
+        RemoveButton.IsEnabled = Selected is not null;
         if (Selected is { } layer)
         {
             LayerToggle.IsChecked = layer.Enabled;
@@ -287,6 +298,8 @@ public partial class CaptureOverlayEditorWindow : Window
         else if (sender == OpacitySlider)
             layer.Opacity = (int)OpacitySlider.Value;
         layer.SetPosition(layer.X, layer.Y);
+        if (sender == XSlider || sender == YSlider)
+            _moveLayer(layer.Id, layer.X, layer.Y);
         LoadTransform();
         ScheduleSave();
     }

@@ -232,11 +232,19 @@ internal static class Program
             }],
         };
         double movedX = -1, movedY = -1;
+        int saves = 0;
         var window = new CaptureOverlayEditorWindow(config,
-            (_, _) => Task.FromResult(""), (_, _, _) => new(false, 0, 0, 0, 0, ""),
+            (_, _) => { saves++; return Task.FromResult(""); }, (_, _, _) => new(false, 0, 0, 0, 0, ""),
             (_, x, y) => { movedX = x; movedY = y; });
         try
         {
+            var previewTimer = (System.Windows.Threading.DispatcherTimer)Field(window, "_previewTimer")!;
+            previewTimer.Start();
+            typeof(CaptureOverlayEditorWindow).GetMethod("RefreshPreview", Private)!.Invoke(window, null);
+            Require(!previewTimer.IsEnabled, "Hidden overlay editor keeps polling preview statistics.");
+            Require(!((System.Windows.Controls.Button)window.FindName("RaiseButton")).IsEnabled &&
+                !((System.Windows.Controls.Button)window.FindName("LowerButton")).IsEnabled,
+                "Single-layer editor must disable unavailable ordering actions.");
             var layers = (IList)Field(window, "_layers")!;
             var layer = (CaptureOverlay)layers[0]!;
             void SetSlider(string name, double value) =>
@@ -254,6 +262,8 @@ internal static class Program
             SetSlider("YSlider", 100);
             Require(layer.X == 0.8 && layer.Y == 0.85,
                 "Position sliders did not align the full layer to the right and bottom edges.");
+            Require(movedX == layer.X && movedY == layer.Y,
+                "Position sliders did not update the live layer before persistence.");
             SetSlider("WidthSlider", 40);
             SetSlider("HeightSlider", 30);
             Require(layer.X == 0.6 && layer.Y == 0.7,
@@ -283,6 +293,11 @@ internal static class Program
             SetSlider("XSlider", 0);
             SetSlider("YSlider", 0);
             Require(layer.X == 0 && layer.Y == 0, "Position sliders cannot reach the canvas origin.");
+            Require(saves == 0, "Slider changes wrote settings synchronously.");
+            var flush = (Task<bool>)typeof(CaptureOverlayEditorWindow)
+                .GetMethod("SavePendingAsync", Private)!.Invoke(window, null)!;
+            Require(flush.GetAwaiter().GetResult() && saves == 1,
+                "Flushing pending slider edits must persist one coalesced update.");
         }
         finally
         {
@@ -357,6 +372,21 @@ internal static class Program
                 editor.ShowDialog();
                 Require(window.IsVisible, "Closing the capture editor hid the dashboard.");
             }
+            window.ShowError("Capture", "Turn capture off before editing settings.");
+            var notice = (FrameworkElement)window.FindName("NoticeBanner");
+            Require(notice.Visibility == Visibility.Visible, "Notice setup failed.");
+            typeof(SettingsWindow).GetMethod("ShowSettings", Private)!.Invoke(window, null);
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            var timer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(300),
+            };
+            timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+            timer.Start();
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
+            Require(notice.Visibility == Visibility.Collapsed, "Dashboard notice leaked into settings.");
+            window.ShowError("Settings", "Invalid setting.");
+            Require(notice.Visibility == Visibility.Visible, "Settings errors must remain visible.");
         }
         finally { window.Close(); }
         Console.WriteLine("CAPTURE_OVERLAY_DASHBOARD PASS");

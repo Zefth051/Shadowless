@@ -188,7 +188,8 @@ public sealed partial class ObsReplayEngine
             ObsNative.obs_source_release(overlay.OpacityFilter);
             overlay.OpacityFilter = 0;
         }
-        if (layer.Opacity < 100)
+        if (layer.Opacity < 100 &&
+            (overlay.OpacityFilter == 0 || overlay.Layer.Opacity != layer.Opacity))
         {
             nint settings = ObsNative.obs_data_create();
             try

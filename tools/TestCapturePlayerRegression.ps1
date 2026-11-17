@@ -133,7 +133,7 @@ Assert-Contains $editorXaml `
     'x:Name="PlayerHelpButton"[\s\S]*?x:Name="PlayerHelpPopup"[\s\S]*?L\.Library\.ShortcutPlayback[\s\S]*?L\.Library\.ShortcutCloseHint' `
     "Player shortcuts must live behind the dedicated Help button."
 Assert-Contains $editorXaml `
-    'x:Name="PlayerHelpButton"[\s\S]*?Height="30"[\s\S]*?Foreground="\{DynamicResource AccentBrush\}"[\s\S]*?Background="\{DynamicResource AccentSubtleBrush\}"' `
+    'x:Name="PlayerHelpButton"[\s\S]*?Height="30"[\s\S]*?Foreground="\{DynamicResource AccentReadableBrush\}"[\s\S]*?Background="\{DynamicResource AccentSubtleBrush\}"' `
     "Player Help action must remain compact and accent-colored."
 Assert-Contains $editor `
     'TimelineEditorPanel\.Visibility = Visibility\.Visible;[\s\S]*?EditorActionsPanel\.Visibility = Visibility\.Visible;[\s\S]*?PreviewModePanel\.Visibility = Visibility\.Collapsed;' `

@@ -42,7 +42,7 @@
                                 <Setter TargetName="Box" Property="Background"
                                         Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="Box" Property="BorderBrush"
-                                        Value="{DynamicResource AccentBrush}"/>
+                                        Value="{DynamicResource AccentReadableBrush}"/>
                                 <Setter TargetName="Check" Property="Visibility"
                                         Value="Visible"/>
                             </Trigger>
@@ -89,7 +89,7 @@
             <Setter Property="Height" Value="4"/>
             <Setter Property="Maximum" Value="1"/>
             <Setter Property="Width" Value="86"/>
-            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             <Setter Property="Background" Value="{StaticResource DividerBrush}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding HasAudioSession}" Value="False">
@@ -127,13 +127,13 @@
                 <Grid Width="22" Height="22" Margin="0,0,11,0"
                       VerticalAlignment="Center">
                     <Rectangle Width="3" Height="8" RadiusX="1.5" RadiusY="1.5"
-                               Fill="{DynamicResource AccentBrush}"
+                               Fill="{DynamicResource AccentReadableBrush}"
                                HorizontalAlignment="Left" VerticalAlignment="Center"/>
                     <Rectangle Width="3" Height="16" RadiusX="1.5" RadiusY="1.5"
-                               Fill="{DynamicResource AccentBrush}"
+                               Fill="{DynamicResource AccentReadableBrush}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     <Rectangle Width="3" Height="11" RadiusX="1.5" RadiusY="1.5"
-                               Fill="{DynamicResource AccentBrush}"
+                               Fill="{DynamicResource AccentReadableBrush}"
                                HorizontalAlignment="Right" VerticalAlignment="Center"/>
                 </Grid>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -237,7 +237,7 @@
                                                Stretch="Uniform"
                                                SnapsToDevicePixels="True"/>
                                         <TextBlock Text="{Binding Initials}"
-                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   Foreground="{DynamicResource AccentReadableBrush}"
                                                    FontSize="11" FontWeight="ExtraBold"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center">
@@ -332,7 +332,7 @@
                             Background="{DynamicResource AccentSubtleBrush}"
                             Margin="0,0,10,0">
                         <Path Data="{StaticResource IconMic}"
-                              Stroke="{DynamicResource AccentBrush}"
+                              Stroke="{DynamicResource AccentReadableBrush}"
                               StrokeThickness="1.7"
                               Width="15" Height="15" Stretch="Uniform"/>
                     </Border>

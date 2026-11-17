@@ -357,6 +357,13 @@
   <sys:String x:Key="L.Capture.RecordingEnabled">Aufnahme läuft</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">Aufnahme starten</sys:String>
   <sys:String x:Key="L.Capture.StopRecording">Aufnahme stoppen</sys:String>
+  <sys:String x:Key="L.Capture.PauseRecording">Aufnahme pausieren</sys:String>
+  <sys:String x:Key="L.Capture.ResumeRecording">Aufnahme fortsetzen</sys:String>
+  <sys:String x:Key="L.Capture.PausedHint">Aufnahme und Replay-Puffer sind pausiert. Zum Speichern von Clips fortsetzen.</sys:String>
+  <sys:String x:Key="L.Capture.PauseFailed">Aufnahme konnte nicht pausiert oder fortgesetzt werden</sys:String>
+  <sys:String x:Key="L.Status.RecordingPaused">Aufnahme pausiert</sys:String>
+  <sys:String x:Key="L.Engine.RecordingUnexpectedStop">Die fortlaufende Aufnahme wurde unerwartet beendet.</sys:String>
+  <sys:String x:Key="L.Engine.RecordingError">Fortlaufende Aufnahme fehlgeschlagen: {0}</sys:String>
   <sys:String x:Key="L.Status.Recording">Aufnahme läuft</sys:String>
   <sys:String x:Key="L.Status.RecordingDetail">{0} · {1}</sys:String>
   <sys:String x:Key="L.Status.RecordingDisabled">Aufnahme ist aus</sys:String>
@@ -367,7 +374,6 @@
   <sys:String x:Key="L.Notify.RecordingSavedDetail">Daueraufnahme wurde gespeichert.</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameTitle">Aufnahme ist aus</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameDetail">{0} erkannt. Aufnahme starten, um das Spiel aufzuzeichnen.</sys:String>
-  <sys:String x:Key="L.Engine.ReplayUnavailableWhileRecording">Im Aufnahmemodus kann kein Replay gespeichert werden.</sys:String>
   <sys:String x:Key="L.Tray.Recording">Shadowless · Aufnahme läuft</sys:String>
   <sys:String x:Key="L.Tray.ToggleRecording">Aufnahme starten / stoppen</sys:String>
   <sys:String x:Key="L.Hotkey.ToggleRecording">Aufnahme starten / stoppen</sys:String>
@@ -375,6 +381,9 @@
   <sys:String x:Key="L.Section.Appearance">DARSTELLUNG</sys:String>
   <sys:String x:Key="L.Appearance.Accent">Akzentfarbe</sys:String>
   <sys:String x:Key="L.Appearance.AccentHint">Wird in ganz Shadowless verwendet</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccent">Eigene HEX-Farbe</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentHint">#RRGGBB verwenden, zum Beispiel #12ABEF. Wird mit Fertig angewendet.</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentError">Eine Farbe als #RRGGBB mit sechs hexadezimalen Ziffern (0–9, A–F) eingeben.</sys:String>
   <sys:String x:Key="L.Appearance.Mint">Mint</sys:String>
   <sys:String x:Key="L.Appearance.Blue">Blau</sys:String>
   <sys:String x:Key="L.Appearance.Violet">Violett</sys:String>
@@ -473,4 +482,6 @@
   <sys:String x:Key="L.Error.SettingsSaveFailed">Speichern fehlgeschlagen: {0}. Grund: {1}</sys:String>
   <sys:String x:Key="L.Settings.File">Einstellungsdatei</sys:String>
   <sys:String x:Key="L.Settings.Capture">Aufnahmeeinstellungen</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresence">Discord Rich Presence</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresenceHint">Zeigt das erkannte Spiel nur während der Aufnahme auf Discord. Die verstrichene Zeit wird nicht geteilt.</sys:String>
 </ResourceDictionary>

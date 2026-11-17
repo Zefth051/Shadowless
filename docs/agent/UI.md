@@ -30,6 +30,12 @@ overlay notifications, and recording indicator.
 
 - Settings edits are staged. Done applies; Cancel discards. Closing dirty
   settings shows the save/discard notice and keeps the window open.
+- Entering settings dismisses the previous dashboard notice. Validation and
+  save failures raised inside settings remain visible normally.
+- Appearance supports preset accents and validated #RRGGBB values. Custom
+  colors remain staged until Done; invalid input blocks saving. Filled controls
+  retain the selected color while readable accent tokens serve text, icons and
+  focus indicators. Custom colors use the existing violet application icon.
 - Windows-login autostart and replay-on-launch are independent. Replay startup
   requires explicit opt-in, including for older configurations; manual and
   background launches use the same preference and start replay rather than a
@@ -46,6 +52,24 @@ overlay notifications, and recording indicator.
   buffer. Adjacent labels/percentages open live volume sliders; microphone controls
   also remain available in advanced mode. Enabling a disabled source still rebuilds capture.
 - Every localization key exists in all dictionaries with matching placeholders.
+- Discord Rich Presence is enabled by default and staged with other settings.
+  Done immediately re-evaluates it without restarting capture. It connects only
+  for active, unpaused capture of a game recognized from the capture engine's
+  active executable; stopped/paused/unknown capture and opt-out clear activity
+  and disconnect. Missing Discord never blocks capture. No elapsed timer or
+  periodic presence polling is used; changed payloads are coalesced and
+  unchanged payloads suppressed. `tools/DiscordPresenceQa` covers the IPC contract.
+- Shared accent, subtle and icon buttons use accent-aware keyboard focus and
+  press feedback without added animations. Dashboard refresh/close icons use
+  shared vector geometry; packaged branding remains unchanged.
+- Notifications, help badges and layer-order controls use bundled vector paths
+  with a shared rounded stroke style. Shortcut key legends remain text.
+- The overlay editor detaches preview and stops statistics polling while hidden
+  or minimized. Position sliders update live; persistence is debounced and
+  flushed on explicit Apply/close. Percentage readouts remain visible and layer
+  ordering buttons disable at the list edges. Normal active status is static;
+  native indicator placement skips unchanged bounds unless topmost repair is
+  needed. Performance still requires measurement on a Windows capture host.
 - Replay saves play a bundled confirmation sound only after the file is saved,
   independently of notification visibility. Sound failures do not fail the save.
 - Frame rates of 120, 144, and 240 FPS appear separately as experimental with

@@ -25,13 +25,10 @@
 
             <Grid x:Name="NotificationIcon" Width="34" Height="34"
                   Margin="0,-2,0,0" VerticalAlignment="Center">
-                <Ellipse x:Name="IconRing" Stroke="{DynamicResource AccentBrush}" StrokeThickness="2"/>
-                <TextBlock x:Name="IconText" Text="✓"
-                           Foreground="{DynamicResource AccentBrush}"
-                           FontFamily="Segoe UI Variable Display"
-                           FontSize="16" FontWeight="Bold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
+                <Ellipse x:Name="IconRing" Stroke="{DynamicResource AccentReadableBrush}" StrokeThickness="2"/>
+                <Path x:Name="IconPath" Data="{StaticResource IconCheck}"
+                      Style="{StaticResource StrokeIcon}" Width="16" Height="16"
+                      Stroke="{DynamicResource AccentReadableBrush}"/>
             </Grid>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="5,0,0,0">
@@ -53,7 +50,7 @@
                     Margin="0,0,0,-13"
                     CornerRadius="1" Background="#22283136">
                 <Border x:Name="LifeBar"
-                        Background="{DynamicResource AccentBrush}"
+                        Background="{DynamicResource AccentReadableBrush}"
                         RenderTransformOrigin="0,0.5"
                         HorizontalAlignment="Stretch">
                     <Border.RenderTransform>

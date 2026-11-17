@@ -44,6 +44,7 @@ public partial class SettingsWindow : Window
     private Button? _capturingHotkeyButton;
     private bool _updatingUi;
     private bool _runtimeActive;
+    private bool _recordingPaused;
     private int _availableReplaySeconds;
     private bool? _animatedRecordingState;
     private int _deviceRefreshVersion;
@@ -74,6 +75,7 @@ public partial class SettingsWindow : Window
 
     public bool Applied { get; private set; }
     internal Action? CaptureOverlayEditorRequested { get; set; }
+    internal Func<bool, Task<bool>>? SetRecordingPaused { get; set; }
     internal Func<bool, Task<string>>? SetCaptureOverlaysEnabled { get; set; }
 
     internal void UpdateCaptureOverlayState()
@@ -420,18 +422,14 @@ public partial class SettingsWindow : Window
             GetSelectedRadioTag(DashboardCaptureModeOptions, "replay"),
             "recording",
             StringComparison.Ordinal);
-        ReplayOnlySettings.Visibility = recording
-            ? Visibility.Collapsed
-            : Visibility.Visible;
-        ReplayToggleHotkeySettings.Visibility = recording
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        ReplayOnlySettings.Visibility = Visibility.Visible;
+        ReplayToggleHotkeySettings.Visibility = Visibility.Visible;
+        ToggleHotkeyLabel.Text = Localization.Text(recording ? "L.Hotkey.ToggleRecording" : "L.Hotkey.Toggle");
+        ToggleHotkeyHint.Text = Localization.Text(recording ? "L.Hotkey.ToggleRecordingHint" : "L.Hotkey.ToggleHint");
         CaptureEnabledLabel.Text = Localization.Text(
             recording ? "L.Capture.RecordingEnabled" : "L.Replay.Instant");
-        PrimaryHotkeyLabel.Text = Localization.Text(
-            recording ? "L.Hotkey.ToggleRecording" : "L.Hotkey.SaveReplay");
-        PrimaryHotkeyHint.Text = Localization.Text(
-            recording ? "L.Hotkey.ToggleRecordingHint" : "L.Hotkey.SaveHint");
+        PrimaryHotkeyLabel.Text = Localization.Text("L.Hotkey.SaveReplay");
+        PrimaryHotkeyHint.Text = Localization.Text("L.Hotkey.SaveHint");
     }
 
     private void UpdateCaptureSourceState()
@@ -484,6 +482,7 @@ public partial class SettingsWindow : Window
 
             SettingsReplayToggle.IsChecked = _config.ReplayEnabled;
             StartReplayOnLaunchBox.IsChecked = _config.StartReplayOnLaunch;
+            DiscordRichPresenceBox.IsChecked = _config.DiscordRichPresenceEnabled;
             WarnGameOffBox.IsChecked = _config.WarnWhenGameStartsWithReplayOff;
             RecordingIndicatorBox.IsChecked = _config.ShowRecordingIndicator;
             SelectRadioByTag(
@@ -496,6 +495,8 @@ public partial class SettingsWindow : Window
             MicBoostSlider.Value = Math.Clamp(_config.MicrophoneBoostDb, 0, 20);
             OrganizeByGameBox.IsChecked = _config.OrganizeReplaysByGame;
             SelectRadioByTag(AccentColorOptions, _config.AccentColor);
+            CustomAccentBox.Text = _config.AccentColor.StartsWith('#') ? _config.AccentColor : "#B69AF7";
+            CustomAccentRadio.IsChecked = _config.AccentColor.StartsWith('#');
 
             _pendingSaveHotkey = _config.Hotkey;
             _pendingToggleHotkey = _config.ToggleReplayHotkey;
@@ -522,9 +523,11 @@ public partial class SettingsWindow : Window
         bool active,
         string? activeCodec = null,
         string? activeCaptureSource = null,
-        int? availableReplaySeconds = null)
+        int? availableReplaySeconds = null,
+        bool? recordingPaused = null)
     {
         _runtimeActive = active;
+        _recordingPaused = active && (recordingPaused ?? _recordingPaused);
         if (availableReplaySeconds is not null)
             _availableReplaySeconds = availableReplaySeconds.Value;
         else if (!active)
@@ -566,7 +569,9 @@ public partial class SettingsWindow : Window
             StringComparison.Ordinal);
         StatusTitleText.Text = Localization.Text(
             active
-                ? recordingMode ? "L.Status.Recording" : "L.Status.Enabled"
+                ? recordingMode
+                    ? _recordingPaused ? "L.Status.RecordingPaused" : "L.Status.Recording"
+                    : "L.Status.Enabled"
                 : recordingMode
                     ? "L.Status.RecordingDisabled"
                     : "L.Status.Disabled");
@@ -585,11 +590,14 @@ public partial class SettingsWindow : Window
                 recordingMode
                     ? "L.Status.RecordingIdle"
                     : "L.Status.Idle");
-        StatusRing.Stroke = FindBrush(active ? "AccentBrush" : "RingIdleBrush");
-        StatusDot.Fill = FindBrush(active ? "AccentBrush" : "RingIdleBrush");
-        SaveReplayButton.IsEnabled = recordingMode ||
-                                     (active && _availableReplaySeconds > 0);
-        AnimateRecordingState(active);
+        StatusRing.Stroke = FindBrush(active ? "AccentReadableBrush" : "RingIdleBrush");
+        StatusDot.Fill = FindBrush(active ? "AccentReadableBrush" : "RingIdleBrush");
+        SaveReplayButton.IsEnabled = active && !_recordingPaused && _availableReplaySeconds > 0;
+        PauseRecordingButton.Visibility = recordingMode ? Visibility.Visible : Visibility.Collapsed;
+        PauseRecordingButton.IsEnabled = active && SetRecordingPaused is not null && _actionInProgress == 0;
+        PauseRecordingButton.Content = Localization.Text(_recordingPaused ? "L.Capture.ResumeRecording" : "L.Capture.PauseRecording");
+        RecordingPauseHint.Visibility = _recordingPaused ? Visibility.Visible : Visibility.Collapsed;
+        AnimateRecordingState(active && !_recordingPaused);
 
         RefreshDashboardAudioLevels();
         PrimaryAudioChipText.Text = Localization.Text(
@@ -604,10 +612,7 @@ public partial class SettingsWindow : Window
         string codec = FormatCodec(activeCodec ?? _config.Codec);
         CodecSummaryText.Text = $"{codec} · {FormatResolution(_config.RecordingResolution)}";
         FpsSummaryText.Text = $"{_config.FrameRate} FPS";
-        SaveButtonText.Text = recordingMode
-            ? Localization.Text(
-                active ? "L.Capture.StopRecording" : "L.Capture.StartRecording")
-            : Localization.Format(
+        SaveButtonText.Text = Localization.Format(
                 "L.Save.Duration",
                 FormatDuration(
                     active && _availableReplaySeconds > 0
@@ -731,7 +736,7 @@ public partial class SettingsWindow : Window
             content.Children.Add(new System.Windows.Shapes.Path
             {
                 Data = (Geometry)FindResource("IconMic"),
-                Stroke = FindBrush("AccentBrush"),
+                Stroke = FindBrush("AccentReadableBrush"),
                 StrokeThickness = 1.8,
                 Width = 17,
                 Height = 17,
@@ -745,7 +750,7 @@ public partial class SettingsWindow : Window
             content.Children.Add(new TextBlock
             {
                 Text = BuildDashboardAudioInitials(displayName),
-                Foreground = FindBrush("AccentBrush"),
+                Foreground = FindBrush("AccentReadableBrush"),
                 FontSize = 10.5,
                 FontWeight = FontWeights.ExtraBold,
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -1058,7 +1063,8 @@ public partial class SettingsWindow : Window
             return;
 
         Config pending = CreatePendingConfig();
-        bool dirty = !TryGetBitrateMbps(out _) || !SettingsValuesEqual(pending, _config) ||
+        bool dirty = !TryGetBitrateMbps(out _) || !TryGetAccentColor(out _) ||
+                     !SettingsValuesEqual(pending, _config) ||
                      (AutostartBox.IsChecked == true) != _savedAutostartEnabled;
         SetSettingsDirty(dirty);
     }
@@ -1071,6 +1077,7 @@ public partial class SettingsWindow : Window
             "replay");
         candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
         candidate.StartReplayOnLaunch = StartReplayOnLaunchBox.IsChecked == true;
+        candidate.DiscordRichPresenceEnabled = DiscordRichPresenceBox.IsChecked == true;
         candidate.WarnWhenGameStartsWithReplayOff = WarnGameOffBox.IsChecked == true;
         candidate.ShowRecordingIndicator = RecordingIndicatorBox.IsChecked == true;
         candidate.RecordingIndicatorPosition = GetSelectedRadioTag(
@@ -1108,9 +1115,7 @@ public partial class SettingsWindow : Window
             candidate.CaptureSystemAudio = false;
         candidate.OutputDirectory = _outputDirectory;
         candidate.OrganizeReplaysByGame = OrganizeByGameBox.IsChecked == true;
-        candidate.AccentColor = GetSelectedRadioTag(
-            AccentColorOptions,
-            _config.AccentColor);
+        candidate.AccentColor = TryGetAccentColor(out string accent) ? accent : _config.AccentColor;
         candidate.Hotkey = _pendingSaveHotkey;
         candidate.ToggleReplayHotkey = _pendingToggleHotkey;
         candidate.OverlayHotkey = _pendingOverlayHotkey;
@@ -1121,6 +1126,7 @@ public partial class SettingsWindow : Window
         string.Equals(left.CaptureMode, right.CaptureMode, StringComparison.Ordinal) &&
         left.ReplayEnabled == right.ReplayEnabled &&
         left.StartReplayOnLaunch == right.StartReplayOnLaunch &&
+        left.DiscordRichPresenceEnabled == right.DiscordRichPresenceEnabled &&
         left.WarnWhenGameStartsWithReplayOff == right.WarnWhenGameStartsWithReplayOff &&
         left.ShowRecordingIndicator == right.ShowRecordingIndicator &&
         string.Equals(
@@ -1701,6 +1707,7 @@ public partial class SettingsWindow : Window
 
     private void ShowSettings()
     {
+        HideNotice();
         DashboardVolumePopup.IsOpen = false;
         LoadSettingsControls();
         _closeAfterUnsavedResolution = false;
@@ -1860,19 +1867,29 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private async void SaveReplay_Click(object sender, RoutedEventArgs e)
+    private void SaveReplay_Click(object sender, RoutedEventArgs e)
     {
         AnimatePress(SaveReplayButton);
-        if (string.Equals(
-                _config.CaptureMode,
-                "recording",
-                StringComparison.Ordinal))
-        {
-            bool active = await _setReplayEnabled(!_runtimeActive);
-            UpdateRuntimeState(active);
-            return;
-        }
         _saveReplay();
+    }
+
+    private async void PauseRecording_Click(object sender, RoutedEventArgs e)
+    {
+        if (SetRecordingPaused is null || !TryBeginAction())
+            return;
+        try
+        {
+            _recordingPaused = await SetRecordingPaused(!_recordingPaused);
+            UpdateRuntimeState(_runtimeActive, recordingPaused: _recordingPaused);
+        }
+        catch (Exception exception)
+        {
+            HandleUiActionError("Recording pause", exception);
+        }
+        finally
+        {
+            EndAction();
+        }
     }
 
     private async void DashboardCaptureMode_Click(object sender, RoutedEventArgs e)
@@ -2017,7 +2034,7 @@ public partial class SettingsWindow : Window
                 {
                     Width = 6,
                     Height = 6,
-                    Fill = selected ? FindBrush("AccentBrush") : Brushes.Transparent,
+                    Fill = selected ? FindBrush("AccentReadableBrush") : Brushes.Transparent,
                 },
                 Tag = new AudioDeviceSelection(isSystem, id),
                 Style = (Style)FindResource("TrayMenuItem"),
@@ -2370,6 +2387,15 @@ public partial class SettingsWindow : Window
             CustomBitrateBox.SelectAll();
             return;
         }
+        if (!TryGetAccentColor(out string accent))
+        {
+            ShowError(
+                Localization.Text("L.Appearance.Accent"),
+                Localization.Text("L.Appearance.CustomAccentError"));
+            CustomAccentBox.Focus();
+            CustomAccentBox.SelectAll();
+            return;
+        }
         if (!HotkeyManager.IsValid(_pendingSaveHotkey) ||
             !HotkeyManager.IsValid(_pendingToggleHotkey) ||
             !HotkeyManager.IsValid(_pendingOverlayHotkey) ||
@@ -2433,6 +2459,7 @@ public partial class SettingsWindow : Window
             "replay");
         candidate.ReplayEnabled = SettingsReplayToggle.IsChecked == true;
         candidate.StartReplayOnLaunch = StartReplayOnLaunchBox.IsChecked == true;
+        candidate.DiscordRichPresenceEnabled = DiscordRichPresenceBox.IsChecked == true;
         candidate.WarnWhenGameStartsWithReplayOff = WarnGameOffBox.IsChecked == true;
         candidate.ShowRecordingIndicator =
             RecordingIndicatorBox.IsChecked == true;
@@ -2479,9 +2506,7 @@ public partial class SettingsWindow : Window
             candidate.AdvancedMicrophoneTrack = _pendingAdvancedMicrophoneTrack;
             candidate.OutputDirectory = _outputDirectory;
             candidate.OrganizeReplaysByGame = OrganizeByGameBox.IsChecked == true;
-            candidate.AccentColor = GetSelectedRadioTag(
-                AccentColorOptions,
-                _config.AccentColor);
+            candidate.AccentColor = accent;
             candidate.Hotkey = _pendingSaveHotkey;
             candidate.ToggleReplayHotkey = _pendingToggleHotkey;
             candidate.OverlayHotkey = _pendingOverlayHotkey;
@@ -2528,6 +2553,7 @@ public partial class SettingsWindow : Window
             return false;
 
         ReplayToggle.IsEnabled = false;
+        PauseRecordingButton.IsEnabled = false;
         CaptureOverlayToggle.IsEnabled = false;
         CaptureOverlaysButton.IsEnabled = false;
         DashboardCaptureModeOptions.IsEnabled = false;
@@ -2548,6 +2574,7 @@ public partial class SettingsWindow : Window
     {
         Interlocked.Exchange(ref _actionInProgress, 0);
         ReplayToggle.IsEnabled = true;
+        PauseRecordingButton.IsEnabled = _runtimeActive && SetRecordingPaused is not null;
         CaptureOverlayToggle.IsEnabled = true;
         CaptureOverlaysButton.IsEnabled = true;
         DashboardCaptureModeOptions.IsEnabled = true;
@@ -3119,6 +3146,18 @@ public partial class SettingsWindow : Window
 
     private void CustomBitrateBox_TextChanged(object sender, TextChangedEventArgs e) =>
         QueueSettingsDirtyRefresh();
+
+    private void CustomAccentBox_TextChanged(object sender, TextChangedEventArgs e) =>
+        QueueSettingsDirtyRefresh();
+
+    private bool TryGetAccentColor(out string accent)
+    {
+        if (CustomAccentRadio.IsChecked != true)
+            return Config.TryNormalizeAccentColor(
+                GetSelectedRadioTag(AccentColorOptions, _config.AccentColor), out accent);
+
+        return Config.TryNormalizeAccentColor(CustomAccentBox.Text, out accent) && accent.StartsWith('#');
+    }
 
     private bool TryGetBitrateMbps(out int bitrate)
     {

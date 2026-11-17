@@ -22,6 +22,9 @@ $player = Read-Text "src\Shadowless\MpvHost.cs"
 $editor = Read-Text "src\Shadowless\ClipEditorWindow.xaml.cs"
 $editorXaml = Read-Text "src\Shadowless\ClipEditorWindow.xaml"
 
+Require $settings 'private void ShowSettings\(\)\s*\{\s*HideNotice\(\);' `
+    "Entering settings must dismiss the previous dashboard notice."
+
 Require $settings 'L\.Status\.RecordingDisabled' `
     "Recording mode needs its own inactive status title."
 Require $settings 'L\.Status\.RecordingIdle' `

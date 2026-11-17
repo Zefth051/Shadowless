@@ -41,7 +41,7 @@
                                 <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -68,14 +68,14 @@
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}">
                                 <Path x:Name="Check" Visibility="Collapsed"
-                                      Data="M4 9l3 3 7-7" Stroke="#07110E"
+                                      Data="M4 9l3 3 7-7" Stroke="{DynamicResource OnAccentBrush}"
                                       StrokeThickness="2" StrokeStartLineCap="Round"
                                       StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
                             </Border>
                             <ContentPresenter Grid.Column="1" Margin="8,0,0,0"
                                               VerticalAlignment="Center"/>
                             <Border x:Name="FocusBorder" Grid.ColumnSpan="2" Margin="-4"
-                                    BorderBrush="{DynamicResource AccentBrush}"
+                                    BorderBrush="{DynamicResource AccentReadableBrush}"
                                     BorderThickness="1" CornerRadius="7"
                                     Visibility="Collapsed" IsHitTestVisible="False"/>
                         </Grid>
@@ -88,7 +88,7 @@
                                 <Setter TargetName="Box" Property="Background"
                                         Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="Box" Property="BorderBrush"
-                                        Value="{DynamicResource AccentBrush}"/>
+                                        Value="{DynamicResource AccentReadableBrush}"/>
                                 <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
@@ -161,10 +161,10 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Path x:Name="HeaderTrimIcon" Data="{StaticResource IconScissors}"
-                          Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.8"
+                          Stroke="{DynamicResource AccentReadableBrush}" StrokeThickness="1.8"
                           Width="15" Height="15" Stretch="Uniform"/>
                     <Path x:Name="HeaderPreviewIcon" Data="{StaticResource IconPlay}"
-                          Fill="{DynamicResource AccentBrush}" Width="15" Height="15"
+                          Fill="{DynamicResource AccentReadableBrush}" Width="15" Height="15"
                           Stretch="Uniform" Visibility="Collapsed"/>
                     <TextBlock x:Name="HeaderTitleText"
                                Text="{DynamicResource L.Library.TrimTitle}"
@@ -178,7 +178,7 @@
                         Style="{StaticResource SubtleButton}"
                         Height="30" MinWidth="82" Padding="13,0"
                         VerticalAlignment="Center" FontWeight="SemiBold"
-                        Foreground="{DynamicResource AccentBrush}"
+                        Foreground="{DynamicResource AccentReadableBrush}"
                         Background="{DynamicResource AccentSubtleBrush}"
                         BorderBrush="{DynamicResource AccentDimBrush}"
                         BorderThickness="1"
@@ -356,7 +356,7 @@
                                         Visibility="Collapsed" Opacity="0">
                                     <TextBlock x:Name="FullscreenSpeedFeedbackText"
                                                Style="{StaticResource PlayerShortcutBadgeText}"
-                                               Foreground="{DynamicResource AccentBrush}"/>
+                                               Foreground="{DynamicResource AccentReadableBrush}"/>
                                 </Border>
                             </StackPanel>
                             <Button Grid.Column="2" Style="{StaticResource ClipActionButton}"
@@ -397,7 +397,7 @@
                             <Rectangle x:Name="LeftShade" Height="76" Fill="#C4070A0C"/>
                             <Rectangle x:Name="RightShade" Height="76" Fill="#C4070A0C"/>
                             <Border x:Name="SelectionBorder" Height="76"
-                                    BorderBrush="{DynamicResource AccentBrush}" BorderThickness="3"
+                                    BorderBrush="{DynamicResource AccentReadableBrush}" BorderThickness="3"
                                     CornerRadius="8" IsHitTestVisible="False"/>
                             <Thumb x:Name="StartThumb" Width="16" Height="76" Cursor="SizeWE"
                                    Panel.ZIndex="4" DragDelta="StartThumb_DragDelta"
@@ -464,7 +464,7 @@
                                 <TextBlock x:Name="AudioTrackCountText" Text="0"
                                            FontFamily="{StaticResource FontMono}"
                                            FontSize="10" FontWeight="Bold"
-                                           Foreground="{DynamicResource AccentBrush}"
+                                           Foreground="{DynamicResource AccentReadableBrush}"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
                             </Border>
@@ -496,7 +496,7 @@
                                                       Margin="4,0,0,0" VerticalAlignment="Center">
                                             <Grid Width="164">
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource AccentBrush}"
+                                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource AccentReadableBrush}"
                                                              VerticalAlignment="Center" Margin="0,0,8,0"/>
                                                     <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"
                                                                MaxWidth="116" VerticalAlignment="Center"/>
@@ -727,7 +727,7 @@
                                     Visibility="Collapsed" Opacity="0">
                                 <TextBlock x:Name="PreviewSpeedFeedbackText"
                                            Style="{StaticResource PlayerShortcutBadgeText}"
-                                           Foreground="{DynamicResource AccentBrush}"/>
+                                           Foreground="{DynamicResource AccentReadableBrush}"/>
                             </Border>
                         </StackPanel>
                         <StackPanel Grid.Column="2" Orientation="Horizontal">
@@ -765,7 +765,7 @@
                                     <TextBlock x:Name="PreviewAudioTrackCountText" Text="0"
                                                FontFamily="{StaticResource FontMono}"
                                                FontSize="10" FontWeight="Bold"
-                                               Foreground="{DynamicResource AccentBrush}"
+                                               Foreground="{DynamicResource AccentReadableBrush}"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"/>
                                 </Border>
@@ -798,7 +798,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <Ellipse Width="7" Height="7"
-                                                         Fill="{DynamicResource AccentBrush}"
+                                                         Fill="{DynamicResource AccentReadableBrush}"
                                                          VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding Label}"
                                                            Margin="8,0" TextTrimming="CharacterEllipsis"

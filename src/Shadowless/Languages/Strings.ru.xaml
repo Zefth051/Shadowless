@@ -384,6 +384,13 @@
   <sys:String x:Key="L.Capture.RecordingEnabled">Запись включена</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">Начать запись</sys:String>
   <sys:String x:Key="L.Capture.StopRecording">Остановить запись</sys:String>
+  <sys:String x:Key="L.Capture.PauseRecording">Приостановить запись</sys:String>
+  <sys:String x:Key="L.Capture.ResumeRecording">Продолжить запись</sys:String>
+  <sys:String x:Key="L.Capture.PausedHint">Запись и буфер повтора приостановлены. Возобновите запись для сохранения клипов.</sys:String>
+  <sys:String x:Key="L.Capture.PauseFailed">Не удалось приостановить или возобновить запись</sys:String>
+  <sys:String x:Key="L.Status.RecordingPaused">Запись приостановлена</sys:String>
+  <sys:String x:Key="L.Engine.RecordingUnexpectedStop">Непрерывная запись неожиданно остановилась.</sys:String>
+  <sys:String x:Key="L.Engine.RecordingError">Ошибка непрерывной записи: {0}</sys:String>
   <sys:String x:Key="L.Status.Recording">Идёт запись</sys:String>
   <sys:String x:Key="L.Status.RecordingDetail">{0} · {1}</sys:String>
   <sys:String x:Key="L.Status.RecordingDisabled">Запись выключена</sys:String>
@@ -394,7 +401,6 @@
   <sys:String x:Key="L.Notify.RecordingSavedDetail">Непрерывная запись сохранена.</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameTitle">Запись выключена</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameDetail">Обнаружена игра {0}. Включите запись, чтобы сохранить её.</sys:String>
-  <sys:String x:Key="L.Engine.ReplayUnavailableWhileRecording">Сохранение повтора недоступно в режиме записи.</sys:String>
   <sys:String x:Key="L.Tray.Recording">Shadowless · Идёт запись</sys:String>
   <sys:String x:Key="L.Tray.ToggleRecording">Начать / остановить запись</sys:String>
   <sys:String x:Key="L.Hotkey.ToggleRecording">Начать / остановить запись</sys:String>
@@ -402,6 +408,9 @@
   <sys:String x:Key="L.Section.Appearance">ВНЕШНИЙ ВИД</sys:String>
   <sys:String x:Key="L.Appearance.Accent">Акцентный цвет</sys:String>
   <sys:String x:Key="L.Appearance.AccentHint">Применяется во всём Shadowless</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccent">Свой HEX-цвет</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentHint">Формат #RRGGBB, например #12ABEF. Применяется по кнопке «Готово».</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentError">Введите цвет в формате #RRGGBB: шесть шестнадцатеричных цифр (0–9, A–F).</sys:String>
   <sys:String x:Key="L.Appearance.Mint">Мятный</sys:String>
   <sys:String x:Key="L.Appearance.Blue">Синий</sys:String>
   <sys:String x:Key="L.Appearance.Violet">Фиолетовый</sys:String>
@@ -474,4 +483,6 @@
   <sys:String x:Key="L.Error.SettingsSaveFailed">Не удалось сохранить: {0}. Причина: {1}</sys:String>
   <sys:String x:Key="L.Settings.File">Файл настроек</sys:String>
   <sys:String x:Key="L.Settings.Capture">Настройки захвата</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresence">Статус игры в Discord</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresenceHint">Показывать распознанную игру в Discord только во время захвата. Время захвата не передаётся.</sys:String>
 </ResourceDictionary>

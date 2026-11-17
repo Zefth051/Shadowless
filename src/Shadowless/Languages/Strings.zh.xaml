@@ -357,6 +357,13 @@
   <sys:String x:Key="L.Capture.RecordingEnabled">正在录制</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">开始录制</sys:String>
   <sys:String x:Key="L.Capture.StopRecording">停止录制</sys:String>
+  <sys:String x:Key="L.Capture.PauseRecording">暂停录制</sys:String>
+  <sys:String x:Key="L.Capture.ResumeRecording">继续录制</sys:String>
+  <sys:String x:Key="L.Capture.PausedHint">录制和回放捕获已暂停。请继续录制以保存片段。</sys:String>
+  <sys:String x:Key="L.Capture.PauseFailed">无法暂停或继续录制</sys:String>
+  <sys:String x:Key="L.Status.RecordingPaused">录制已暂停</sys:String>
+  <sys:String x:Key="L.Engine.RecordingUnexpectedStop">连续录制意外停止。</sys:String>
+  <sys:String x:Key="L.Engine.RecordingError">连续录制失败：{0}</sys:String>
   <sys:String x:Key="L.Status.Recording">正在录制</sys:String>
   <sys:String x:Key="L.Status.RecordingDetail">{0} · {1}</sys:String>
   <sys:String x:Key="L.Status.RecordingDisabled">录制已关闭</sys:String>
@@ -367,7 +374,6 @@
   <sys:String x:Key="L.Notify.RecordingSavedDetail">连续录制已保存。</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameTitle">录制已关闭</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameDetail">检测到 {0}。请开始录制以保存游戏画面。</sys:String>
-  <sys:String x:Key="L.Engine.ReplayUnavailableWhileRecording">录制模式下无法保存回放。</sys:String>
   <sys:String x:Key="L.Tray.Recording">Shadowless · 正在录制</sys:String>
   <sys:String x:Key="L.Tray.ToggleRecording">开始 / 停止录制</sys:String>
   <sys:String x:Key="L.Hotkey.ToggleRecording">开始 / 停止录制</sys:String>
@@ -375,6 +381,9 @@
   <sys:String x:Key="L.Section.Appearance">外观</sys:String>
   <sys:String x:Key="L.Appearance.Accent">强调色</sys:String>
   <sys:String x:Key="L.Appearance.AccentHint">应用于整个 Shadowless</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccent">自定义 HEX 颜色</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentHint">使用 #RRGGBB 格式，例如 #12ABEF。选择完成后应用。</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentError">请输入 #RRGGBB 格式的颜色，使用六位十六进制数字（0–9、A–F）。</sys:String>
   <sys:String x:Key="L.Appearance.Mint">薄荷绿</sys:String>
   <sys:String x:Key="L.Appearance.Blue">蓝色</sys:String>
   <sys:String x:Key="L.Appearance.Violet">紫色</sys:String>
@@ -473,4 +482,6 @@
   <sys:String x:Key="L.Error.SettingsSaveFailed">无法保存：{0}。原因：{1}</sys:String>
   <sys:String x:Key="L.Settings.File">设置文件</sys:String>
   <sys:String x:Key="L.Settings.Capture">捕获设置</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresence">Discord 丰富状态</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresenceHint">仅在捕获期间在 Discord 上显示已识别的游戏。不分享已用时间。</sys:String>
 </ResourceDictionary>

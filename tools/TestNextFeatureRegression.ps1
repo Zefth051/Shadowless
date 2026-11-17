@@ -50,18 +50,24 @@ Require $engine `
     'windowsGraphicsCaptureReady\s*&&[\s\S]{0,180}MonitorCaptureMethodWgc' `
     "Desktop capture must gate WGC on successful preflight."
 Require $engine `
-    'desktopCaptureMethod == "dxgi" \|\| !windowsGraphicsCaptureReady\)[\s\S]{0,60}return MonitorCaptureMethodDxgi' `
-    "Desktop capture must force DXGI when borderless WGC access is unavailable."
+    'if \(desktopCaptureMethod == "dxgi"\)[\s\S]{0,60}return MonitorCaptureMethodDxgi' `
+    "Compatibility mode must keep explicit DXGI capture."
+Reject $engine 'desktopCaptureMethod == "dxgi" \|\| !windowsGraphicsCaptureReady' `
+    "Borderless permission must not force Auto capture back to DXGI on hybrid laptops."
+Require $engine '_preferredMonitorCaptureMethod == MonitorCaptureMethodDxgi' `
+    "Auto fallback must reach the existing monitor source alongside WGC."
+Require $engine '"method",\s*_preferredMonitorCaptureMethod' `
+    "The monitor source update must apply the selected backend, including Auto."
 Require $app `
     'GraphicsCaptureAccess\.RequestAccessAsync\([\s\S]{0,100}GraphicsCaptureAccessKind\.Borderless' `
     "Windows 11 must request borderless WGC access on the UI thread before OBS starts."
 Require $engine `
-    'long captureMethod = MonitorCaptureMethodDxgi;' `
-    "Desktop capture must start on DXGI so Auto cannot open a bordered WGC session."
+    'long captureMethod = MonitorCaptureMethodDxgi;[\s\S]{0,160}if \(requestedMethod != _preferredMonitorCaptureMethod\)[\s\S]{0,100}captureMethod = _preferredMonitorCaptureMethod;' `
+    "Desktop capture must retain DXGI startup except for a confirmed cross-adapter fallback."
 Require $app 'status == AppCapabilityAccessStatus\.Allowed' `
     "Borderless WGC access must only be accepted when explicitly allowed."
 Require $app 'Environment\.OSVersion\.Version\.Build < 22000\)\s*return false;' `
-    "Systems without borderless preflight must use DXGI."
+    "Windows 10 must skip the unsupported borderless permission request."
 Require $engine `
     'obs_source_update\(_desktopVideoSource,\s*settings\)' `
     "Desktop capture must switch the existing source to WGC without restarting output."
@@ -108,7 +114,16 @@ Reject $settings 'CaptureModeBox' `
 Require $settingsXaml 'x:Name="ReplayOnlySettings"' `
     "Replay-only buffer controls cannot be hidden in Recording mode."
 Require $settingsXaml 'x:Name="ReplayToggleHotkeySettings"' `
-    "Recording mode still exposes a duplicate replay-toggle hotkey."
+    "Capture start/stop hotkey settings must remain available alongside clip saving."
+Require $settings 'ReplayOnlySettings\.Visibility\s*=\s*Visibility\.Visible' `
+    "Recording mode needs replay-buffer duration and size settings."
+Require $settingsXaml 'x:Name="PauseRecordingButton"' `
+    "Continuous recording needs a pause/resume button."
+Require $engine 'CreateReplayBuffer\(\);[\s\S]{0,100}CreateRecordingOutput\(\);' `
+    "Continuous recording must retain the shared replay output."
+Reject $engine 'ReplayUnavailableWhileRecording' `
+    "Clip saving must remain available during continuous recording."
+
 Require $settingsXaml `
     'x:Name="SaveReplayButton"[\s\S]{0,500}<ColumnDefinition Width="\*"/>\s*<ColumnDefinition Width="Auto"/>\s*<ColumnDefinition Width="\*"/>' `
     "Save button content must stay centered when hotkey text width changes."
@@ -204,9 +219,9 @@ Require $config 'PlayerVolume\s*=\s*Math\.Clamp\(PlayerVolume,\s*0,\s*100\)' `
     "Persisted replay player volume must be normalized."
 Require $playerXaml 'x:Name="PreviewVolumeSlider"' `
     "Replay player transport is missing its volume slider."
-Require $indicator 'TryFindResource\("AccentBrush"\)' `
+Require $indicator 'TryFindResource\("AccentReadableBrush"\)' `
     "Recording indicator active state must use selected accent color."
-Require $indicatorXaml 'StateRing[\s\S]*?DynamicResource AccentBrush' `
+Require $indicatorXaml 'StateRing[\s\S]*?DynamicResource AccentReadableBrush' `
     "Recording indicator XAML must track accent resource changes."
 
 Get-ChildItem (Join-Path $root "src\Shadowless\Languages") `

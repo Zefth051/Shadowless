@@ -4,6 +4,23 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-16
+
+### Added
+
+- **Clip saves while recording:** Save replay clips during continuous recording using shared encoders.
+- **Pause/Resume** for standalone recording, keeping the same file; pause also pauses shared replay capture.
+- **Discord Rich Presence** (basic): capture state and the detected game name.
+- **Custom accents:** Validated #RRGGBB accents alongside the presets, with readable text, icons and focus states.
+
+### Improved
+
+- Refreshed dashboard, capture overlay editor, notifications and settings styling.
+
+### Known limitations
+
+- This update was prepared without a Windows host; build, recording lifecycle, Discord presence and hybrid-GPU capture still need validation on Windows 11.
+
 ## [0.3.1] - 2026-11-12
 
 ### Improved

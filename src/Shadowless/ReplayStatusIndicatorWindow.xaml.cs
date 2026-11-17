@@ -11,6 +11,7 @@ namespace Shadowless;
 internal enum ReplayIndicatorState
 {
     Active,
+    Paused,
     Recovering,
     Error,
     Saved,
@@ -55,6 +56,7 @@ public partial class ReplayStatusIndicatorWindow : Window
     private bool _lastForegroundIsScreenCapture;
     private bool _gameDetected;
     private bool _firstFrameRendered;
+    private (int Left, int Top, int Size)? _lastBounds;
 #if DEBUG
     internal bool AllowCaptureForQa { get; set; }
 #endif
@@ -169,6 +171,7 @@ public partial class ReplayStatusIndicatorWindow : Window
         if (!IsVisible)
         {
             _lastPositionForegroundWindow = 0;
+            _lastBounds = null;
             Opacity = 0;
             Show();
             BeginAnimation(
@@ -204,7 +207,7 @@ public partial class ReplayStatusIndicatorWindow : Window
                 new SolidColorBrush(Color.FromRgb(242, 194, 66)),
             ReplayIndicatorState.Error =>
                 new SolidColorBrush(Color.FromRgb(255, 95, 99)),
-            _ => Application.Current.TryFindResource("AccentBrush") as Brush ??
+            _ => Application.Current.TryFindResource("AccentReadableBrush") as Brush ??
                  new SolidColorBrush(Color.FromRgb(99, 224, 189)),
         };
         StateRing.Stroke = accent;
@@ -214,7 +217,11 @@ public partial class ReplayStatusIndicatorWindow : Window
         {
             case ReplayIndicatorState.Active:
                 StateRing.StrokeDashArray = new DoubleCollection([7, 3]);
-                StartRotation(2200);
+                break;
+            case ReplayIndicatorState.Paused:
+                CenterDot.Visibility = Visibility.Collapsed;
+                StateRing.StrokeDashArray = new DoubleCollection([3, 3]);
+                IndicatorRoot.Opacity = 0.65;
                 break;
             case ReplayIndicatorState.Recovering:
                 StateRing.StrokeDashArray = new DoubleCollection([2, 2.4]);
@@ -465,6 +472,8 @@ public partial class ReplayStatusIndicatorWindow : Window
         bool raiseAboveForeground =
             !screenCaptureForeground &&
             (foregroundChanged || IsCoveredByHigherWindow(hwnd));
+        if (!raiseAboveForeground && _lastBounds == (left, top, size))
+            return;
         bool positioned = SetWindowPos(
             hwnd,
             raiseAboveForeground ? HwndTopmost : 0,
@@ -474,6 +483,8 @@ public partial class ReplayStatusIndicatorWindow : Window
             size,
             SwpNoActivate |
             (raiseAboveForeground ? 0 : SwpNoZOrder));
+        if (positioned)
+            _lastBounds = (left, top, size);
         if (!positioned && raiseAboveForeground && !_topmostFailureLogged)
         {
             _topmostFailureLogged = true;

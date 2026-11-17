@@ -357,6 +357,13 @@
   <sys:String x:Key="L.Capture.RecordingEnabled">録画中</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">録画を開始</sys:String>
   <sys:String x:Key="L.Capture.StopRecording">録画を停止</sys:String>
+  <sys:String x:Key="L.Capture.PauseRecording">録画を一時停止</sys:String>
+  <sys:String x:Key="L.Capture.ResumeRecording">録画を再開</sys:String>
+  <sys:String x:Key="L.Capture.PausedHint">録画とリプレイの取得は一時停止中です。クリップを保存するには再開してください。</sys:String>
+  <sys:String x:Key="L.Capture.PauseFailed">録画を一時停止または再開できませんでした</sys:String>
+  <sys:String x:Key="L.Status.RecordingPaused">録画は一時停止中</sys:String>
+  <sys:String x:Key="L.Engine.RecordingUnexpectedStop">連続録画が予期せず停止しました。</sys:String>
+  <sys:String x:Key="L.Engine.RecordingError">連続録画に失敗しました: {0}</sys:String>
   <sys:String x:Key="L.Status.Recording">録画中</sys:String>
   <sys:String x:Key="L.Status.RecordingDetail">{0} · {1}</sys:String>
   <sys:String x:Key="L.Status.RecordingDisabled">録画はオフです</sys:String>
@@ -367,7 +374,6 @@
   <sys:String x:Key="L.Notify.RecordingSavedDetail">連続録画を保存しました。</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameTitle">録画はオフです</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameDetail">{0} を検出しました。録画を開始して保存してください。</sys:String>
-  <sys:String x:Key="L.Engine.ReplayUnavailableWhileRecording">録画モードではリプレイを保存できません。</sys:String>
   <sys:String x:Key="L.Tray.Recording">Shadowless · 録画中</sys:String>
   <sys:String x:Key="L.Tray.ToggleRecording">録画を開始 / 停止</sys:String>
   <sys:String x:Key="L.Hotkey.ToggleRecording">録画を開始 / 停止</sys:String>
@@ -375,6 +381,9 @@
   <sys:String x:Key="L.Section.Appearance">外観</sys:String>
   <sys:String x:Key="L.Appearance.Accent">アクセントカラー</sys:String>
   <sys:String x:Key="L.Appearance.AccentHint">Shadowless 全体に適用されます</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccent">カスタム HEX カラー</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentHint">#RRGGBB 形式（例：#12ABEF）。完了を選ぶと適用されます。</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentError">#RRGGBB 形式で、6 桁の16進数（0–9、A–F）を入力してください。</sys:String>
   <sys:String x:Key="L.Appearance.Mint">ミント</sys:String>
   <sys:String x:Key="L.Appearance.Blue">ブルー</sys:String>
   <sys:String x:Key="L.Appearance.Violet">バイオレット</sys:String>
@@ -473,4 +482,6 @@
   <sys:String x:Key="L.Error.SettingsSaveFailed">保存できません：{0}。理由：{1}</sys:String>
   <sys:String x:Key="L.Settings.File">設定ファイル</sys:String>
   <sys:String x:Key="L.Settings.Capture">キャプチャ設定</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresence">Discord リッチプレゼンス</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresenceHint">キャプチャ中のみ、認識されたゲームを Discord に表示します。経過時間は共有しません。</sys:String>
 </ResourceDictionary>

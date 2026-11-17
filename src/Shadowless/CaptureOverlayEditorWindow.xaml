@@ -98,7 +98,7 @@
                                                         <Setter TargetName="Row" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
                                                     </Trigger>
                                                     <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                                        <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                        <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
                                                         <Setter TargetName="Row" Property="BorderThickness" Value="1"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
@@ -109,9 +109,13 @@
                             </ListBox.ItemContainerStyle>
                         </ListBox>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,16">
-                            <Button Content="↑" Width="36" Click="Raise_Click" ToolTip="{DynamicResource L.Overlays.Raise}" AutomationProperties.Name="{DynamicResource L.Overlays.Raise}"/>
-                            <Button Content="↓" Width="36" Margin="8,0" Click="Lower_Click" ToolTip="{DynamicResource L.Overlays.Lower}" AutomationProperties.Name="{DynamicResource L.Overlays.Lower}"/>
-                            <Button Content="{DynamicResource L.Overlays.Remove}" Click="Remove_Click"/>
+                            <Button x:Name="RaiseButton" Width="36" Click="Raise_Click" ToolTip="{DynamicResource L.Overlays.Raise}" AutomationProperties.Name="{DynamicResource L.Overlays.Raise}">
+                                <Path Data="{StaticResource IconArrowUp}" Style="{StaticResource StrokeIcon}"/>
+                            </Button>
+                            <Button x:Name="LowerButton" Width="36" Margin="8,0" Click="Lower_Click" ToolTip="{DynamicResource L.Overlays.Lower}" AutomationProperties.Name="{DynamicResource L.Overlays.Lower}">
+                                <Path Data="{StaticResource IconArrowDown}" Style="{StaticResource StrokeIcon}"/>
+                            </Button>
+                            <Button x:Name="RemoveButton" Content="{DynamicResource L.Overlays.Remove}" Click="Remove_Click"/>
                         </StackPanel>
                         <StackPanel x:Name="TransformPanel" IsEnabled="False">
                             <DockPanel Margin="0,0,0,16">
@@ -119,15 +123,30 @@
                                               Click="LayerToggle_Click" AutomationProperties.Name="{DynamicResource L.Overlays.Visible}"/>
                                 <TextBlock Text="{DynamicResource L.Overlays.Visible}" VerticalAlignment="Center"/>
                             </DockPanel>
-                            <TextBlock Text="{DynamicResource L.Overlays.X}"/>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Value, ElementName=XSlider, StringFormat={}{0:0}%}"/>
+                                <TextBlock Text="{DynamicResource L.Overlays.X}"/>
+                            </DockPanel>
                             <Slider x:Name="XSlider" AutomationProperties.Name="{DynamicResource L.Overlays.X}" AutoToolTipPlacement="TopLeft"/>
-                            <TextBlock Text="{DynamicResource L.Overlays.Y}"/>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Value, ElementName=YSlider, StringFormat={}{0:0}%}"/>
+                                <TextBlock Text="{DynamicResource L.Overlays.Y}"/>
+                            </DockPanel>
                             <Slider x:Name="YSlider" AutomationProperties.Name="{DynamicResource L.Overlays.Y}" AutoToolTipPlacement="TopLeft"/>
-                            <TextBlock Text="{DynamicResource L.Overlays.Width}"/>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Value, ElementName=WidthSlider, StringFormat={}{0:0}%}"/>
+                                <TextBlock Text="{DynamicResource L.Overlays.Width}"/>
+                            </DockPanel>
                             <Slider x:Name="WidthSlider" Minimum="1" AutomationProperties.Name="{DynamicResource L.Overlays.Width}" AutoToolTipPlacement="TopLeft"/>
-                            <TextBlock Text="{DynamicResource L.Overlays.Height}"/>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Value, ElementName=HeightSlider, StringFormat={}{0:0}%}"/>
+                                <TextBlock Text="{DynamicResource L.Overlays.Height}"/>
+                            </DockPanel>
                             <Slider x:Name="HeightSlider" Minimum="1" AutomationProperties.Name="{DynamicResource L.Overlays.Height}" AutoToolTipPlacement="TopLeft"/>
-                            <TextBlock Text="{DynamicResource L.Overlays.Opacity}"/>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Value, ElementName=OpacitySlider, StringFormat={}{0:0}%}"/>
+                                <TextBlock Text="{DynamicResource L.Overlays.Opacity}"/>
+                            </DockPanel>
                             <Slider x:Name="OpacitySlider" AutomationProperties.Name="{DynamicResource L.Overlays.Opacity}" AutoToolTipPlacement="TopLeft"/>
                         </StackPanel>
                     </StackPanel>

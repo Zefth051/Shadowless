@@ -384,6 +384,13 @@
   <sys:String x:Key="L.Capture.RecordingEnabled">Recording is on</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">Start recording</sys:String>
   <sys:String x:Key="L.Capture.StopRecording">Stop recording</sys:String>
+  <sys:String x:Key="L.Capture.PauseRecording">Pause recording</sys:String>
+  <sys:String x:Key="L.Capture.ResumeRecording">Resume recording</sys:String>
+  <sys:String x:Key="L.Capture.PausedHint">Recording and replay capture are paused. Resume to save clips.</sys:String>
+  <sys:String x:Key="L.Capture.PauseFailed">Could not pause or resume recording</sys:String>
+  <sys:String x:Key="L.Status.RecordingPaused">Recording paused</sys:String>
+  <sys:String x:Key="L.Engine.RecordingUnexpectedStop">Continuous recording stopped unexpectedly.</sys:String>
+  <sys:String x:Key="L.Engine.RecordingError">Continuous recording failed: {0}</sys:String>
   <sys:String x:Key="L.Status.Recording">Recording</sys:String>
   <sys:String x:Key="L.Status.RecordingDetail">{0} · {1}</sys:String>
   <sys:String x:Key="L.Status.RecordingDisabled">Recording is off</sys:String>
@@ -394,7 +401,6 @@
   <sys:String x:Key="L.Notify.RecordingSavedDetail">Continuous recording was saved.</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameTitle">Recording is off</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameDetail">{0} detected. Start recording to capture it.</sys:String>
-  <sys:String x:Key="L.Engine.ReplayUnavailableWhileRecording">Replay saving is unavailable in Recording mode.</sys:String>
   <sys:String x:Key="L.Tray.Recording">Shadowless · Recording</sys:String>
   <sys:String x:Key="L.Tray.ToggleRecording">Start / stop recording</sys:String>
   <sys:String x:Key="L.Hotkey.ToggleRecording">Start / stop recording</sys:String>
@@ -402,6 +408,9 @@
   <sys:String x:Key="L.Section.Appearance">APPEARANCE</sys:String>
   <sys:String x:Key="L.Appearance.Accent">Accent color</sys:String>
   <sys:String x:Key="L.Appearance.AccentHint">Applied across Shadowless</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccent">Custom HEX color</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentHint">Use #RRGGBB, for example #12ABEF. Applied when you choose Done.</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentError">Enter a color as #RRGGBB using six hexadecimal digits (0–9, A–F).</sys:String>
   <sys:String x:Key="L.Appearance.Mint">Mint</sys:String>
   <sys:String x:Key="L.Appearance.Blue">Blue</sys:String>
   <sys:String x:Key="L.Appearance.Violet">Violet</sys:String>
@@ -474,4 +483,6 @@
   <sys:String x:Key="L.Error.SettingsSaveFailed">Could not save: {0}. Reason: {1}</sys:String>
   <sys:String x:Key="L.Settings.File">Settings file</sys:String>
   <sys:String x:Key="L.Settings.Capture">Capture settings</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresence">Discord Rich Presence</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresenceHint">Show the recognized game on Discord only while capturing. No elapsed timer is shared.</sys:String>
 </ResourceDictionary>

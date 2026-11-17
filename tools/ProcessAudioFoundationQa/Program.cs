@@ -23,6 +23,24 @@ internal static class Program
                 Console.WriteLine("PASS: update settings fixture survives production Config.Normalize.");
                 return 0;
             }
+            if (args.Contains("--recording-controls"))
+            {
+                Run("recording clip and pause controls", RecordingControlsQa.Run);
+                return 0;
+            }
+            if (args.Contains("--recording-replay"))
+            {
+                Run("continuous recording clips and pause lifecycle", RecordingReplayQa.Run);
+                return 0;
+            }
+            if (args.Contains("--custom-accent"))
+            {
+                System.Windows.Application.ResourceAssembly = typeof(Config).Assembly;
+                Run("accent validation and persistence", AccentQa.ConfigValues);
+                Run("custom accent button contrast", AccentQa.PaletteContrast);
+                Run("custom accent staged Cancel and Done", AccentQa.StagedSettings);
+                return 0;
+            }
             if (args.Contains("--bitrate"))
             {
                 Run("custom bitrate range and persistence", BitrateQa.Run);
@@ -93,6 +111,7 @@ internal static class Program
                 return 0;
             }
             Run("custom bitrate range and persistence", BitrateQa.Run);
+            Run("accent validation and persistence", AccentQa.ConfigValues);
             Run("settings failure identifies capture options", SettingsFailureQa.Run);
             Run("normalized executable matching", NormalizedExecutableMatching);
             Run("independent same-name roots", IndependentSameNameRoots);
@@ -115,6 +134,7 @@ internal static class Program
             Run("detected game audio routing", DetectedGameAudioRouting);
             Run("separate game identity restriction", SeparateGameIdentityRestriction);
             Run("replay recording mode classification", ReplayRecordingModeClassification);
+            Run("recording replay-buffer setting classification", RecordingReplayQa.ConfigChanges);
             Run("polling reacquisition cadence", PollingReacquisitionCadence);
             Run("process audio health notifications", ProcessAudioHealthNotifications);
             Run("advanced capability model", AdvancedCapabilityModel);
@@ -314,6 +334,10 @@ internal static class Program
     private static void NotificationUsesSelectedAccent()
     {
         var application = new System.Windows.Application();
+        application.Resources.MergedDictionaries.Add(new System.Windows.ResourceDictionary
+        {
+            Source = new Uri("pack://application:,,,/Shadowless;component/Themes/Theme.xaml"),
+        });
         ThemeManager.ApplyAccent("violet");
         var overlay = new OverlayNotificationWindow();
         try
@@ -321,13 +345,13 @@ internal static class Program
             foreach (OverlayTone tone in new[] { OverlayTone.Success, OverlayTone.Neutral })
             {
                 overlay.ShowNotification("✓", "Accent QA", "Violet", tone);
-                var expected = ((System.Windows.Media.SolidColorBrush)application.Resources["AccentBrush"]).Color;
-                var icon = (System.Windows.Controls.TextBlock)overlay.FindName("IconText");
-                var actual = ((System.Windows.Media.SolidColorBrush)icon.Foreground).Color;
+                var expected = ((System.Windows.Media.SolidColorBrush)application.Resources["AccentReadableBrush"]).Color;
+                var icon = (System.Windows.Shapes.Path)overlay.FindName("IconPath");
+                var actual = ((System.Windows.Media.SolidColorBrush)icon.Stroke).Color;
                 Equal(expected, actual);
                 ThemeManager.ApplyAccent("blue");
-                expected = ((System.Windows.Media.SolidColorBrush)application.Resources["AccentBrush"]).Color;
-                actual = ((System.Windows.Media.SolidColorBrush)icon.Foreground).Color;
+                expected = ((System.Windows.Media.SolidColorBrush)application.Resources["AccentReadableBrush"]).Color;
+                actual = ((System.Windows.Media.SolidColorBrush)icon.Stroke).Color;
                 Equal(expected, actual);
             }
         }

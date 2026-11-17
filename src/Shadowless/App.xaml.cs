@@ -34,6 +34,7 @@ public partial class App : Application
     private bool? _trayActiveState;
     private MenuItem? _saveMenuItem;
     private MenuItem? _toggleMenuItem;
+    private MenuItem? _pauseRecordingMenuItem;
     private MenuItem? _openFolderMenuItem;
     private MenuItem? _settingsMenuItem;
     private MenuItem? _exitMenuItem;
@@ -59,6 +60,8 @@ public partial class App : Application
     private System.Media.SoundPlayer? _replaySavedSound;
     private ReplayStatusIndicatorWindow? _recordingIndicator;
     private readonly UpdateService _updateService = new();
+    private DiscordPresence? _discordPresence;
+    private bool _discordPresenceAllowed;
     private DispatcherTimer? _updateShutdownTimer;
     private int _saving;
     private EncoderCapabilities? _capabilities;
@@ -510,6 +513,8 @@ public partial class App : Application
 
             if (!_startedAfterCaptureRecovery)
                 _config.ApplyLaunchPreferences();
+            if (!e.Args.Any(argument => argument.StartsWith("--qa-", StringComparison.OrdinalIgnoreCase)))
+                _discordPresenceAllowed = true;
             CreateTrayIcon();
             BindHotkeyAtStartup();
             StartHealthMonitor();
@@ -1244,9 +1249,9 @@ public partial class App : Application
                 legacyWindowsCaptureMethod == 0 &&
                 windows10CaptureMethod == 2 &&
                 windows11CaptureMethod == 2 &&
-                windows11FallbackCaptureMethod == 1 &&
+                windows11FallbackCaptureMethod == 0 &&
                 ObsReplayEngine.RecommendedMonitorCaptureMethod(
-                    new Version(10, 0, 19045), false) == 1 &&
+                    new Version(10, 0, 19045), false) == 0 &&
                 invalidConfig.PipelineEquals(hotkeyOnlyChange) &&
                 invalidConfig.PipelineEquals(outputFolderChange) &&
                 invalidConfig.PipelineEquals(replayOrganizationChange) &&
@@ -1903,6 +1908,7 @@ public partial class App : Application
         _obs = null;
         _replayRunning = false;
         _captureDescription = null;
+        UpdateDiscordPresence();
         try
         {
             engine?.Dispose();
@@ -1987,6 +1993,7 @@ public partial class App : Application
             _obs = null;
             _replayRunning = false;
             _captureDescription = null;
+            UpdateDiscordPresence();
             if (engine is not null)
             {
                 try
@@ -2062,20 +2069,20 @@ public partial class App : Application
                 status == AppCapabilityAccessStatus.Allowed;
             Log.Write(
                 $"WGC borderless preflight: status={status}; " +
-                $"ready={_windowsGraphicsCaptureReady}.");
+                $"borderlessAllowed={_windowsGraphicsCaptureReady}.");
         }
         catch (Exception exception)
         {
             _windowsGraphicsCaptureReady = false;
             Log.Write(
-                "WGC borderless preflight failed; using DXGI: " +
+                "WGC borderless preflight failed; Auto capture may show a border: " +
                 exception.Message);
         }
 
         return _windowsGraphicsCaptureReady;
     }
 
-    private async Task StopPipelineCoreAsync()
+    private async Task<bool> StopPipelineCoreAsync()
     {
         await StopProcessAudioMonitorAsync();
         ObsReplayEngine? engine = _obs;
@@ -2084,13 +2091,16 @@ public partial class App : Application
         _obs = null;
         _replayRunning = false;
         _captureDescription = null;
+        UpdateDiscordPresence();
         if (engine is null)
-            return;
+            return true;
 
         var stopwatch = Stopwatch.StartNew();
         try
         {
             await RunOnObsThreadAsync(engine.Dispose);
+            if (!string.IsNullOrWhiteSpace(engine.RecordingStopError))
+                throw new IOException(Localization.Format("L.Engine.RecordingError", engine.RecordingStopError));
             Log.Write($"OBS pipeline stopped in {stopwatch.ElapsedMilliseconds} ms.");
             if (!string.IsNullOrWhiteSpace(recordingPath) &&
                 File.Exists(recordingPath))
@@ -2102,10 +2112,16 @@ public partial class App : Application
                 Log.Write($"Continuous recording saved: {routed}");
                 _settingsWindow?.NotifyReplaySaved(routed);
             }
+            else if (!string.IsNullOrWhiteSpace(recordingPath))
+                throw new IOException(Localization.Text("L.Engine.SavedPathMissing"));
+            return true;
         }
         catch (Exception exception)
         {
             Log.Write($"OBS pipeline shutdown failed: {exception}");
+            _settingsWindow?.ShowError(Localization.Text("L.Notify.SaveError"), exception.Message);
+            ShowOverlayNotification("!", Localization.Text("L.Notify.SaveError"), exception.Message, OverlayTone.Error);
+            return false;
         }
     }
 
@@ -2496,6 +2512,7 @@ public partial class App : Application
         try
         {
             RefreshReplayOffGameWarning();
+            UpdateDiscordPresence();
             if (!IsReplayRunning)
                 return;
             if (!await _pipelineGate.WaitAsync(0))
@@ -2780,15 +2797,7 @@ public partial class App : Application
             Style = (Style)FindResource("TrayMenu"),
         };
 
-        _saveMenuItem = CreateMenuItem(
-            Localization.Text(
-                string.Equals(
-                    _config!.CaptureMode,
-                    "recording",
-                    StringComparison.Ordinal)
-                    ? "L.Tray.ToggleRecording"
-                    : "L.Tray.Save"),
-            _config!.Hotkey);
+        _saveMenuItem = CreateMenuItem(Localization.Text("L.Tray.Save"), _config!.Hotkey);
         _saveMenuItem.Click += (_, _) => SaveReplay();
         menu.Items.Add(_saveMenuItem);
 
@@ -2797,6 +2806,9 @@ public partial class App : Application
             _config.ToggleReplayHotkey);
         _toggleMenuItem.Click += (_, _) => ToggleReplayFromHotkey();
         menu.Items.Add(_toggleMenuItem);
+        _pauseRecordingMenuItem = CreateMenuItem(Localization.Text("L.Capture.PauseRecording"));
+        _pauseRecordingMenuItem.Click += async (_, _) => await SetRecordingPausedAsync(_obs?.IsRecordingPaused != true);
+        menu.Items.Add(_pauseRecordingMenuItem);
 
         _openFolderMenuItem = CreateMenuItem(
             Localization.Text("L.Tray.OpenFolder"));
@@ -2898,6 +2910,7 @@ public partial class App : Application
             PrepareAndLaunchUpdateAsync);
         _settingsWindow.CaptureOverlayEditorRequested = OpenCaptureOverlayEditor;
         _settingsWindow.SetAudioLevels = SetAudioLevelsAsync;
+        _settingsWindow.SetRecordingPaused = SetRecordingPausedAsync;
         _settingsWindow.SetCaptureOverlaysEnabled = enabled =>
             ApplyCaptureOverlaysAsync(enabled, _config!.CaptureOverlays);
         _settingsWindow.Closed += (_, _) =>
@@ -2906,6 +2919,7 @@ public partial class App : Application
             if (_uiOnly)
                 Shutdown();
         };
+        UpdateUiState();
         _settingsWindow.Show();
         _settingsWindow.Activate();
         if (_config!.ReplayEnabled != true &&
@@ -3052,6 +3066,30 @@ public partial class App : Application
         }
     }
 
+    private async Task<bool> SetRecordingPausedAsync(bool paused)
+    {
+        await _pipelineGate.WaitAsync();
+        try
+        {
+            if (_obs is null || !IsReplayRunning || Volatile.Read(ref _exiting) != 0)
+                return false;
+            ObsReplayEngine engine = _obs;
+            await RunOnObsThreadAsync(() => engine.SetRecordingPaused(paused));
+        }
+        catch (Exception exception)
+        {
+            Log.Write($"Recording pause failed: {exception}");
+            _settingsWindow?.ShowError(Localization.Text("L.Capture.PauseFailed"), exception.Message);
+            ShowOverlayNotification("!", Localization.Text("L.Capture.PauseFailed"), exception.Message, OverlayTone.Error);
+        }
+        finally
+        {
+            _pipelineGate.Release();
+            UpdateUiState();
+        }
+        return _obs?.IsRecordingPaused == true;
+    }
+
     private Task<bool> SetReplayEnabledAsync(bool enabled) =>
         SetReplayEnabledGuardedAsync(enabled);
 
@@ -3115,12 +3153,14 @@ public partial class App : Application
             return started;
         }
 
-        await StopPipelineCoreAsync();
+        bool stoppedCleanly = await StopPipelineCoreAsync();
         _config!.ReplayEnabled = false;
         _config.Save();
         _nextRecoveryUtc = DateTime.MinValue;
         _recoveryFailures = 0;
         UpdateUiState();
+        if (!stoppedCleanly)
+            return false;
         bool stoppedRecording = string.Equals(
             _config.CaptureMode,
             "recording",
@@ -3450,6 +3490,7 @@ public partial class App : Application
             }
 
             _config.CopyFrom(candidate);
+            UpdateDiscordPresence();
             failedOption = Localization.Text("L.Section.Appearance");
             ApplyAccent(_config.AccentColor);
             _recordingIndicator?.RefreshAccent();
@@ -3569,6 +3610,25 @@ public partial class App : Application
         }
     }
 
+    private void UpdateDiscordPresence()
+    {
+        bool active = IsReplayRunning;
+        bool paused = _obs?.IsRecordingPaused == true;
+        string? game = active ? GameCatalog.ExactNameForExecutable(_obs?.ActiveGameExecutable) : null;
+        if (!DiscordPresence.ShouldPublish(
+            _discordPresenceAllowed && _config?.DiscordRichPresenceEnabled == true, active, paused, game))
+        {
+            _discordPresence?.Dispose();
+            _discordPresence = null;
+            return;
+        }
+        bool recording = _config?.CaptureMode == "recording";
+        if (_discordPresence is null)
+            _discordPresence = new DiscordPresence(game!, recording);
+        else
+            _discordPresence.Update(active, recording, paused, game);
+    }
+
     private void UpdateUiState()
     {
         bool active = IsReplayRunning;
@@ -3576,6 +3636,7 @@ public partial class App : Application
             _config?.CaptureMode,
             "recording",
             StringComparison.Ordinal);
+        UpdateDiscordPresence();
         string codec = _obs?.ActiveCodec ?? _config?.Codec ?? "h264";
         int availableReplaySeconds = active
             ? _obs?.AvailableReplaySeconds ?? _config!.BufferSeconds
@@ -3586,7 +3647,8 @@ public partial class App : Application
             active,
             codec,
             _captureDescription,
-            availableReplaySeconds);
+            availableReplaySeconds,
+            _obs?.IsRecordingPaused == true);
         if (_tray is not null)
         {
             if (_trayActiveState != active)
@@ -3599,7 +3661,7 @@ public partial class App : Application
             }
             _tray.ToolTipText = active
                 ? recordingMode
-                    ? Localization.Text("L.Tray.Recording")
+                    ? Localization.Text(_obs?.IsRecordingPaused == true ? "L.Status.RecordingPaused" : "L.Tray.Recording")
                     : Localization.Format(
                         "L.Tray.Active",
                         FormatDuration(_config!.BufferSeconds))
@@ -3607,15 +3669,22 @@ public partial class App : Application
         }
         if (_saveMenuItem is not null)
         {
-            _saveMenuItem.Header = Localization.Text(
-                recordingMode ? "L.Tray.ToggleRecording" : "L.Tray.Save");
+            _saveMenuItem.Header = Localization.Text("L.Tray.Save");
             _saveMenuItem.InputGestureText = _config?.Hotkey ?? "";
-            _saveMenuItem.IsEnabled = recordingMode ||
-                                      (active && availableReplaySeconds > 0);
+            _saveMenuItem.IsEnabled = active && _obs?.IsRecordingPaused != true && availableReplaySeconds > 0;
         }
         if (_toggleMenuItem is not null)
-            _toggleMenuItem.InputGestureText =
-                _config?.ToggleReplayHotkey ?? "";
+        {
+            _toggleMenuItem.Header = Localization.Text(recordingMode ? "L.Tray.ToggleRecording" : "L.Tray.Toggle");
+            _toggleMenuItem.InputGestureText = _config?.ToggleReplayHotkey ?? "";
+        }
+        if (_pauseRecordingMenuItem is not null)
+        {
+            _pauseRecordingMenuItem.Visibility = recordingMode ? Visibility.Visible : Visibility.Collapsed;
+            _pauseRecordingMenuItem.IsEnabled = active;
+            _pauseRecordingMenuItem.Header = Localization.Text(_obs?.IsRecordingPaused == true
+                ? "L.Capture.ResumeRecording" : "L.Capture.PauseRecording");
+        }
         UpdateReplayIndicator();
     }
 
@@ -3639,7 +3708,7 @@ public partial class App : Application
             Interlocked.CompareExchange(ref _recoveryInProgress, 0, 0) != 0
                 ? ReplayIndicatorState.Recovering
                 : IsReplayRunning
-                    ? ReplayIndicatorState.Active
+                    ? _obs?.IsRecordingPaused == true ? ReplayIndicatorState.Paused : ReplayIndicatorState.Active
                     : ReplayIndicatorState.Error;
         _recordingIndicator.SetState(state);
     }
@@ -3682,15 +3751,13 @@ public partial class App : Application
 
     private void SaveReplay()
     {
-        if (string.Equals(
-                _config?.CaptureMode,
-                "recording",
-                StringComparison.Ordinal))
+        ObsReplayEngine? engine = _obs;
+        if (engine?.IsRecordingPaused == true)
         {
-            _ = SetReplayEnabledGuardedAsync(IsReplayRunning ? false : true);
+            ShowOverlayNotification("Ⅱ", Localization.Text("L.Status.RecordingPaused"),
+                Localization.Text("L.Capture.PausedHint"), OverlayTone.Warning);
             return;
         }
-        ObsReplayEngine? engine = _obs;
         if (engine is null || !IsReplayRunning ||
             Volatile.Read(ref _exiting) != 0)
         {
@@ -4117,6 +4184,9 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _discordPresenceAllowed = false;
+        _discordPresence?.Dispose();
+        _discordPresence = null;
         if (_exportingDiagnostics)
         {
             _obsTaskScheduler.Dispose();

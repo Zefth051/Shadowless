@@ -87,6 +87,7 @@ public sealed partial class ObsReplayEngine : IDisposable
     private readonly object _saveGate = new();
     private readonly ObsNative.SignalCallback _savedCallback;
     private readonly ObsNative.SignalCallback _stoppedCallback;
+    private readonly ObsNative.SignalCallback _recordingStoppedCallback;
     private readonly List<nint> _audioSources = [];
     private nint _systemAudioSource;
     private nint _microphoneSource;
@@ -107,6 +108,10 @@ public sealed partial class ObsReplayEngine : IDisposable
     private nint _videoEncoder;
     private nint _output;
     private nint _outputSignals;
+    private nint _recordingOutput;
+    private nint _recordingOutputSignals;
+    private DateTime _recordingPauseStartedUtc;
+    private volatile bool _recordingPaused;
     private nint _processAudioScene;
     private TaskCompletionSource<string>? _pendingSave;
     private bool _started;
@@ -122,6 +127,7 @@ public sealed partial class ObsReplayEngine : IDisposable
     private uint _baseWidth;
     private uint _baseHeight;
     private uint _adapterIndex;
+    private CaptureInterop.MonitorInfo? _captureMonitor;
     private int _videoFrameRate;
     private long _preferredMonitorCaptureMethod = MonitorCaptureMethodAuto;
     private bool _automaticGameActive;
@@ -160,11 +166,14 @@ public sealed partial class ObsReplayEngine : IDisposable
     public bool IsAutomaticCapture { get; }
     public bool IsContinuousRecording { get; }
     public string RecordingPath { get; private set; } = "";
+    public bool IsRecordingPaused => _recordingPaused;
+    public string RecordingStopError { get; private set; } = "";
     internal bool IsGameCaptureDetectorActive => _gameCaptureDetectorShowing;
     public bool IsActive =>
         _started &&
         _output != 0 &&
         ObsNative.obs_output_active(_output) &&
+        (!IsContinuousRecording || (_recordingOutput != 0 && ObsNative.obs_output_active(_recordingOutput))) &&
         _videoEncoder != 0 &&
         ObsNative.obs_encoder_active(_videoEncoder);
 
@@ -237,9 +246,10 @@ public sealed partial class ObsReplayEngine : IDisposable
         bool windowsGraphicsCaptureReady = true,
         string desktopCaptureMethod = "auto")
     {
-        if (desktopCaptureMethod == "dxgi" || !windowsGraphicsCaptureReady)
+        if (desktopCaptureMethod == "dxgi")
             return MonitorCaptureMethodDxgi;
 
+        // Borderless access only controls the capture border; OBS Auto handles cross-GPU displays.
         return windowsGraphicsCaptureReady &&
                (osVersion.Major > 10 ||
                 (osVersion.Major == 10 &&
@@ -312,12 +322,12 @@ public sealed partial class ObsReplayEngine : IDisposable
     {
         get
         {
-            if (_started && IsGameCapture && !IsGameHooked)
+            if (_started && IsGameCapture && !IsGameHooked && !IsContinuousRecording)
                 return true;
             if (!IsActive)
                 return false;
 
-            if (_gameOutputPaused)
+            if (_gameOutputPaused || IsRecordingPaused)
                 return true;
 
             uint frames = ObsNative.obs_get_total_frames();
@@ -345,12 +355,12 @@ public sealed partial class ObsReplayEngine : IDisposable
     {
         get
         {
-            if (IsContinuousRecording || !IsActive ||
-                _replayWindowStartedUtc == default)
+            if (!IsActive || _replayWindowStartedUtc == default)
                 return 0;
 
             int elapsed = (int)Math.Floor(
-                (DateTime.UtcNow - _replayWindowStartedUtc).TotalSeconds);
+                ((_recordingPauseStartedUtc == default ? DateTime.UtcNow : _recordingPauseStartedUtc) -
+                 _replayWindowStartedUtc).TotalSeconds);
             return Math.Clamp(elapsed, 0, _config.BufferSeconds);
         }
     }
@@ -626,6 +636,7 @@ public sealed partial class ObsReplayEngine : IDisposable
             StringComparison.OrdinalIgnoreCase);
         _savedCallback = OnReplaySaved;
         _stoppedCallback = OnOutputStopped;
+        _recordingStoppedCallback = OnRecordingOutputStopped;
     }
 
     public void Start()
@@ -712,9 +723,9 @@ public sealed partial class ObsReplayEngine : IDisposable
     public ReplaySaveOperation BeginSaveReplay(
         CancellationToken cancellationToken = default)
     {
-        if (IsContinuousRecording)
+        if (IsRecordingPaused)
             throw new InvalidOperationException(
-                Localization.Text("L.Engine.ReplayUnavailableWhileRecording"));
+                Localization.Text("L.Capture.PausedHint"));
         if (IsAutomaticCapture)
             RefreshCaptureState();
         if (IsGameCapture && _gameOutputPaused)
@@ -791,9 +802,9 @@ public sealed partial class ObsReplayEngine : IDisposable
 
     public void ResetReplayWindow()
     {
-        if (IsContinuousRecording)
+        if (IsRecordingPaused)
             throw new InvalidOperationException(
-                Localization.Text("L.Engine.ReplayUnavailableWhileRecording"));
+                Localization.Text("L.Capture.PausedHint"));
         if (!IsActive)
             throw new InvalidOperationException(
                 Localization.Text("L.Engine.BufferStopped"));
@@ -910,6 +921,9 @@ public sealed partial class ObsReplayEngine : IDisposable
         // Both automatic modes can hook different games over pipeline lifetime,
         // so fixed OBS canvas follows selected monitor rather than one process.
         (int captureWidth, int captureHeight) = (monitor.Width, monitor.Height);
+        _captureMonitor = monitor;
+        if (_config.MonitorIndex != monitor.Index)
+            Log.Write($"Requested monitor {_config.MonitorIndex} is unavailable; using monitor {monitor.Index}.");
         _baseWidth = (uint)captureWidth;
         _baseHeight = (uint)captureHeight;
         (uint outputWidth, uint outputHeight) = ResolveOutputSize(
@@ -1131,11 +1145,9 @@ public sealed partial class ObsReplayEngine : IDisposable
 
     private void CreateSources()
     {
-        List<CaptureInterop.MonitorInfo> monitors = CaptureInterop.EnumerateMonitors();
-        CaptureInterop.MonitorInfo monitor =
-            _config.MonitorIndex >= 0 && _config.MonitorIndex < monitors.Count
-                ? monitors[_config.MonitorIndex]
-                : monitors.First();
+        // Keep source selection and canvas dimensions on the same startup snapshot.
+        CaptureInterop.MonitorInfo monitor = _captureMonitor ??
+            throw new InvalidOperationException(Localization.Text("L.Engine.MonitorMissing"));
 
         if (IsAutomaticCapture)
         {
@@ -1289,8 +1301,27 @@ public sealed partial class ObsReplayEngine : IDisposable
                     Environment.OSVersion.Version,
                     _windowsGraphicsCaptureReady,
                     _config.DesktopCaptureMethod);
-            // OBS Auto may choose WGC before borderless access is available.
+            int monitorAdapter = GpuPreference.MonitorAdapterIndex(monitor.Handle);
+            long requestedMethod = _preferredMonitorCaptureMethod;
+            _preferredMonitorCaptureMethod = CaptureAdapterPolicy.ResolveMonitorMethod(
+                requestedMethod, _adapterIndex, monitorAdapter,
+                RecommendedMonitorCaptureMethod(Environment.OSVersion.Version,
+                    _windowsGraphicsCaptureReady, "auto") == MonitorCaptureMethodWgc);
+            Log.Write(
+                $"Desktop capture selection: monitor={monitor.Index}, device={monitor.DeviceId}, " +
+                $"size={monitor.Width}x{monitor.Height}, OBS adapter={_adapterIndex}, " +
+                $"display adapter={monitorAdapter}, preference={_config.GpuPreference}, " +
+                $"requested method={requestedMethod}, selected method={_preferredMonitorCaptureMethod}.");
+            if (requestedMethod != _preferredMonitorCaptureMethod)
+                Log.Write("Cross-adapter DXGI capture detected; requesting a cross-GPU backend. " +
+                    "The saved compatibility setting is unchanged; verify capture on this device.");
+            else if (monitorAdapter < 0)
+                Log.Write("Display adapter ownership is unknown; cross-adapter capture cannot be assessed.");
+            // Avoid starting an incompatible DXGI session on a confirmed cross-GPU display.
+            // Otherwise retain DXGI startup until the output is ready for the switch.
             long captureMethod = MonitorCaptureMethodDxgi;
+            if (requestedMethod != _preferredMonitorCaptureMethod)
+                captureMethod = _preferredMonitorCaptureMethod;
             ObsNative.obs_data_set_int(
                 settings,
                 "method",
@@ -1302,7 +1333,7 @@ public sealed partial class ObsReplayEngine : IDisposable
                 _ => "Auto",
             };
             Log.Write(
-                $"Desktop capture startup backend: {(captureMethod == MonitorCaptureMethodDxgi ? "DXGI" : "Auto")}; " +
+                $"Desktop capture startup backend: {captureMethod} (0=Auto, 1=DXGI, 2=WGC); " +
                 $"preferred={preferredMethodName}; " +
                 $"Windows {Environment.OSVersion.Version}");
             ObsNative.obs_data_set_string(settings, "monitor_id", monitor.DeviceId);
@@ -1331,7 +1362,7 @@ public sealed partial class ObsReplayEngine : IDisposable
     private void ApplyPreferredMonitorCaptureMethod()
     {
         if (_desktopVideoSource == 0 ||
-            _preferredMonitorCaptureMethod != MonitorCaptureMethodWgc)
+            _preferredMonitorCaptureMethod == MonitorCaptureMethodDxgi)
         {
             return;
         }
@@ -1342,9 +1373,11 @@ public sealed partial class ObsReplayEngine : IDisposable
             ObsNative.obs_data_set_int(
                 settings,
                 "method",
-                MonitorCaptureMethodWgc);
+                _preferredMonitorCaptureMethod);
             ObsNative.obs_source_update(_desktopVideoSource, settings);
-            Log.Write("Desktop capture backend switch requested: WGC.");
+            string methodName = _preferredMonitorCaptureMethod == MonitorCaptureMethodWgc
+                ? "WGC" : "Auto";
+            Log.Write($"Desktop capture backend switch requested: {methodName}.");
         }
         finally
         {
@@ -2057,10 +2090,34 @@ public sealed partial class ObsReplayEngine : IDisposable
 
     private void CreateOutput()
     {
+        CreateReplayBuffer();
         if (IsContinuousRecording)
             CreateRecordingOutput();
+    }
+
+    public void SetRecordingPaused(bool paused)
+    {
+        if (_disposing || !IsContinuousRecording || !IsActive || _recordingOutput == 0)
+            throw new InvalidOperationException(Localization.Text("L.Engine.BufferStopped"));
+        if (IsRecordingPaused == paused)
+            return;
+        // OBS pauses the shared encoders once; pausing both outputs would double-apply it.
+        if (!ObsNative.obs_output_can_pause(_recordingOutput) ||
+            !ObsNative.obs_output_pause(_recordingOutput, paused))
+            throw new InvalidOperationException(Localization.Text("L.Capture.PauseFailed"));
+
+        DateTime now = DateTime.UtcNow;
+        if (paused)
+            _recordingPauseStartedUtc = now;
         else
-            CreateReplayBuffer();
+        {
+            if (_recordingPauseStartedUtc != default && _replayWindowStartedUtc != default)
+                _replayWindowStartedUtc += now - _recordingPauseStartedUtc;
+            _recordingPauseStartedUtc = default;
+        }
+        _recordingPaused = paused;
+        _previousFrameCheckUtc = default;
+        Log.Write(paused ? "Continuous recording and replay capture paused." : "Continuous recording and replay capture resumed.");
     }
 
     private void CreateRecordingOutput()
@@ -2074,7 +2131,7 @@ public sealed partial class ObsReplayEngine : IDisposable
         string extension = opus ? "mkv" : "mp4";
         RecordingPath = Path.Combine(
             captureDirectory,
-            $"Recording_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.{extension}");
+            $"Recording_{DateTime.Now:yyyy-MM-dd_HH-mm-ss-fff}.{extension}");
 
         nint settings = ObsNative.obs_data_create();
         try
@@ -2087,7 +2144,7 @@ public sealed partial class ObsReplayEngine : IDisposable
                     "muxer_settings",
                     "movflags=frag_keyframe+empty_moov+delay_moov");
             }
-            _output = ObsNative.obs_output_create(
+            _recordingOutput = ObsNative.obs_output_create(
                 "ffmpeg_muxer",
                 "Shadowless Recording",
                 settings,
@@ -2098,15 +2155,15 @@ public sealed partial class ObsReplayEngine : IDisposable
             ObsNative.obs_data_release(settings);
         }
 
-        if (_output == 0)
+        if (_recordingOutput == 0)
             throw new InvalidOperationException(
                 Localization.Text("L.Engine.BufferUnavailable"));
 
-        ConfigureOutputEncodersAndSignals(connectSavedSignal: false);
-        if (!ObsNative.obs_output_start(_output))
+        ConfigureOutputEncodersAndSignals(_recordingOutput, replay: false);
+        if (!ObsNative.obs_output_start(_recordingOutput))
         {
             string error = PtrToString(
-                ObsNative.obs_output_get_last_error(_output));
+                ObsNative.obs_output_get_last_error(_recordingOutput));
             throw new InvalidOperationException(
                 string.IsNullOrWhiteSpace(error)
                     ? Localization.Text("L.Engine.BufferStartFailed")
@@ -2167,9 +2224,9 @@ public sealed partial class ObsReplayEngine : IDisposable
             throw new InvalidOperationException(
                 Localization.Text("L.Engine.BufferUnavailable"));
 
-        ConfigureOutputEncodersAndSignals(connectSavedSignal: true);
+        ConfigureOutputEncodersAndSignals(_output, replay: true);
 
-        if (IsGameCapture)
+        if (IsGameCapture && !IsContinuousRecording)
         {
             _replayWindowStartedUtc = default;
             Log.Write(
@@ -2188,32 +2245,21 @@ public sealed partial class ObsReplayEngine : IDisposable
         _replayWindowStartedUtc = DateTime.UtcNow;
     }
 
-    private void ConfigureOutputEncodersAndSignals(bool connectSavedSignal)
+    private void ConfigureOutputEncodersAndSignals(nint output, bool replay)
     {
-        ObsNative.obs_output_set_video_encoder(_output, _videoEncoder);
+        ObsNative.obs_output_set_video_encoder(output, _videoEncoder);
         for (int index = 0; index < _audioEncoders.Count; index++)
-        {
-            ObsNative.obs_output_set_audio_encoder(
-                _output,
-                _audioEncoders[index],
-                (nuint)index);
-        }
+            ObsNative.obs_output_set_audio_encoder(output, _audioEncoders[index], (nuint)index);
 
-        _outputSignals = ObsNative.obs_output_get_signal_handler(_output);
-        if (connectSavedSignal)
+        nint signals = ObsNative.obs_output_get_signal_handler(output);
+        if (replay)
         {
-            ObsNative.signal_handler_connect(
-                _outputSignals,
-                "saved",
-                _savedCallback,
-                0);
+            _outputSignals = signals;
+            ObsNative.signal_handler_connect(signals, "saved", _savedCallback, 0);
         }
-        ObsNative.signal_handler_connect(
-            _outputSignals,
-            "stop",
-            _stoppedCallback,
-            0);
-
+        else
+            _recordingOutputSignals = signals;
+        ObsNative.signal_handler_connect(signals, "stop", replay ? _stoppedCallback : _recordingStoppedCallback, 0);
     }
 
     private int AudioTrackCount()
@@ -2431,6 +2477,18 @@ public sealed partial class ObsReplayEngine : IDisposable
                 : Localization.Format("L.Engine.BufferError", error));
     }
 
+    private void OnRecordingOutputStopped(nint _, nint __)
+    {
+        if (_disposing)
+            return;
+        string error = PtrToString(ObsNative.obs_output_get_last_error(_recordingOutput));
+        RecordingStopError = string.IsNullOrWhiteSpace(error)
+            ? Localization.Text("L.Engine.RecordingUnexpectedStop") : error;
+        Faulted?.Invoke(string.IsNullOrWhiteSpace(error)
+            ? RecordingStopError
+            : Localization.Format("L.Engine.RecordingError", error));
+    }
+
     private static bool ReadBoolProcedure(nint handler, string procedure, string name)
     {
         if (handler == 0)
@@ -2503,6 +2561,36 @@ public sealed partial class ObsReplayEngine : IDisposable
     private static string PtrToString(nint value) =>
         value == 0 ? "" : Marshal.PtrToStringUTF8(value) ?? "";
 
+    private static string StopAndReleaseOutput(ref nint output, string name)
+    {
+        if (output == 0)
+            return "";
+        bool forcedStop = false;
+        if (ObsNative.obs_output_active(output))
+        {
+            ObsNative.obs_output_stop(output);
+            for (int attempt = 0; attempt < 120 && ObsNative.obs_output_active(output); attempt++)
+                Thread.Sleep(25);
+            if (ObsNative.obs_output_active(output))
+            {
+                Log.Write($"OBS {name} output stop timed out; forcing stop: {PtrToString(ObsNative.obs_output_get_last_error(output))}");
+                forcedStop = true;
+                ObsNative.obs_output_force_stop(output);
+                for (int attempt = 0; attempt < 40 && ObsNative.obs_output_active(output); attempt++)
+                    Thread.Sleep(25);
+            }
+        }
+        string error = PtrToString(ObsNative.obs_output_get_last_error(output));
+        if ((forcedStop || ObsNative.obs_output_active(output)) && string.IsNullOrWhiteSpace(error))
+            error = Localization.Text(name == "recording"
+                ? "L.Engine.RecordingUnexpectedStop" : "L.Engine.BufferUnexpectedStop");
+        if (!string.IsNullOrWhiteSpace(error))
+            Log.Write($"OBS {name} output shutdown error: {error}");
+        ObsNative.obs_output_release(output);
+        output = 0;
+        return error;
+    }
+
     public void Dispose()
     {
         if (_disposing)
@@ -2543,24 +2631,19 @@ public sealed partial class ObsReplayEngine : IDisposable
             _outputSignals = 0;
         }
 
-        if (_output != 0 && ObsNative.obs_output_active(_output))
+        if (_recordingOutputSignals != 0)
         {
-            ObsNative.obs_output_stop(_output);
-            for (int attempt = 0;
-                 attempt < 40 && ObsNative.obs_output_active(_output);
-                 attempt++)
-            {
-                Thread.Sleep(25);
-            }
-            if (ObsNative.obs_output_active(_output))
-                ObsNative.obs_output_force_stop(_output);
+            ObsNative.signal_handler_disconnect(_recordingOutputSignals, "stop", _recordingStoppedCallback, 0);
+            _recordingOutputSignals = 0;
         }
 
-        if (_output != 0)
-        {
-            ObsNative.obs_output_release(_output);
-            _output = 0;
-        }
+        // Stop recording first: OBS unpauses shared encoders so its muxer can finalize.
+        string stopError = StopAndReleaseOutput(ref _recordingOutput, "recording");
+        if (!string.IsNullOrWhiteSpace(stopError))
+            RecordingStopError = stopError;
+        _recordingPaused = false;
+        _recordingPauseStartedUtc = default;
+        StopAndReleaseOutput(ref _output, "replay");
         if (_videoEncoder != 0)
         {
             ObsNative.obs_encoder_release(_videoEncoder);

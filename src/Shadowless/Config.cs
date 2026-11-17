@@ -27,6 +27,7 @@ public sealed class Config
     public string CaptureMode { get; set; } = "replay";
     public bool ReplayEnabled { get; set; } = true;
     public bool StartReplayOnLaunch { get; set; }
+    public bool DiscordRichPresenceEnabled { get; set; } = true;
     public bool WarnWhenGameStartsWithReplayOff { get; set; } = true;
     public bool ShowRecordingIndicator { get; set; } = true;
     public bool CaptureOverlaysEnabled { get; set; }
@@ -205,6 +206,7 @@ public sealed class Config
         CaptureMode = source.CaptureMode;
         ReplayEnabled = source.ReplayEnabled;
         StartReplayOnLaunch = source.StartReplayOnLaunch;
+        DiscordRichPresenceEnabled = source.DiscordRichPresenceEnabled;
         WarnWhenGameStartsWithReplayOff = source.WarnWhenGameStartsWithReplayOff;
         ShowRecordingIndicator = source.ShowRecordingIndicator;
         CaptureOverlaysEnabled = source.CaptureOverlaysEnabled;
@@ -251,9 +253,8 @@ public sealed class Config
 
     public bool PipelineEquals(Config other) =>
         string.Equals(CaptureMode, other.CaptureMode, StringComparison.Ordinal) &&
-        (string.Equals(CaptureMode, "recording", StringComparison.Ordinal) ||
-         (BufferSeconds == other.BufferSeconds &&
-          MaxReplaySizeMb == other.MaxReplaySizeMb)) &&
+        BufferSeconds == other.BufferSeconds &&
+        MaxReplaySizeMb == other.MaxReplaySizeMb &&
         FrameRate == other.FrameRate &&
         BitrateMbps == other.BitrateMbps &&
         string.Equals(Codec, other.Codec, StringComparison.Ordinal) &&
@@ -324,11 +325,20 @@ public sealed class Config
             : 1;
         ProcessAudioRoutes = NormalizeProcessAudioRoutes(ProcessAudioRoutes);
         OutputDirectory = NormalizePath(OutputDirectory, allowEmpty: false);
-        AccentColor = AllowedText(
-            AccentColor,
-            ["mint", "blue", "violet", "rose", "amber"],
-            "violet");
+        AccentColor = TryNormalizeAccentColor(AccentColor, out string accent) ? accent : "violet";
         PlayerVolume = Math.Clamp(PlayerVolume, 0, 100);
+    }
+
+    internal static bool TryNormalizeAccentColor(string? value, out string accent)
+    {
+        accent = value?.Trim() ?? "";
+        if (accent.Length == 7 && accent[0] == '#' && accent.Skip(1).All(Uri.IsHexDigit))
+        {
+            accent = accent.ToUpperInvariant();
+            return true;
+        }
+        accent = accent.ToLowerInvariant();
+        return accent is "mint" or "blue" or "violet" or "rose" or "amber";
     }
 
     private static List<ProcessAudioRoute> NormalizeProcessAudioRoutes(

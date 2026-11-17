@@ -30,14 +30,14 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
                                 <Setter TargetName="Surface" Property="Background" Value="{DynamicResource AccentChipBgBrush}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Surface" Property="Background" Value="{DynamicResource BgHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
                                 <Setter TargetName="Surface" Property="BorderThickness" Value="1"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -69,7 +69,7 @@
                                 <Setter TargetName="Surface" Property="Background" Value="{DynamicResource BgHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
                                 <Setter TargetName="Surface" Property="BorderThickness" Value="1"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -114,10 +114,10 @@
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource AccentChipBgBrush}"/>
                                 <Setter Property="BorderBrush" Value="{DynamicResource AccentDimBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
                                 <Setter TargetName="Tile" Property="BorderThickness" Value="2"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -154,9 +154,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Grid Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,10,0">
-                    <Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="2.4"
+                    <Ellipse Stroke="{DynamicResource AccentReadableBrush}" StrokeThickness="2.4"
                              StrokeDashArray="15,5" StrokeStartLineCap="Round"/>
-                    <Ellipse Width="5" Height="5" Fill="{DynamicResource AccentBrush}"/>
+                    <Ellipse Width="5" Height="5" Fill="{DynamicResource AccentReadableBrush}"/>
                 </Grid>
                 <TextBlock Grid.Column="1" Text="{DynamicResource L.Brand}" FontSize="20" FontWeight="ExtraBold"
                            VerticalAlignment="Center"/>
@@ -200,7 +200,7 @@
                             Height="40" Padding="12,0" Margin="12,0,0,0">
                         <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Esc" FontFamily="{StaticResource FontMono}" Margin="0,0,12,0"/>
-                        <Path Data="M6 6l12 12 M18 6L6 18"
+                        <Path Data="{StaticResource IconClose}"
                               Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                               StrokeThickness="1.8" Width="13" Height="13" Stretch="Uniform"/>
                         </StackPanel>
@@ -271,14 +271,14 @@
                         </Grid.ColumnDefinitions>
                         <Grid Width="46" Height="46" Margin="0,0,14,0">
                             <Ellipse Stroke="{StaticResource DividerBrush}" StrokeThickness="3"/>
-                            <Ellipse x:Name="StatusRing" Stroke="{DynamicResource AccentBrush}" StrokeThickness="3"
+                            <Ellipse x:Name="StatusRing" Stroke="{DynamicResource AccentReadableBrush}" StrokeThickness="3"
                                      StrokeDashArray="32,8" StrokeStartLineCap="Round"
                                      RenderTransformOrigin="0.5,0.5">
                                 <Ellipse.RenderTransform>
                                     <RotateTransform x:Name="StatusRingRotation"/>
                                 </Ellipse.RenderTransform>
                             </Ellipse>
-                            <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="{DynamicResource AccentBrush}"/>
+                            <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="{DynamicResource AccentReadableBrush}"/>
                         </Grid>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock x:Name="StatusTitleText" Text="{DynamicResource L.Status.Enabled}"
@@ -304,8 +304,8 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Grid x:Name="CaptureOverlayIcon" Width="46" Height="46" Margin="0,0,14,0">
-                            <Ellipse Stroke="{DynamicResource AccentBrush}" StrokeThickness="3"/>
-                            <Path Data="{StaticResource IconDisplay}" Stroke="{DynamicResource AccentBrush}"
+                            <Ellipse Stroke="{DynamicResource AccentReadableBrush}" StrokeThickness="3"/>
+                            <Path Data="{StaticResource IconDisplay}" Stroke="{DynamicResource AccentReadableBrush}"
                                   StrokeThickness="1.8" Width="22" Height="22" Stretch="Uniform"/>
                         </Grid>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
@@ -448,7 +448,7 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                     <TextBlock x:Name="DashboardVolumeTitle" FontWeight="SemiBold"/>
                                     <TextBlock x:Name="DashboardVolumePercent" Grid.Column="1" FontFamily="{StaticResource FontMono}"
-                                               Foreground="{DynamicResource AccentBrush}"/>
+                                               Foreground="{DynamicResource AccentReadableBrush}"/>
                                 </Grid>
                                 <Slider x:Name="DashboardVolumeSlider" Minimum="0" Maximum="100" TickFrequency="1"
                                         IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10"
@@ -511,6 +511,15 @@
                     </Grid>
                 </Button>
 
+                <Button x:Name="PauseRecordingButton" Style="{StaticResource SubtleButton}"
+                        Visibility="Collapsed" Height="32" Margin="0,8,0,0"
+                        Content="{DynamicResource L.Capture.PauseRecording}"
+                        AutomationProperties.Name="{Binding Content, RelativeSource={RelativeSource Self}}"
+                        Click="PauseRecording_Click"/>
+                <TextBlock x:Name="RecordingPauseHint" Visibility="Collapsed" Margin="2,6,2,0"
+                           Text="{DynamicResource L.Capture.PausedHint}" TextWrapping="Wrap"
+                           Style="{StaticResource SecondaryText}"/>
+
                 <Grid Margin="2,10,2,0">
                     <Path Data="{StaticResource IconFolder}" Stroke="{StaticResource TextMutedBrush}"
                           StrokeThickness="1.8" Width="12" Height="12" Stretch="Uniform"
@@ -538,8 +547,11 @@
                         <Button HorizontalAlignment="Right"
                                 Style="{StaticResource DashboardLinkButton}"
                                 Click="RefreshLibrary_Click"
-                                ToolTip="{DynamicResource L.Library.Refresh}">
-                            <TextBlock Text="↻" FontSize="16"/>
+                                ToolTip="{DynamicResource L.Library.Refresh}"
+                                AutomationProperties.Name="{DynamicResource L.Library.Refresh}">
+                            <Path Data="{StaticResource IconRefresh}" Width="15" Height="15" Stretch="Uniform"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
                         </Button>
                     </Grid>
                     <StackPanel x:Name="ReplayLibraryLoading" Grid.Row="1"
@@ -727,7 +739,7 @@
                     <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="{DynamicResource L.Settings.UnsavedTitle}"
                                        FontSize="11.5" FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentReadableBrush}"
                                        TextTrimming="CharacterEllipsis"/>
                             <TextBlock Text="{DynamicResource L.Settings.UnsavedHint}"
                                        FontSize="9.5"
@@ -941,6 +953,21 @@
                                                Style="{StaticResource RowLabelText}" TextWrapping="Wrap" Margin="0,0,12,0"/>
                                     <ToggleButton x:Name="StartReplayOnLaunchBox" Grid.Column="1"
                                                   AutomationProperties.Name="{DynamicResource L.Replay.StartOnLaunch}"
+                                                  Style="{StaticResource ToggleSwitch}"/>
+                                </Grid>
+                                <Border Style="{StaticResource RowDivider}"/>
+                                <Grid Margin="13,11">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock Text="{DynamicResource L.Settings.DiscordPresence}" Style="{StaticResource RowLabelText}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{DynamicResource L.Settings.DiscordPresenceHint}" Style="{StaticResource SecondaryText}"
+                                                   TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                    <ToggleButton x:Name="DiscordRichPresenceBox" Grid.Column="1"
+                                                  AutomationProperties.Name="{DynamicResource L.Settings.DiscordPresence}"
                                                   Style="{StaticResource ToggleSwitch}"/>
                                 </Grid>
                             </StackPanel>
@@ -1423,6 +1450,10 @@
                                    Style="{StaticResource SectionHeaderText}"/>
                         <Border Style="{StaticResource SettingsGroup}">
                             <Grid Margin="13,11">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="190"/>
@@ -1463,6 +1494,17 @@
                                         </RadioButton>
                                     </UniformGrid>
                                 </Border>
+                                <RadioButton x:Name="CustomAccentRadio" Grid.Row="1" GroupName="AccentColor"
+                                             Content="{DynamicResource L.Appearance.CustomAccent}"
+                                             Foreground="{DynamicResource TextPrimaryBrush}"
+                                             VerticalAlignment="Center" Margin="0,12,12,0"
+                                             ToolTip="{DynamicResource L.Appearance.CustomAccentHint}"/>
+                                <TextBox x:Name="CustomAccentBox" Grid.Row="1" Grid.Column="1"
+                                         Style="{StaticResource DarkTextBox}" Margin="0,10,0,0"
+                                         IsEnabled="{Binding IsChecked, ElementName=CustomAccentRadio}"
+                                         AutomationProperties.Name="{DynamicResource L.Appearance.CustomAccent}"
+                                         ToolTip="{DynamicResource L.Appearance.CustomAccentHint}"
+                                         TextChanged="CustomAccentBox_TextChanged"/>
                             </Grid>
                         </Border>
 
@@ -1494,8 +1536,8 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel>
-                                            <TextBlock Text="{DynamicResource L.Hotkey.Toggle}" Style="{StaticResource RowLabelText}"/>
-                                            <TextBlock Text="{DynamicResource L.Hotkey.ToggleHint}" Style="{StaticResource SecondaryText}"/>
+                                            <TextBlock x:Name="ToggleHotkeyLabel" Text="{DynamicResource L.Hotkey.Toggle}" Style="{StaticResource RowLabelText}"/>
+                                            <TextBlock x:Name="ToggleHotkeyHint" Text="{DynamicResource L.Hotkey.ToggleHint}" Style="{StaticResource SecondaryText}"/>
                                         </StackPanel>
                                         <Button x:Name="ToggleHotkeyButton" Grid.Column="1"
                                                 Style="{StaticResource SubtleButton}" MinWidth="128"
@@ -1657,7 +1699,7 @@
                     </StackPanel>
                     <Button Grid.Column="2" Style="{StaticResource IconButton}"
                             Width="24" Height="24" Click="NoticeClose_Click">
-                        <Path Data="M6 6l12 12 M18 6L6 18"
+                        <Path Data="{StaticResource IconClose}"
                               Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                               StrokeThickness="1.8" Width="11" Height="11" Stretch="Uniform"/>
                     </Button>

@@ -73,23 +73,31 @@ public partial class OverlayNotificationWindow : Window
     {
         if (tone is OverlayTone.Success or OverlayTone.Neutral)
         {
-            IconText.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "AccentBrush");
-            IconRing.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "AccentBrush");
-            LifeBar.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "AccentBrush");
+            IconPath.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "AccentReadableBrush");
+            IconRing.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "AccentReadableBrush");
+            LifeBar.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, "AccentReadableBrush");
         }
         else
         {
             Brush accent = new SolidColorBrush(tone == OverlayTone.Warning
                 ? Color.FromRgb(224, 179, 99)
                 : Color.FromRgb(224, 130, 99));
-            IconText.Foreground = accent;
+            IconPath.Stroke = accent;
             IconRing.Stroke = accent;
             LifeBar.Background = accent;
         }
 
         _sequence++;
 
-        IconText.Text = glyph;
+        IconPath.SetResourceReference(System.Windows.Shapes.Path.DataProperty, glyph switch
+        {
+            "✓" => "IconCheck",
+            "●" => "IconRecord",
+            "■" => "IconStop",
+            "Ⅱ" => "IconPause",
+            "↻" or "⟳" => "IconRefresh",
+            _ => "IconIssue",
+        });
         TitleText.Text = title;
         DetailText.Text = detail;
 

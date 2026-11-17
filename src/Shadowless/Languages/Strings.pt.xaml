@@ -357,6 +357,13 @@
   <sys:String x:Key="L.Capture.RecordingEnabled">A gravação está ativa</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">Iniciar gravação</sys:String>
   <sys:String x:Key="L.Capture.StopRecording">Parar gravação</sys:String>
+  <sys:String x:Key="L.Capture.PauseRecording">Pausar gravação</sys:String>
+  <sys:String x:Key="L.Capture.ResumeRecording">Retomar gravação</sys:String>
+  <sys:String x:Key="L.Capture.PausedHint">A gravação e o buffer de replay estão pausados. Retome para salvar clipes.</sys:String>
+  <sys:String x:Key="L.Capture.PauseFailed">Não foi possível pausar ou retomar a gravação</sys:String>
+  <sys:String x:Key="L.Status.RecordingPaused">Gravação pausada</sys:String>
+  <sys:String x:Key="L.Engine.RecordingUnexpectedStop">A gravação contínua parou inesperadamente.</sys:String>
+  <sys:String x:Key="L.Engine.RecordingError">Falha na gravação contínua: {0}</sys:String>
   <sys:String x:Key="L.Status.Recording">Gravando</sys:String>
   <sys:String x:Key="L.Status.RecordingDetail">{0} · {1}</sys:String>
   <sys:String x:Key="L.Status.RecordingDisabled">A gravação está desativada</sys:String>
@@ -367,7 +374,6 @@
   <sys:String x:Key="L.Notify.RecordingSavedDetail">A gravação contínua foi salva.</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameTitle">A gravação está desativada</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameDetail">{0} detectado. Inicie a gravação para capturá-lo.</sys:String>
-  <sys:String x:Key="L.Engine.ReplayUnavailableWhileRecording">Não é possível salvar replay no modo Gravação.</sys:String>
   <sys:String x:Key="L.Tray.Recording">Shadowless · Gravando</sys:String>
   <sys:String x:Key="L.Tray.ToggleRecording">Iniciar / parar gravação</sys:String>
   <sys:String x:Key="L.Hotkey.ToggleRecording">Iniciar / parar gravação</sys:String>
@@ -375,6 +381,9 @@
   <sys:String x:Key="L.Section.Appearance">APARÊNCIA</sys:String>
   <sys:String x:Key="L.Appearance.Accent">Cor de destaque</sys:String>
   <sys:String x:Key="L.Appearance.AccentHint">Aplicada em todo o Shadowless</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccent">Cor HEX personalizada</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentHint">Use #RRGGBB, por exemplo #12ABEF. Aplicada ao escolher Concluído.</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentError">Insira uma cor como #RRGGBB com seis dígitos hexadecimais (0–9, A–F).</sys:String>
   <sys:String x:Key="L.Appearance.Mint">Menta</sys:String>
   <sys:String x:Key="L.Appearance.Blue">Azul</sys:String>
   <sys:String x:Key="L.Appearance.Violet">Violeta</sys:String>
@@ -473,4 +482,6 @@
   <sys:String x:Key="L.Error.SettingsSaveFailed">Não foi possível salvar: {0}. Motivo: {1}</sys:String>
   <sys:String x:Key="L.Settings.File">Arquivo de configurações</sys:String>
   <sys:String x:Key="L.Settings.Capture">Opções de captura</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresence">Presença rica do Discord</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresenceHint">Mostra o jogo reconhecido no Discord apenas durante a captura. O tempo decorrido não é partilhado.</sys:String>
 </ResourceDictionary>

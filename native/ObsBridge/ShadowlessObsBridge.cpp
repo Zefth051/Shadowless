@@ -88,7 +88,7 @@ static int32_t get_preferred_adapter_index(DXGI_GPU_PREFERENCE preference)
         if (result == DXGI_ERROR_NOT_FOUND)
             break;
         if (FAILED(result) || !candidate)
-            continue;
+            break;
 
         DXGI_ADAPTER_DESC1 candidate_desc{};
         result = candidate->GetDesc1(&candidate_desc);
@@ -115,4 +115,41 @@ extern "C" __declspec(dllexport) int32_t __cdecl
 shadowless_get_power_saving_adapter_index()
 {
     return get_preferred_adapter_index(DXGI_GPU_PREFERENCE_MINIMUM_POWER);
+}
+
+// Match HMONITOR rather than display order: Windows and DXGI enumerate differently.
+extern "C" __declspec(dllexport) int32_t __cdecl
+shadowless_get_monitor_adapter_index(HMONITOR monitor)
+{
+    if (!monitor)
+        return -1;
+    IDXGIFactory1 *factory = nullptr;
+    HRESULT result = CreateDXGIFactory1(__uuidof(IDXGIFactory1),
+        reinterpret_cast<void **>(&factory));
+    if (FAILED(result) || !factory)
+        return -1;
+
+    int32_t selected_index = -1;
+    for (UINT index = 0; selected_index < 0; ++index) {
+        IDXGIAdapter1 *adapter = nullptr;
+        result = factory->EnumAdapters1(index, &adapter);
+        if (FAILED(result) || !adapter)
+            break;
+        for (UINT output_index = 0;; ++output_index) {
+            IDXGIOutput *output = nullptr;
+            result = adapter->EnumOutputs(output_index, &output);
+            if (FAILED(result) || !output)
+                break;
+            DXGI_OUTPUT_DESC desc{};
+            result = output->GetDesc(&desc);
+            output->Release();
+            if (SUCCEEDED(result) && desc.AttachedToDesktop && desc.Monitor == monitor) {
+                selected_index = static_cast<int32_t>(index);
+                break;
+            }
+        }
+        adapter->Release();
+    }
+    factory->Release();
+    return selected_index;
 }

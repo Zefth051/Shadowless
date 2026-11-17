@@ -49,6 +49,8 @@
   <SolidColorBrush x:Key="TextValueBrush" Color="{StaticResource ColorTextValue}"/>
   <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource ColorAccent}"/>
   <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource ColorAccentHover}"/>
+  <SolidColorBrush x:Key="AccentReadableBrush" Color="{StaticResource ColorAccent}"/>
+  <SolidColorBrush x:Key="AccentReadableHoverBrush" Color="{StaticResource ColorAccentHover}"/>
   <SolidColorBrush x:Key="AccentDimBrush" Color="{StaticResource ColorAccentDim}"/>
   <SolidColorBrush x:Key="OnAccentBrush" Color="{StaticResource ColorOnAccent}"/>
   <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource ColorAccentSubtle}"/>
@@ -75,6 +77,26 @@
   <!-- ============ ICON GEOMETRY (viewbox 24) ============ -->
   <Geometry x:Key="IconDownload">M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3</Geometry>
   <Geometry x:Key="IconFolder">M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z</Geometry>
+  <Geometry x:Key="IconClose">M6 6l12 12 M18 6L6 18</Geometry>
+  <Geometry x:Key="IconRefresh">M20 7v5h-5 M20 12a8 8 0 1 0-2.34 5.66</Geometry>
+  <Geometry x:Key="IconCheck">M5 12l4 4L19 6</Geometry>
+  <Geometry x:Key="IconArrowUp">M12 20V4 M5 11l7-7 7 7</Geometry>
+  <Geometry x:Key="IconArrowDown">M12 4v16 M5 13l7 7 7-7</Geometry>
+  <Geometry x:Key="IconStop">M5 5h14v14H5z</Geometry>
+  <Geometry x:Key="IconRecord">M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0z</Geometry>
+  <Geometry x:Key="IconHelp">M9 8a3 3 0 1 1 5 2.24c-1.3.8-2 1.26-2 3.76 M12 18h.01</Geometry>
+  <Style x:Key="StrokeIcon" TargetType="Path">
+    <Setter Property="Width" Value="16"/>
+    <Setter Property="Height" Value="16"/>
+    <Setter Property="Stretch" Value="Uniform"/>
+    <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}"/>
+    <Setter Property="StrokeThickness" Value="1.8"/>
+    <Setter Property="StrokeStartLineCap" Value="Round"/>
+    <Setter Property="StrokeEndLineCap" Value="Round"/>
+    <Setter Property="StrokeLineJoin" Value="Round"/>
+    <Setter Property="HorizontalAlignment" Value="Center"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
   <Geometry x:Key="IconChevron">M6 9l6 6 6-6</Geometry>
   <Geometry x:Key="IconBack">M19 12H5 M12 19l-7-7 7-7</Geometry>
   <Geometry x:Key="IconDisplay">M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M8 21h8 M12 17v4</Geometry>
@@ -130,9 +152,9 @@
         <ControlTemplate TargetType="Control">
           <Viewbox Stretch="Uniform">
             <Grid Width="24" Height="24">
-              <Ellipse Margin="2" Stroke="{DynamicResource AccentBrush}"
+              <Ellipse Margin="2" Stroke="{DynamicResource AccentReadableBrush}"
                        StrokeThickness="2" Opacity="0.14"/>
-              <Ellipse x:Name="LoadingArc" Margin="2" Stroke="{DynamicResource AccentBrush}"
+              <Ellipse x:Name="LoadingArc" Margin="2" Stroke="{DynamicResource AccentReadableBrush}"
                        StrokeThickness="2.2" StrokeDashArray="8,20"
                        StrokeDashCap="Round" Fill="Transparent"
                        RenderTransformOrigin="0.5,0.5">
@@ -253,12 +275,8 @@
                   Width="15" Height="15" CornerRadius="8"
                   Background="{TemplateBinding Background}"
                   BorderBrush="#FF59636A" BorderThickness="1">
-            <TextBlock Text="?" FontFamily="{StaticResource FontUi}"
-                       FontSize="9.5" FontWeight="Bold"
-                       Foreground="{TemplateBinding Foreground}"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"
-                       Margin="0,-1,0,0"/>
+            <Path Data="{StaticResource IconHelp}" Style="{StaticResource StrokeIcon}"
+                  Width="7" Height="10" Stroke="{TemplateBinding Foreground}"/>
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
@@ -266,7 +284,7 @@
                       Value="{DynamicResource AccentSubtleBrush}"/>
               <Setter TargetName="Badge" Property="BorderBrush"
                       Value="{DynamicResource AccentDimBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="Badge" Property="Opacity" Value="0.72"/>
@@ -302,7 +320,8 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Button">
-          <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="11" Padding="{TemplateBinding Padding}">
+          <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="11" Padding="{TemplateBinding Padding}"
+                  BorderBrush="Transparent" BorderThickness="1">
             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
           </Border>
@@ -314,6 +333,12 @@
               <Setter TargetName="Bd" Property="Background" Value="{StaticResource WindowBorderBrush}"/>
               <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
             </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="Opacity" Value="0.78"/>
+            </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
@@ -322,7 +347,7 @@
 
   <!-- Quiet actions such as "Change..." -->
   <Style x:Key="SubtleButton" TargetType="Button">
-    <Setter Property="Foreground" Value="#FFC4CDD2"/>
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
     <Setter Property="FontFamily" Value="{StaticResource FontUi}"/>
     <Setter Property="FontSize" Value="11.5"/>
     <Setter Property="FontWeight" Value="Bold"/>
@@ -338,8 +363,17 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Bd" Property="BorderBrush" Value="#FF3A4A45"/>
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
               <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="Opacity" Value="0.78"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -377,7 +411,7 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentDimBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="Bd" Property="Background" Value="#FF17332D"/>
@@ -407,7 +441,7 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter Property="Opacity" Value="0.72"/>
@@ -436,7 +470,7 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter Property="Opacity" Value="0.7"/>
@@ -466,10 +500,10 @@
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
               <Setter TargetName="AboutBadge" Property="Background"
                       Value="{DynamicResource AccentChipBgBrush}"/>
             </Trigger>
@@ -504,7 +538,7 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="MenuSurface" Property="Background" Value="#FF20272A"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter Property="Opacity" Value="0.72"/>
@@ -541,15 +575,15 @@
             <Trigger Property="Tag" Value="available">
               <Setter Property="Background" Value="{DynamicResource AccentChipBgBrush}"/>
               <Setter Property="BorderBrush" Value="{DynamicResource AccentChipBorderBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="Tag" Value="busy">
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="UpdateBadge" Property="Background"
                       Value="{StaticResource BgHoverBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableHoverBrush}"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
               <Setter TargetName="UpdateBadge" Property="Opacity" Value="0.72"/>
@@ -566,7 +600,7 @@
   <Style x:Key="DarkTextBox" TargetType="TextBox">
     <Setter Property="Background" Value="{StaticResource BgControlBrush}"/>
     <Setter Property="Foreground" Value="{StaticResource TextValueBrush}"/>
-    <Setter Property="CaretBrush" Value="{DynamicResource AccentBrush}"/>
+    <Setter Property="CaretBrush" Value="{DynamicResource AccentReadableBrush}"/>
     <Setter Property="BorderBrush" Value="{StaticResource BorderControlBrush}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Padding" Value="11,7"/>
@@ -639,12 +673,12 @@
                 <Thumb Width="14" Height="14">
                   <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
-                      <Ellipse x:Name="Knob" Fill="{DynamicResource AccentBrush}"
+                      <Ellipse x:Name="Knob" Fill="{DynamicResource AccentReadableBrush}"
                                Stroke="#FF19372F" StrokeThickness="1"/>
                       <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                           <Setter TargetName="Knob" Property="Fill"
-                                  Value="{DynamicResource AccentHoverBrush}"/>
+                                  Value="{DynamicResource AccentReadableHoverBrush}"/>
                         </Trigger>
                       </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -689,7 +723,7 @@
                 <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
                   <RepeatButton.Template>
                     <ControlTemplate TargetType="RepeatButton">
-                      <Border Height="4" Background="{DynamicResource AccentBrush}"
+                      <Border Height="4" Background="{DynamicResource AccentReadableBrush}"
                               CornerRadius="2,0,0,2"/>
                     </ControlTemplate>
                   </RepeatButton.Template>
@@ -700,7 +734,7 @@
                   <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
                       <Ellipse x:Name="ProgressKnob"
-                               Fill="{DynamicResource AccentBrush}"
+                               Fill="{DynamicResource AccentReadableBrush}"
                                Stroke="#FF17352E" StrokeThickness="1">
                         <Ellipse.RenderTransform>
                           <ScaleTransform ScaleX="0.84" ScaleY="0.84"/>
@@ -709,7 +743,7 @@
                       <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                           <Setter TargetName="ProgressKnob" Property="Fill"
-                                  Value="{DynamicResource AccentHoverBrush}"/>
+                                  Value="{DynamicResource AccentReadableHoverBrush}"/>
                           <Setter TargetName="ProgressKnob" Property="RenderTransform">
                             <Setter.Value>
                               <ScaleTransform ScaleX="1" ScaleY="1"/>
@@ -781,13 +815,22 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Button">
-          <Border x:Name="Bd" Background="Transparent" CornerRadius="8">
+          <Border x:Name="Bd" Background="Transparent" CornerRadius="8" BorderBrush="Transparent" BorderThickness="1">
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="Bd" Property="Background" Value="{StaticResource BgHoverBrush}"/>
               <Setter Property="Foreground" Value="#FFC4CDD2"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentReadableBrush}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+              <Setter TargetName="Bd" Property="Opacity" Value="0.78"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -814,7 +857,7 @@
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
               <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -842,7 +885,7 @@
                 <ColumnDefinition Width="Auto"/>
               </Grid.ColumnDefinitions>
               <TextBlock x:Name="Check" Text="✓" FontSize="14" FontWeight="Bold"
-                         Foreground="{DynamicResource AccentBrush}"
+                         Foreground="{DynamicResource AccentReadableBrush}"
                          VerticalAlignment="Center" Visibility="Hidden"/>
               <TextBlock Grid.Column="1" Text="{Binding DisplayName}"
                          FontSize="12.5" FontWeight="SemiBold"
@@ -863,7 +906,7 @@
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
               <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
               <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
             </Trigger>
           </ControlTemplate.Triggers>
@@ -944,7 +987,7 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
               <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <MultiTrigger>
               <MultiTrigger.Conditions>
@@ -1021,7 +1064,7 @@
                       Value="{DynamicResource AccentChipBgBrush}"/>
               <Setter TargetName="Bd" Property="BorderBrush"
                       Value="{DynamicResource AccentChipBorderBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.45"/>
@@ -1051,7 +1094,7 @@
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
               <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSubtleBrush}"/>
-              <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+              <Setter Property="Foreground" Value="{DynamicResource AccentReadableBrush}"/>
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter Property="Opacity" Value="0.38"/>

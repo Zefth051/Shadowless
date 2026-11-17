@@ -37,13 +37,18 @@ internal static class ThemeManager
     {
         if (Application.Current is null)
             return;
+        bool custom = Config.TryNormalizeAccentColor(name, out string accent) && accent.StartsWith('#');
         if (!Palettes.TryGetValue(name ?? "", out Palette? palette))
-            palette = Palettes["violet"];
+            palette = custom
+                ? CustomPalette(Parse(accent))
+                : Palettes["violet"];
 
         ResourceDictionary resources = Application.Current.Resources;
         resources["AccentBrush"] = Brush(palette.Accent);
         resources["AccentHoverBrush"] = Brush(palette.Hover);
-        resources["AccentDimBrush"] = Brush(palette.Dim);
+        resources["AccentReadableBrush"] = Brush(custom ? ReadableAccent(palette.Accent) : palette.Accent);
+        resources["AccentReadableHoverBrush"] = Brush(custom ? ReadableAccent(palette.Hover) : palette.Hover);
+        resources["AccentDimBrush"] = Brush(custom ? ReadableAccent(palette.Dim) : palette.Dim);
         resources["OnAccentBrush"] = Brush(palette.OnAccent);
         resources["AccentSubtleBrush"] = Brush(WithAlpha(palette.Accent, 0x24));
         resources["AccentChipBgBrush"] = Brush(WithAlpha(palette.Accent, 0x12));
@@ -70,6 +75,41 @@ internal static class ThemeManager
         frame.Freeze();
         return frame;
     }
+
+    private static Palette CustomPalette(Color accent)
+    {
+        bool darkForeground = RelativeLuminance(accent) > 0.1791287847;
+        // Move hover away from the foreground to preserve its contrast.
+        Color hoverTarget = darkForeground ? Colors.White : Colors.Black;
+        return new(accent, Blend(accent, hoverTarget, 0.18),
+            Blend(accent, Colors.Black, 0.32), darkForeground ? Colors.Black : Colors.White);
+    }
+
+    private static Color ReadableAccent(Color accent)
+    {
+        // The brightest shared dark surface also covers controls and hover panels.
+        double background = RelativeLuminance(Color.FromRgb(43, 50, 54));
+        for (int step = 0; step <= 20; step++)
+        {
+            Color candidate = Blend(accent, Colors.White, step / 20d);
+            if ((RelativeLuminance(candidate) + 0.05) / (background + 0.05) >= 4.5)
+                return candidate;
+        }
+        return Colors.White;
+    }
+
+    private static double RelativeLuminance(Color color)
+    {
+        static double Linear(byte value) => value <= 10
+            ? value / 3294.6
+            : Math.Pow((value / 255d + 0.055) / 1.055, 2.4);
+        return 0.2126 * Linear(color.R) + 0.7152 * Linear(color.G) + 0.0722 * Linear(color.B);
+    }
+
+    private static Color Blend(Color color, Color target, double amount) => Color.FromRgb(
+        (byte)Math.Round(color.R + (target.R - color.R) * amount),
+        (byte)Math.Round(color.G + (target.G - color.G) * amount),
+        (byte)Math.Round(color.B + (target.B - color.B) * amount));
 
     private static Palette New(string accent, string hover, string dim, string onAccent) =>
         new(Parse(accent), Parse(hover), Parse(dim), Parse(onAccent));

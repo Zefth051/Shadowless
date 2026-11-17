@@ -384,6 +384,13 @@
   <sys:String x:Key="L.Capture.RecordingEnabled">Запис увімкнено</sys:String>
   <sys:String x:Key="L.Capture.StartRecording">Почати запис</sys:String>
   <sys:String x:Key="L.Capture.StopRecording">Зупинити запис</sys:String>
+  <sys:String x:Key="L.Capture.PauseRecording">Призупинити запис</sys:String>
+  <sys:String x:Key="L.Capture.ResumeRecording">Продовжити запис</sys:String>
+  <sys:String x:Key="L.Capture.PausedHint">Запис і буфер повтору призупинено. Відновіть запис, щоб зберігати кліпи.</sys:String>
+  <sys:String x:Key="L.Capture.PauseFailed">Не вдалося призупинити або відновити запис</sys:String>
+  <sys:String x:Key="L.Status.RecordingPaused">Запис призупинено</sys:String>
+  <sys:String x:Key="L.Engine.RecordingUnexpectedStop">Безперервний запис несподівано зупинився.</sys:String>
+  <sys:String x:Key="L.Engine.RecordingError">Помилка безперервного запису: {0}</sys:String>
   <sys:String x:Key="L.Status.Recording">Триває запис</sys:String>
   <sys:String x:Key="L.Status.RecordingDetail">{0} · {1}</sys:String>
   <sys:String x:Key="L.Status.RecordingDisabled">Запис вимкнено</sys:String>
@@ -394,7 +401,6 @@
   <sys:String x:Key="L.Notify.RecordingSavedDetail">Безперервний запис збережено.</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameTitle">Запис вимкнено</sys:String>
   <sys:String x:Key="L.Notify.RecordingOffGameDetail">Виявлено гру {0}. Увімкніть запис, щоб зберегти її.</sys:String>
-  <sys:String x:Key="L.Engine.ReplayUnavailableWhileRecording">Збереження повтору недоступне в режимі запису.</sys:String>
   <sys:String x:Key="L.Tray.Recording">Shadowless · Триває запис</sys:String>
   <sys:String x:Key="L.Tray.ToggleRecording">Почати / зупинити запис</sys:String>
   <sys:String x:Key="L.Hotkey.ToggleRecording">Почати / зупинити запис</sys:String>
@@ -402,6 +408,9 @@
   <sys:String x:Key="L.Section.Appearance">ВИГЛЯД</sys:String>
   <sys:String x:Key="L.Appearance.Accent">Акцентний колір</sys:String>
   <sys:String x:Key="L.Appearance.AccentHint">Застосовується в усьому Shadowless</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccent">Власний HEX-колір</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentHint">Формат #RRGGBB, наприклад #12ABEF. Застосовується кнопкою «Готово».</sys:String>
+  <sys:String x:Key="L.Appearance.CustomAccentError">Введіть колір у форматі #RRGGBB: шість шістнадцяткових цифр (0–9, A–F).</sys:String>
   <sys:String x:Key="L.Appearance.Mint">М'ятний</sys:String>
   <sys:String x:Key="L.Appearance.Blue">Синій</sys:String>
   <sys:String x:Key="L.Appearance.Violet">Фіолетовий</sys:String>
@@ -474,4 +483,6 @@
   <sys:String x:Key="L.Error.SettingsSaveFailed">Не вдалося зберегти: {0}. Причина: {1}</sys:String>
   <sys:String x:Key="L.Settings.File">Файл налаштувань</sys:String>
   <sys:String x:Key="L.Settings.Capture">Параметри захоплення</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresence">Статус гри в Discord</sys:String>
+    <sys:String x:Key="L.Settings.DiscordPresenceHint">Показувати розпізнану гру в Discord лише під час захоплення. Час захоплення не передається.</sys:String>
 </ResourceDictionary>

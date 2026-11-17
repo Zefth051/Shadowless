@@ -10,6 +10,23 @@ internal static class GpuPreference
     [DllImport("ShadowlessObsBridge.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern int shadowless_get_power_saving_adapter_index();
 
+    [DllImport("ShadowlessObsBridge.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int shadowless_get_monitor_adapter_index(nint monitor);
+
+    internal static int MonitorAdapterIndex(nint monitor)
+    {
+        try
+        {
+            return shadowless_get_monitor_adapter_index(monitor);
+        }
+        catch (Exception exception) when (exception is DllNotFoundException or
+            EntryPointNotFoundException or BadImageFormatException)
+        {
+            Log.Write($"Display adapter detection unavailable; preserving capture selection: {exception.Message}");
+            return -1;
+        }
+    }
+
     internal static uint AdapterIndex(string preference)
     {
         try
