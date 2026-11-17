@@ -19,3 +19,8 @@ topology, and a bundled native source. It must not make basic replay unreliable.
 - Routes are persisted by executable and reconciled across process restarts.
 - Container/codec capability determines available tracks; current maximum is six.
 - Failure is explicit and does not silently change what gets recorded.
+- Update (Windows 0.3.4, see ADR 0006): when saved Advanced or separate-track audio
+  cannot run (Windows build below 20348, or the process-audio source missing),
+  capture starts with mixed audio instead of failing. The saved settings are not
+  modified, a one-time non-blocking notice says mixed audio is in use, and
+  Instant Replay and Recording are never blocked by this capability.

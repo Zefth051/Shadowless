@@ -128,10 +128,37 @@ Reconciled on 2026-11-17 against both branches' changelogs and logs.
   synchronization, permissions and platform support before choosing the capture path.
   - Linux: open (design). Windows: open.
 
-- **Beta testing update channel (planned, not implemented):** Settings → Updates option, off by default, on Windows and Linux. Requirements: `docs/BETA_TESTING_CHANNEL.md`.
+- **Beta testing update channel (planned, not implemented):** Settings → Updates → Beta testing, available on Windows and Linux.
+  - Off by default. Off: only final releases are offered. On: final releases and compatible prereleases.
+  - Never downgrades automatically; Store builds stay Store-managed.
+  - Requirements and acceptance tests: `docs/BETA_TESTING_CHANNEL.md`. Not started; needs an explicit go-ahead.
+
+## Compatibility (added 2026-11-17)
+
+Policy, requirements and evidence levels: `docs/COMPATIBILITY.md`; rule:
+`docs/PRODUCT_PHILOSOPHY.md`. Nothing here replaces an item above.
+
+- [ ] Priority systems: Windows 10, Windows 11, Arch Linux, CachyOS (Wayland, Hyprland,
+  KDE Plasma 6 on Linux). Every feature must state its behavior on the four systems.
+  - Windows 0.3.4 (hotfix): per-application audio is unavailable below build 20348 and
+    0.3.3 aborted capture start on Windows 10 with saved advanced/separate audio. Fix:
+    mixed-audio fallback, unchanged saved settings, one-time notice, real error shown in
+    recovery messages. CI-tested with simulated builds (19045, 22631); real Windows 10 and
+    11 verification pending before release.
+  - Windows: open. Clean-PC behavior without the Visual C++ runtime is unverified (the
+    runtime is not bundled); independent of the 0.3.3 regression.
+  - Linux 0.3.8 (in development): optional input access must never affect core capture;
+    accurate failure messages; helper security review; hotplug; Arch/CachyOS audit.
+- [ ] More Linux distributions, in stages, each subject to validation. No official
+  support is declared before the acceptance criteria in `docs/COMPATIBILITY.md` pass.
+  - Stage 1 Fedora, Stage 2 Ubuntu, Stage 3 Debian, Stage 4 others (for example openSUSE).
+  - Acceptance per distribution: install, dependencies, capture, audio, permissions,
+    updater and desktop behavior, with evidence.
+  - Linux: open. Windows: n/a.
 
 ## Proposed delivery order
 
+0. Windows 0.3.4 hotfix and Linux 0.3.8 stabilization take priority over new features.
 1. Finish and validate the immediate distribution work.
 2. Check existing behavior in both branches; finish game-folder organization on Windows.
 3. Fix reproducible laptop/overlay issues, then refresh the UI.
