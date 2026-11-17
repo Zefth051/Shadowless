@@ -39,7 +39,7 @@ public:
     void recordingStarted();     // its first frame
     void recordingPaused();      // paused time is cut from the video: the recording can no longer be aligned
     void recordingStopRequested();
-    void replaySaveRequested();
+    void replaySaveRequested(qint64 bufferMs = -1); // -1: the buffer length of the last update()
 
     // Writes the sidecar for a saved clip. Skipped: nothing to write (inactive, paused or unknown timing).
     // Failed: the file could not be written; the clip itself is never affected.
@@ -53,7 +53,7 @@ private:
     Clock m_clock;
     std::unique_ptr<InputRecorder> m_recorder;
     QString m_layout;
-    qint64 m_bufferMs = 0;
+    qint64 m_bufferMs = 0, m_clipBufferMs = 0;
     qint64 m_captureStartMs = 0, m_clipRequestMs = 0, m_recordingStartMs = 0, m_recordingStopMs = 0;
     bool m_recordingPausedOnce = false, m_closed = false;
 };

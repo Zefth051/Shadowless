@@ -57,6 +57,7 @@ private slots:
     void shutdownIsSafeInAnyOrder();
     void writeFailureLeavesNoPartialFile();
     void allowlistFollowsTheActiveLayout();
+    void replaySaveUsesTheBufferInForceWhenItWasRequested();
 };
 
 void SidecarTests::replayClipCoversTheBufferEndingAtTheSaveRequest() {
@@ -265,6 +266,21 @@ void SidecarTests::allowlistFollowsTheActiveLayout() {
     QVERIFY(InputSidecarSession::allowlistFor("unknown-layout").isEmpty());
     QVERIFY(InputSidecarSession::allowlistFor("none").isEmpty());
     QCOMPARE(InputSidecarSession::allowlistFor("azerty"), InputSidecarSession::allowlistFor("qwerty"));
+}
+
+void SidecarTests::replaySaveUsesTheBufferInForceWhenItWasRequested() {
+    Fixture f; f.now = f.at(0); f.session->update(f.state("qwerty", true, false, 60000)); f.session->captureStarted(false);
+    f.source.inject("key.w", true, f.at(50000)); f.source.inject("key.w", false, f.at(51000));
+    f.source.inject("key.a", true, f.at(100000)); f.source.inject("key.a", false, f.at(101000));
+    f.now = f.at(102000); f.session->replaySaveRequested(60000);              // the buffer in force at the request
+    f.session->update(f.state("qwerty", true, false, 200000));                  // a later update must not change that clip
+    QCOMPARE(f.session->writeClip(f.clip(), false), Outcome::Written);
+    QCOMPARE(f.read(f.clip()).value("durationMs").toInt(), 60000);
+    QCOMPARE(f.read(f.clip()).value("events").toArray().size(), 4);
+    // Without an explicit length the last update() decides.
+    f.now = f.at(103000); f.session->replaySaveRequested();
+    QCOMPARE(f.session->writeClip(f.clip("b.mp4"), false), Outcome::Written);
+    QCOMPARE(f.read(f.clip("b.mp4")).value("durationMs").toInt(), 103000);       // 200 s buffer but only 103 s of capture so far
 }
 
 QTEST_MAIN(SidecarTests)
