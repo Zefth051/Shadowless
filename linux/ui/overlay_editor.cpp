@@ -236,6 +236,7 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
     connect(m_inputPanel, &InputOverlayPanel::previewChanged, m_canvas, &OverlayCanvas::setInputOverlay);
     connect(m_inputPanel, &InputOverlayPanel::changed, this, &OverlayEditor::inputOverlayChanged);
     connect(m_inputPanel, &InputOverlayPanel::previewWanted, this, &OverlayEditor::inputPreviewWanted);
+    connect(m_inputPanel, &InputOverlayPanel::accessChanged, this, &OverlayEditor::inputAccessChanged);
     right->addStretch();
     auto *scroll = new QScrollArea;
     scroll->setWidgetResizable(true);

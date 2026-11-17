@@ -412,6 +412,25 @@ private slots:
         QVERIFY(full.width() <= video.width() * 40 / 100);                     // still moderate
         QCOMPARE(Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 50, "full").width(), full.width() / 2);
     }
+    void inputAccessControlsFollowAvailabilityAndNeverBlockTheApp() {
+        QTemporaryDir dir; QFile rule(dir.filePath("70.rules")); QVERIFY(rule.open(QIODevice::WriteOnly)); rule.close();
+        InputOverlayPanel panel; panel.show();
+        InputOverlaySettings value; value.layout = "qwerty"; panel.setValue(value);
+        auto *tool = panel.findChild<Input::InputAccess *>(); QVERIFY(tool);
+        auto *enable = panel.findChild<QPushButton *>("inputOverlayEnableAccess"); auto *remove = panel.findChild<QPushButton *>("inputOverlayRemoveAccess");
+        auto *manual = panel.findChild<QLabel *>("inputOverlaySetup"); QVERIFY(enable && remove && manual);
+        tool->configureForTesting({}, {}, dir.filePath("absent"));                 // no pkexec or helper: only the manual steps remain
+        panel.setInputStatus(Input::InputStatus::PermissionDenied, {});
+        QVERIFY(enable->isHidden()); QVERIFY(remove->isHidden()); QVERIFY(!manual->isHidden());
+        tool->configureForTesting("/bin/sh", "/bin/sh", rule.fileName());            // automatic setup available, rule already installed
+        panel.setInputStatus(Input::InputStatus::PermissionDenied, {});
+        QVERIFY(!enable->isHidden()); QVERIFY(manual->isHidden()); QVERIFY(!remove->isHidden());
+        panel.setInputStatus(Input::InputStatus::Active, {});                        // already readable: LIVE, nothing is asked
+        QVERIFY(enable->isHidden());
+        QCOMPARE(panel.statusBadge(), QString("LIVE"));
+        value.layout = "none"; panel.setValue(value);                                // overlay off: no setup controls at all
+        QVERIFY(enable->isHidden() && remove->isHidden());
+    }
     void overlayRectHonoursCornerMarginsAndShrinksGamepads() {
         const QRect video(0, 0, 1920, 1080);
         const QRect bl = Input::overlayRect(video, {11.05, 5.62}, "bottom-left", 100);

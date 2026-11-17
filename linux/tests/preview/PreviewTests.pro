@@ -8,5 +8,5 @@ HEADERS += ../../overlays/preview_client.h ../../plugins/compositor.h ../../over
 QMAKE_CXXFLAGS += -Wall -Wextra -Werror
 # The editor hosts the peripheral overlay panel (core renderer, layouts and the settings model).
 include(../../overlays/input/core/input.pri)
-SOURCES += ../../ui/input_overlay_panel.cpp ../../ui/input_overlay_preview.cpp ../../settings/settings.cpp
-HEADERS += ../../ui/input_overlay_panel.h ../../ui/input_overlay_preview.h ../../settings/settings.h
+SOURCES += ../../ui/input_overlay_panel.cpp ../../ui/input_overlay_preview.cpp ../../settings/settings.cpp ../../ui/input_access_dialog.cpp ../../overlays/input/access/input_access.cpp
+HEADERS += ../../ui/input_overlay_panel.h ../../ui/input_overlay_preview.h ../../settings/settings.h ../../ui/input_access_dialog.h ../../overlays/input/access/input_access.h
