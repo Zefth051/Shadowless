@@ -933,7 +933,6 @@ public partial class SettingsWindow : Window
     {
         _runtimeActive = false;
         _updatingUi = true;
-        ReplayToggle.IsChecked = true;
         SettingsReplayToggle.IsChecked = true;
         _updatingUi = false;
 
