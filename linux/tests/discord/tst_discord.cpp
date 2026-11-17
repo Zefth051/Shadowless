@@ -1,6 +1,11 @@
 #include "../../app/discord_presence.h"
+#include "../../capture/replay_paths.h"
+#include <QDir>
+#include <QFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QTemporaryDir>
 #include <QTest>
 #include <QtEndian>
 #include <sys/socket.h>
@@ -34,6 +39,53 @@ class DiscordPresenceTests : public QObject {
     };
     static QJsonObject payload(const QByteArray &bytes) { return QJsonDocument::fromJson(bytes.mid(8)).object(); }
 private slots:
+    void ambiguousProcessIdentity_data() {
+        QTest::addColumn<QString>("executable");
+        QTest::addColumn<QByteArray>("arguments");
+        QTest::addColumn<QString>("expected");
+        QTest::newRow("known native") << "rocketleague.exe" << QByteArray() << QString("Rocket League");
+        QTest::newRow("unknown native") << "unknown-game" << QByteArray() << QString();
+        QTest::newRow("known wine") << "wine64"
+            << (QByteArray("C:\\Games\\rocketleague.exe") + '\0') << QString("Rocket League");
+        QTest::newRow("ambiguous before known") << "wine64"
+            << (QByteArray("game.exe") + '\0' + "rocketleague.exe" + '\0') << QString();
+        QTest::newRow("ambiguous after known") << "wine64"
+            << (QByteArray("rocketleague.exe") + '\0' + "game.exe" + '\0') << QString();
+        QTest::newRow("ambiguous process alongside known") << "game.exe" << QByteArray() << QString();
+    }
+    void ambiguousProcessIdentity() {
+        QFETCH(QString, executable);
+        QFETCH(QByteArray, arguments);
+        QFETCH(QString, expected);
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto root = directory.filePath("proc");
+        QVERIFY(QDir().mkpath(root + "/101"));
+        QVERIFY(QDir().mkpath(root + "/102"));
+        QFile binary(directory.filePath(executable));
+        QVERIFY(binary.open(QIODevice::WriteOnly)); binary.close();
+        QVERIFY(QFile::link(binary.fileName(), root + "/101/exe"));
+        QFile cmdline(root + "/101/cmdline");
+        QVERIFY(cmdline.open(QIODevice::WriteOnly));
+        QCOMPARE(cmdline.write(arguments), arguments.size()); cmdline.close();
+        // A second known process must not override an ambiguous identity.
+        if (executable == "game.exe") {
+            QFile known(directory.filePath("rocketleague.exe"));
+            QVERIFY(known.open(QIODevice::WriteOnly)); known.close();
+            QVERIFY(QFile::link(known.fileName(), root + "/102/exe"));
+        }
+        QCOMPARE(gameForProcesses(root), expected);
+        if (expected.isEmpty()) {
+            const auto clip = directory.filePath("clip.mp4");
+            QFile file(clip); QVERIFY(file.open(QIODevice::WriteOnly));
+            file.write("original clip"); file.close();
+            QString error;
+            QCOMPARE(routeClip(directory.path(), clip, gameForProcesses(root), &error), clip);
+            QVERIFY(error.isEmpty());
+            QVERIFY(file.open(QIODevice::ReadOnly));
+            QCOMPARE(file.readAll(), QByteArray("original clip"));
+        }
+    }
     void littleEndianFrames() {
         QCOMPARE(DiscordPresence::frame(3, "ping"), QByteArray::fromHex("030000000400000070696e67"));
         QVERIFY(DiscordPresence::frame(1, QByteArray(65537, 'x')).isEmpty());

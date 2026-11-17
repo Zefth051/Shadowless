@@ -101,8 +101,11 @@ QString gameForProcesses(const QString &processDirectory) {
         }
         for (const auto &candidate : candidates) {
             const auto key = executableName(candidate);
-            const auto name = catalog().value(key, catalog().value(key + ".exe"));
-            if (name.isEmpty()) continue;
+            auto identity = catalog().constFind(key);
+            if (identity == catalog().cend()) identity = catalog().constFind(key + ".exe");
+            if (identity == catalog().cend()) continue;
+            if (identity->isEmpty()) return {};
+            const auto &name = *identity;
             if (!matched.isEmpty() && matched != name) return {};
             matched = name;
         }
