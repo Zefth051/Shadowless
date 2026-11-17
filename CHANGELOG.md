@@ -4,6 +4,8 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-11-17
+
 ### Added
 
 - **Peripheral overlay (Linux):** In **Capture overlays**, pick a Medal-style overlay of pressed keys, mouse buttons or gamepad inputs: QWERTY (compact or full), arrow keys, AZERTY or DualSense. A live preview shows your real input, and the overlay appears on the capture preview in the corner you choose, with its own size and opacity. It is off by default and nothing is read until you choose one.
