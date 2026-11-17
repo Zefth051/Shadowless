@@ -5,7 +5,9 @@ Use this page to route work. Read one area document, not the whole set.
 ## Product philosophy
 
 Every area follows `docs/PRODUCT_PHILOSOPHY.md` (install once, zero friction,
-native authorization, graceful degradation, no repeated setup).
+native authorization, graceful degradation, no repeated setup, compatibility
+with Windows 10/11 and Arch/CachyOS). Requirements and evidence levels:
+`docs/COMPATIBILITY.md`; ADRs 0005 and 0006.
 
 ## Task router
 

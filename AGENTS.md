@@ -11,7 +11,9 @@ the Windows solution and PowerShell validation below apply to Windows code.
 Shadowless is simple: install once and it just works; it adapts to the user,
 not the reverse. Read `docs/PRODUCT_PHILOSOPHY.md` (single source of truth)
 before designing or reviewing any feature, installer, setting or permission
-flow. Security, testing and duo rules below still apply.
+flow. It includes the permanent compatibility rules for Windows 10/11 and Arch
+Linux/CachyOS (requirements and evidence: `docs/COMPATIBILITY.md`). Security,
+testing and duo rules below still apply.
 
 ## Start here
 
