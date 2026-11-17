@@ -51,7 +51,11 @@ public partial class OverlayNotificationWindow : Window
             Interval = TimeSpan.FromMilliseconds(250),
         };
         _topmostTimer.Tick += (_, _) => EnsureNativeTopmost(moveToTarget: false);
-        SourceInitialized += (_, _) => MakeClickThrough();
+        SourceInitialized += (_, _) =>
+        {
+            MakeClickThrough();
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(NotificationWindowProc);
+        };
         Closing += (_, e) =>
         {
             _hideTimer.Stop();
@@ -155,6 +159,18 @@ public partial class OverlayNotificationWindow : Window
             });
     }
 
+    private nint NotificationWindowProc(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
+    {
+        const int WmNcHitTest = 0x0084;
+        if (message == WmNcHitTest)
+        {
+            // Let same-thread windows (including Settings) receive clicks beneath the toast.
+            handled = true;
+            return new nint(-1); // HTTRANSPARENT
+        }
+        return 0;
+    }
+
     private void MakeClickThrough()
     {
         nint hwnd = new WindowInteropHelper(this).Handle;
@@ -245,18 +261,19 @@ public partial class OverlayNotificationWindow : Window
         nint hwnd = new WindowInteropHelper(this).Handle;
         int styles = GetWindowLong(hwnd, GwlExStyle);
         bool aboveFullscreen = IsWindowAbove(hwnd, fullscreenWindow);
+        bool hitTestTransparent = SendMessage(hwnd, 0x0084, 0, 0) == new nint(-1);
         bool passed = hwnd != 0 &&
                       (styles & WsExTopmost) != 0 &&
                       (styles & WsExTransparent) != 0 &&
                       (styles & WsExNoActivate) != 0 &&
                       _topmostTimer.IsEnabled &&
                       _targetMonitor != 0 &&
-                      aboveFullscreen;
+                      aboveFullscreen && hitTestTransparent;
         details = $"hwnd={hwnd != 0}, topmost={(styles & WsExTopmost) != 0}, " +
                   $"transparent={(styles & WsExTransparent) != 0}, " +
                   $"noActivate={(styles & WsExNoActivate) != 0}, " +
                   $"timer={_topmostTimer.IsEnabled}, monitor={_targetMonitor != 0}, " +
-                  $"aboveFullscreen={aboveFullscreen}";
+                  $"aboveFullscreen={aboveFullscreen}, hitTestTransparent={hitTestTransparent}";
         return passed;
     }
 
@@ -304,6 +321,9 @@ public partial class OverlayNotificationWindow : Window
         uint flags);
 
 #if DEBUG
+    [DllImport("user32.dll")]
+    private static extern nint SendMessage(nint hwnd, int message, nint wParam, nint lParam);
+
     [DllImport("user32.dll")]
     private static extern nint GetWindow(nint hwnd, uint command);
 #endif
