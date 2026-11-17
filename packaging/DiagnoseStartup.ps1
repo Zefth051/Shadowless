@@ -53,10 +53,26 @@ foreach ($name in 'obs.dll','libobs-d3d11.dll','ShadowlessObsBridge.dll') {
 }
 
 Add-Line ''
+Add-Line '== Capture settings that affect startup (config.json, no paths/devices) =='
+$configPath = Join-Path $env:APPDATA 'Shadowless\config.json'
+if (Test-Path $configPath) {
+    try {
+        $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
+        foreach ($key in 'CaptureMode','CaptureSource','InstantClipEnabled','ReplayEnabled','AudioRoutingMode','SeparateAudioTracks','CaptureSystemAudio','CaptureMicrophone','AdvancedMicrophoneTrack','Codec','FrameRate','GpuPreference') {
+            Add-Line ("{0} = {1}" -f $key, $cfg.$key)
+        }
+        $routes = @($cfg.ProcessAudioRoutes | Where-Object { $_.Enabled })
+        Add-Line ("Enabled per-app audio routes = {0}" -f $routes.Count)
+    } catch { Add-Line '(config.json could not be parsed)' }
+} else {
+    Add-Line '(config.json not found)'
+}
+
+Add-Line ''
 Add-Line '== Recent startup failures from log.txt (sanitized) =='
 $log = Join-Path $env:LOCALAPPDATA 'Shadowless\log.txt'
 if (Test-Path $log) {
-    $lines = Get-Content $log -Tail 400 | Where-Object { $_ -match 'startup failed|Watchdog|OBS pipeline|GPU capability|Exception|Unable to load|VideoFailed|initialize' } | Select-Object -Last 25
+    $lines = Get-Content $log -Tail 400 | Where-Object { $_ -match 'startup failed|Watchdog|OBS pipeline|GPU capability|Exception|Unable to load|build 20348|routing|audio|initialize|version' } | Select-Object -Last 40
     foreach ($line in $lines) {
         $clean = $line -replace '[A-Za-z]:\\[^''"\r\n<>|:]*', '<path>' `
                        -replace '\b\d{1,3}(\.\d{1,3}){3}\b', '<ip>' `
