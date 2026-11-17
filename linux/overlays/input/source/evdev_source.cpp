@@ -5,6 +5,9 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QSocketNotifier>
+#include <QTimer>
+#include <algorithm>
+#include <limits>
 #include <array>
 #include <map>
 #include <cerrno>
@@ -13,6 +16,7 @@
 #include <linux/input.h>
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 namespace Shadowless::Input {
@@ -34,6 +38,17 @@ struct EvdevInputSource::Impl {
         bool dropped = false;
         ~Device() { delete notifier; if (fd >= 0) close(fd); }
     };
+    struct Negative {
+        dev_t rdev = 0;
+        ino_t inode = 0;
+        bool identityKnown = false, rejected = false, configurationFailed = false;
+        int error = 0, attempts = 0, delayMs = 0;
+        qint64 nextMs = -1; // -1 means dormant.
+    };
+    std::map<QString, Negative> negative;
+    int initialMs = 1000, maxMs = 30000, maxAttempts = 6;
+    std::unique_ptr<QTimer> retryTimer;
+    QTimer *debounce;
     EvdevInputSource *q;
     QString directory;
     bool started = false, denied = false;
@@ -44,7 +59,53 @@ struct EvdevInputSource::Impl {
     std::map<QString, std::shared_ptr<Device>> devices;
     QString failure, monitorFailure;
 
-    Impl(EvdevInputSource *source, QString path) : q(source), directory(QDir::cleanPath(path)) {}
+    Impl(EvdevInputSource *source, QString path) : q(source), directory(QDir::cleanPath(path)) {
+        debounce = new QTimer(q);
+        debounce->setSingleShot(true);
+        debounce->setInterval(30);
+        QObject::connect(debounce, &QTimer::timeout, q, [this] { scan(); });
+    }
+    void cachedStatus(const Negative &entry) {
+        if (entry.rejected) return;
+        if (entry.configurationFailed) failure = QStringLiteral("Unable to configure an input device.");
+        else if (entry.error == EACCES || entry.error == EPERM) denied = true;
+        else if (entry.error != ENOENT && entry.error != ENODEV)
+            failure = QStringLiteral("Unable to open an input device.");
+    }
+    void failedAttempt(Negative &entry) {
+        ++entry.attempts;
+        entry.nextMs = -1;
+        if (!entry.rejected && entry.attempts < maxAttempts) {
+            entry.delayMs = entry.delayMs ? int(std::min(qint64(maxMs), qint64(entry.delayMs) * 2)) : initialMs;
+            entry.nextMs = monotonicMs() + entry.delayMs;
+        }
+        cachedStatus(entry);
+    }
+    // scan() may run from the retry timer's own timeout: never delete the timer inside its signal.
+    void dropRetryTimer() {
+        if (!retryTimer) return;
+        retryTimer->stop();
+        retryTimer.release()->deleteLater();
+    }
+    void scheduleRetry() {
+        qint64 next = std::numeric_limits<qint64>::max();
+        for (const auto &entry : negative)
+            if (entry.second.nextMs >= 0) next = std::min(next, entry.second.nextMs);
+        if (next == std::numeric_limits<qint64>::max()) {
+            dropRetryTimer();
+            return;
+        }
+        if (!retryTimer) {
+            retryTimer = std::make_unique<QTimer>(q);
+            retryTimer->setSingleShot(true);
+            retryTimer->setTimerType(Qt::PreciseTimer);
+            QObject::connect(retryTimer.get(), &QTimer::timeout, q, [this] {
+                debounce->stop();
+                scan();
+            });
+        }
+        retryTimer->start(int(std::max(qint64(1), next - monotonicMs())));
+    }
     void status() {
         if (!started) return;
         if (!devices.empty()) q->setStatus(InputStatus::Active);
@@ -186,22 +247,49 @@ struct EvdevInputSource::Impl {
             remove(path);
             if (!started) return;
         }
+        for (auto it = negative.begin(); it != negative.end();) {
+            if (!paths.contains(it->first)) it = negative.erase(it);
+            else ++it;
+        }
         for (const auto &path : paths) {
             if (!started) return;
             if (devices.count(path)) continue;
+            struct stat identity{};
+            const bool known = ::stat(QFile::encodeName(path).constData(), &identity) == 0;
+            auto cached = negative.find(path);
+            if (cached != negative.end() && known && cached->second.identityKnown
+                && (cached->second.rdev != identity.st_rdev || cached->second.inode != identity.st_ino)) {
+                negative.erase(cached);
+                cached = negative.end();
+            }
+            if (cached != negative.end() && (cached->second.nextMs < 0 || cached->second.nextMs > monotonicMs())) {
+                cachedStatus(cached->second);
+                continue;
+            }
+            auto &entry = negative[path];
+            entry.identityKnown = known;
+            entry.rdev = identity.st_rdev; entry.inode = identity.st_ino;
+            entry.configurationFailed = false;
             const int fd = q->openDevice(path);
             if (fd < 0) {
-                if (errno == EACCES || errno == EPERM) denied = true;
-                else if (errno != ENOENT && errno != ENODEV)
-                    failure = QStringLiteral("Unable to open an input device.");
+                entry.error = errno;
+                failedAttempt(entry);
                 continue;
             }
             auto device = std::make_shared<Device>(); device->fd = fd;
             const int flags = fcntl(fd, F_GETFL);
             if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0 || fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
-                failure = QStringLiteral("Unable to configure an input device."); continue;
+                entry.configurationFailed = true;
+                failedAttempt(entry); continue;
             }
-            if (!q->probeDevice(fd, &device->info)) continue;
+            if (!q->probeDevice(fd, &device->info)) {
+                // A device that is not a keyboard, mouse or gamepad is rejected for good; a failing probe
+                // (for example a node that is still initializing) is retried like an open error.
+                entry.rejected = !device->info.probeError;
+                if (!entry.rejected) entry.error = EIO;
+                failedAttempt(entry); continue;
+            }
+            negative.erase(path);
             device->notifier = new QSocketNotifier(fd, QSocketNotifier::Read, q);
             devices.emplace(path, device);
             // The map owns devices; weak capture avoids a notifier/device ownership cycle.
@@ -213,6 +301,7 @@ struct EvdevInputSource::Impl {
             resync(device);
             if (!started) return;
         }
+        scheduleRetry();
         status();
     }
     void hotplug() {
@@ -233,13 +322,24 @@ struct EvdevInputSource::Impl {
                     if (event->wd == parentWatch) parentWatch = -1;
                 }
                 // A remove/recreate with the same name must close the old descriptor too.
-                if (event->wd == directoryWatch && event->len && (event->mask & (IN_DELETE | IN_MOVED_FROM)))
-                    remove(QDir(directory).filePath(QString::fromLocal8Bit(event->name)));
+                if (event->wd == directoryWatch && event->len) {
+                    const auto path = QDir(directory).filePath(QString::fromLocal8Bit(event->name));
+                    if (event->mask & (IN_DELETE | IN_MOVED_FROM)) {
+                        negative.erase(path);
+                        remove(path);
+                    } else if (event->mask & (IN_CREATE | IN_MOVED_TO)) {
+                        negative.erase(path);              // a new node under an old name: forget everything about it
+                    } else if (event->mask & IN_ATTRIB) {
+                        const auto cached = negative.find(path);
+                        if (cached != negative.end() && !cached->second.rejected) negative.erase(cached);
+                    }
+                }
                 if (!started) return;
                 offset += sizeof(inotify_event) + event->len;
             }
         }
-        scan();
+        scheduleRetry();
+        if (!debounce->isActive()) debounce->start();
     }
 };
 
@@ -261,6 +361,7 @@ void EvdevInputSource::start(const QSet<InputId> &allowlist) {
 void EvdevInputSource::stop() {
     if (!d->started) return;
     d->started = false;
+    d->debounce->stop(); d->dropRetryTimer(); d->negative.clear();
     delete d->monitorNotifier; d->monitorNotifier = nullptr;
     if (d->monitor >= 0) close(d->monitor);
     d->monitor = d->directoryWatch = d->parentWatch = -1;
@@ -270,12 +371,29 @@ void EvdevInputSource::stop() {
     d->allow.clear(); d->heldCounts.clear(); d->denied = false;
     setStatus(InputStatus::Stopped);
 }
+void EvdevInputSource::setRetryPolicy(int initialMs, int maxMs, int maxAttempts) {
+    if (d->started) return;
+    d->initialMs = std::max(1, initialMs);
+    d->maxMs = std::max(d->initialMs, maxMs);
+    d->maxAttempts = std::max(1, maxAttempts);
+}
+void EvdevInputSource::retryInaccessible() {
+    if (!d->started) return;
+    for (auto it = d->negative.begin(); it != d->negative.end();) {
+        if (it->second.rejected) ++it; else it = d->negative.erase(it);
+    }
+    d->debounce->stop();
+    d->scan();
+}
 int EvdevInputSource::openDevice(const QString &path) {
     return open(QFile::encodeName(path).constData(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
 }
 bool EvdevInputSource::probeDevice(int fd, DeviceInfo *info) {
     std::array<unsigned long, keyWords> keys{};
-    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(keys)), keys.data()) < 0) return false;
+    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(keys)), keys.data()) < 0) {
+        info->probeError = errno != ENOTTY && errno != EINVAL; // ENOTTY/EINVAL: not an evdev node at all
+        return false;
+    }
     const bool keyboard = bit(keys, KEY_A) && bit(keys, KEY_Z) && bit(keys, KEY_ENTER);
     const bool mouse = bit(keys, BTN_LEFT);
     const bool gamepad = bit(keys, BTN_SOUTH) || bit(keys, BTN_EAST);

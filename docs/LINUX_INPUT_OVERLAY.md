@@ -73,7 +73,8 @@ SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_JOYSTICK}=="1", TAG+="uaccess
 ```
 
 Drop the keyboard line to support only mouse and gamepad overlays. The `uaccess` tag grants
-the user logged in at the seat, not a group. Without access `InputSource` reports
+the user logged in at the seat, not a group. Unreadable devices are retried with bounded backoff and again when a device node changes or reconnects; opening Capture overlays also triggers one retry.
+Without access `InputSource` reports
 `PermissionDenied` and the overlay simply shows nothing. Under Wayland there is no other
 supported way to read global key state, and compositor shortcuts cannot report arbitrary keys.
 
