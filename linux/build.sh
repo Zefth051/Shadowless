@@ -29,6 +29,7 @@ QT_QPA_PLATFORM=offscreen ./tests/input/core/tst_input_core
 ./tests/input/recorder/tst_input_recorder
 ./tests/input/sidecar/tst_input_sidecar
 ./tests/input/access/tst_input_access
+INPUT_SETUP_HELPER="$PWD/helper/input_setup/shadowless-input-setup" INPUT_SETUP_RELOAD_HELPER="$PWD/tests/helper/fixture/shadowless-input-setup-reload-fixture" ./tests/helper/shadowless-helper-tests
 QT_QPA_PLATFORM=offscreen ./tests/camera/tst_camera_catalog
 # The fake shortcut portal must never share the user desktop bus.
 dbus-run-session -- ./tests/shortcuts/shadowless-shortcut-tests

@@ -37,7 +37,7 @@ until you remove the access.
   network, no config parsing. Subcommands `status`, `install`, `remove`. It receives only
   `VENDOR:PRODUCT:CLASS` triples (4 hex digits each, class keyboard|mouse|gamepad, at most 16),
   **generates the rule file from a fixed template** (callers cannot supply rule text), writes
-  `/etc/udev/rules.d/70-shadowless-input.rules` atomically (`O_EXCL` temp + `rename`, 0644),
+  `/etc/udev/rules.d/71-shadowless-input-access.rules` (the manual-setup file `70-shadowless-input.rules` from the docs is never touched) atomically (`O_EXCL` temp + `rename`, 0644),
   then reloads udev and re-triggers input devices (`change` events). Rules match the kernel ids (`ATTRS{id/vendor}`/`ATTRS{id/product}`) plus the device class flag, so USB, Bluetooth and built-in keyboards all work and a different model never matches. It refuses anything else.
   Exit codes: 0 ok, 2 usage/validation, 3 I/O, 4 udev command failed (rule installed).
 * The app (unprivileged) enumerates devices from sysfs (name, vendor, product, class by key

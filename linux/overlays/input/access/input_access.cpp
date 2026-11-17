@@ -13,7 +13,7 @@
 
 namespace Shadowless::Input {
 namespace {
-constexpr const char *kRuleFile = "/etc/udev/rules.d/70-shadowless-input.rules";
+constexpr const char *kRuleFile = "/etc/udev/rules.d/71-shadowless-input-access.rules";
 constexpr int kKeyA = 30, kKeyZ = 44, kKeyEnter = 28, kBtnLeft = 272, kBtnSouth = 304, kBtnEast = 305;
 
 QString attribute(const QString &path) {
@@ -99,7 +99,7 @@ InputAccess::InputAccess(QObject *parent) : QObject(parent), m_ruleFile(kRuleFil
     qRegisterMetaType<Result>();
     m_launcher = QStandardPaths::findExecutable("pkexec");
     const QString app = QCoreApplication::applicationDirPath();
-    for (const QString &candidate : {app + "/../libexec/shadowless/shadowless-input-setup", app + "/shadowless-input-setup",
+    for (const QString &candidate : {app + "/../libexec/shadowless/shadowless-input-setup", app + "/shadowless-input-setup", app + "/../helper/input_setup/shadowless-input-setup",
                                      QString("/usr/libexec/shadowless/shadowless-input-setup"), QString("/usr/lib/shadowless/shadowless-input-setup")})
         if (QFileInfo(candidate).isFile() && QFileInfo(candidate).isExecutable()) { m_helper = QFileInfo(candidate).canonicalFilePath(); break; }
 }

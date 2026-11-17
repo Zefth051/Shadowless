@@ -21,12 +21,15 @@ SUBDIRS += discordtests
 discordtests.file = tests/discord/DiscordTests.pro
 
 # Input overlay suites (contract/layouts, evdev source, recorder, sidecar session)
-SUBDIRS += inputcoretests inputevdevtests inputrecordertests inputsidecartests inputaccesstests cameratests
+SUBDIRS += inputcoretests inputevdevtests inputrecordertests inputsidecartests inputaccesstests inputsetup helperfixture helpertests cameratests
 inputcoretests.file = tests/input/core/InputCoreTests.pro
 inputevdevtests.file = tests/input/evdev/EvdevTests.pro
 inputrecordertests.file = tests/input/recorder/RecorderTests.pro
 inputsidecartests.file = tests/input/sidecar/SidecarTests.pro
 inputaccesstests.file = tests/input/access/AccessTests.pro
+inputsetup.file = helper/input_setup/input_setup.pro
+helperfixture.file = tests/helper/fixture/ReloadFixture.pro
+helpertests.file = tests/helper/HelperTests.pro
 
 # Read-only V4L2 camera catalog
 cameratests.file = tests/camera/CameraCatalogTests.pro
