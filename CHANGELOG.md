@@ -4,6 +4,8 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-11-17
+
 ### Added
 
 - **Pause/Resume hotkey:** A configurable shortcut (Ctrl+Shift+F8 by default) pauses and resumes a standalone recording. It is validated so it cannot duplicate another shortcut.
