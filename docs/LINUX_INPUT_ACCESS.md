@@ -38,7 +38,7 @@ until you remove the access.
   `VENDOR:PRODUCT:CLASS` triples (4 hex digits each, class keyboard|mouse|gamepad, at most 16),
   **generates the rule file from a fixed template** (callers cannot supply rule text), writes
   `/etc/udev/rules.d/70-shadowless-input.rules` atomically (`O_EXCL` temp + `rename`, 0644),
-  then reloads udev and re-triggers only the affected vendors. It refuses anything else.
+  then reloads udev and re-triggers input devices (`change` events). Rules match the kernel ids (`ATTRS{id/vendor}`/`ATTRS{id/product}`) plus the device class flag, so USB, Bluetooth and built-in keyboards all work and a different model never matches. It refuses anything else.
   Exit codes: 0 ok, 2 usage/validation, 3 I/O, 4 udev command failed (rule installed).
 * The app (unprivileged) enumerates devices from sysfs (name, vendor, product, class by key
   capabilities, readable or not via `access(2)`), shows what is already readable, lets the user
@@ -59,3 +59,18 @@ until you remove the access.
 No shell, no `system()`, absolute paths for `udevadm`, cleared environment, strict input
 validation, template-only output, refuses symlinked or unexpected targets, `--root` (tests only)
 is rejected when running under pkexec, no passwords or secrets handled by Shadowless.
+
+## What the user sees
+
+1. **Capture overlays → Peripheral overlay**, pick an overlay. If the devices are already readable the status goes
+   LIVE immediately; nothing is asked.
+2. If not: status PERMISSION DENIED and a button **Enable input access…**. It lists the detected keyboards and mice
+   (main device of each preselected), explains what changes, and has **Not now**.
+3. **Continue** opens the system authorization dialog (pkexec). Cancelling it changes nothing and Shadowless keeps working.
+4. On success the overlay goes LIVE without restarting. **Remove input access** undoes it.
+5. No polkit/pkexec or no helper (unusual builds): the panel shows the manual steps from `LINUX_INPUT_OVERLAY.md`.
+
+Known limits: a helper staged from an AppImage lives in a user-owned 0700 directory until pkexec returns (same model as the
+bundled GSR KMS helper); distro packages should install it under `/usr/libexec/shadowless/`, where it is run in place.
+Wayland sessions on non-systemd distributions without logind will not apply `uaccess` ACLs; the panel then keeps
+reporting PERMISSION DENIED.

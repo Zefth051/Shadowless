@@ -57,7 +57,13 @@ interactive elements) is the only set a source may emit.
   must warn before enabling it and the sidecar for that layout is clearly labelled.
 * Nothing is logged, and `statusDetail()` never contains key data.
 
-## Permissions on Linux (no automatic changes)
+## Permissions on Linux
+
+**Graphical setup (default).** The Capture overlays page offers **Enable input access…**: you choose the keyboards and mice, the system
+asks for authorization once (polkit), and a small helper installs a narrow per-device rule that persists across restarts. Design and
+security model: `LINUX_INPUT_ACCESS.md`. Nothing is changed unless you authorize it, and declining leaves Shadowless fully usable.
+
+**Manual setup (fallback, or if you prefer it).** Shadowless itself never modifies permissions without that authorization.
 
 `/dev/input/event*` is normally `root:input`, mode `0660`. Shadowless never modifies
 permissions and never asks you to join the `input` group (that grants every program you run

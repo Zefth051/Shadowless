@@ -4,6 +4,10 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **One-click input access (Linux):** The Peripheral overlay can now request permission to read your keyboard and mouse from the Capture overlays page, with the standard system authorization dialog and no terminal. You choose the devices; a small helper installs a narrow per-device rule that survives restarts and reconnects, and **Remove input access** undoes it. If your devices are already readable the overlay goes LIVE immediately; declining leaves Shadowless fully working without input capture.
+
 ## [0.3.7] - 2026-11-17
 
 ### Added
