@@ -41,7 +41,8 @@ QString busFor(const QString &target)
     static const QRegularExpression usb(QStringLiteral("/usb(?:[0-9]+)?(?:/|$)"));
     if (usb.match(target).hasMatch())
         return QStringLiteral("usb");
-    if (target.contains(QStringLiteral("/pci")))
+    static const QRegularExpression pci(QStringLiteral("/pci[0-9a-fA-F]{4}:[0-9a-fA-F]{2}(?:/|$)"));
+    if (pci.match(target).hasMatch())
         return QStringLiteral("pci");
     if (target.contains(QStringLiteral("/virtual/")))
         return QStringLiteral("virtual");
@@ -132,9 +133,8 @@ QVector<CameraDevice> CameraCatalog::scan() const
         camera.bridgeHint = bridgeFor(camera.name, camera.driver);
         if (!camera.bridgeHint.isEmpty() || camera.bus == QStringLiteral("virtual"))
             camera.kind = Kind::VirtualLoopback;
-        else if (camera.driver == QStringLiteral("uvcvideo") || camera.bus == QStringLiteral("usb")
-                 || camera.bus == QStringLiteral("pci") || camera.bus == QStringLiteral("platform"))
-            camera.kind = Kind::Physical;
+        else if (camera.driver == QStringLiteral("uvcvideo") || camera.bus == QStringLiteral("usb"))
+            camera.kind = Kind::Physical;   // PCI/platform nodes are often codec or ISP blocks: not claimed as cameras
         if (camera.index == 0 && !target.isEmpty())
             primaryTargets.insert(target);
         targets.append(target);

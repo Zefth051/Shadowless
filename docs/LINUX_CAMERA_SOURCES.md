@@ -19,8 +19,7 @@ video node, issues an ioctl, captures frames, or changes permissions or ownershi
 | PipeWire / portal cameras | Later option, outside this sysfs catalog. | Portal API, desktop availability, consent flow, and interoperability are UNVERIFIED. |
 
 Names are hints, not authenticated identities. A V4L2 entry can represent a
-non-camera function. Physical classification uses `uvcvideo` or USB/PCI/platform
-paths; it does not validate V4L2 capture capabilities. Unknown devices remain
+non-camera function. Physical classification uses `uvcvideo` or a USB path; it does not validate V4L2 capture capabilities. Unknown devices remain
 visible. Absence from sysfs does not prove absence from PipeWire or a portal.
 
 ## Detected versus likely usable
@@ -49,9 +48,11 @@ The conservative rule is that `likelyUsable()` is true only for
 5. `Unknown`: the index is missing, negative, overflowing, or malformed, or the
    bus and driver do not identify a camera (codec and ISP nodes look like
    cameras from sysfs). `likelyUsable()` is **false**.
-6. `LikelyUsable`: an accessible character device with a valid index on a USB,
-   PCI or platform bus or the `uvcvideo` driver, without the preceding
-   exclusions. Its reason still states that capture is unverified.
+6. `LikelyUsable`: an accessible character device with a valid index on a USB
+   bus or with the `uvcvideo` driver, without the preceding exclusions. PCI and
+   platform nodes are often codec or ISP blocks (and MIPI cameras need their own
+   probing), so they stay `Unknown` until an explicit probe phase exists. The
+   reason still states that capture is unverified.
 
 The catalog cannot prove capture support, producer activity, format compatibility,
 frame delivery, device availability, or exclusive access without opening and

@@ -199,6 +199,22 @@ private slots:
         QVERIFY(!devices[0].likelyUsable());
         QVERIFY(devices[0].detected);                 // detected is not the same as usable
     }
+    // PCI and platform nodes are frequently codec or ISP blocks, not cameras: detected, never "likely usable".
+    void platformAndPciNodesAreNotClaimedAsCameras() {
+        Tree t;
+        QVERIFY(t.add("video4", "Video Decoder", "0", "devices/platform/hantro-vpu", "hantro-vpu"));
+        QVERIFY(t.add("video5", "Imaging", "0", "devices/pci0000:00/0000:00:05.0", "intel-ipu6"));
+        QVERIFY(t.add("video6", "Weird", "0", "devices/pcie-fake/node", "other"));
+        const auto devices = t.scan();
+        QCOMPARE(devices.size(), 3);
+        QCOMPARE(devices[0].bus, "platform"); QCOMPARE(devices[1].bus, "pci"); QCOMPARE(devices[2].bus, "unknown");
+        for (const auto &d : devices) {
+            QVERIFY(d.detected);
+            QCOMPARE(d.kind, Kind::Unknown);
+            QCOMPARE(d.usability, Usability::Unknown);
+            QVERIFY(!d.likelyUsable());
+        }
+    }
     void emptyAndMissingRoot() {
         Tree t;
         QVERIFY(t.scan().isEmpty());
