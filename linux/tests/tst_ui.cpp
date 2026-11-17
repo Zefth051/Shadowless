@@ -11,6 +11,8 @@
 #include "../capture/replay_paths.h"
 #include "../ui/clip_notification.h"
 #include "../ui/theme.h"
+#include "../ui/input_overlay_preview.h"
+#include "../ui/input_overlay_layer.h"
 #include <QCheckBox>
 #include <QTableWidget>
 #include <QComboBox>
@@ -210,6 +212,108 @@ private slots:
             QCOMPARE(Settings(path).launchAtLogin(), launch);
             QCOMPARE(Settings(path).startReplayOnLaunch(), start);
         }
+    }
+    void inputOverlayDefaultsToOffAndPersistsSanitized() {
+        QTemporaryDir directory;
+        const auto path = directory.filePath("settings.ini");
+        Settings settings(path);
+        QCOMPARE(settings.inputOverlay().layout, QString("none"));
+        QVERIFY(!settings.inputOverlay().enabled());
+        QVERIFY(!settings.inputOverlay().sidecar);
+        InputOverlaySettings value; value.layout = "qwerty"; value.sidecar = true; value.corner = "top-right"; value.scale = 150; value.opacity = 60;
+        settings.setInputOverlay(value);
+        QVERIFY(Settings(path).inputOverlay() == value);
+        InputOverlaySettings hostile; hostile.layout = "../../etc/passwd"; hostile.sidecar = true; hostile.corner = "middle"; hostile.scale = 9999; hostile.opacity = -5;
+        settings.setInputOverlay(hostile);
+        const auto cleaned = Settings(path).inputOverlay();
+        QCOMPARE(cleaned.layout, QString("none"));
+        QVERIFY(!cleaned.sidecar); // nothing to record without a layout
+        QCOMPARE(cleaned.corner, QString("bottom-left"));
+        QCOMPARE(cleaned.scale, 200); QCOMPARE(cleaned.opacity, 20);
+    }
+    void inputOverlaySettingsRoundTripThroughThePage() {
+        SettingsPage page(caps); applyTheme(&page, "violet");
+        GsrOptions options; QTemporaryDir directory; options.outputDirectory = directory.path();
+        page.edit(options, false, false, keys);
+        auto *layout = page.findChild<QComboBox *>("inputOverlayLayout"); QVERIFY(layout);
+        auto *sidecar = page.findChild<QCheckBox *>("inputOverlaySidecar"); QVERIFY(sidecar);
+        auto *notice = page.findChild<QLabel *>("inputOverlayNotice"); QVERIFY(notice);
+        QCOMPARE(layout->itemData(0).toString(), QString("none"));
+        QCOMPARE(layout->count(), 6); // None + the five reference layouts
+        QVERIFY(!page.inputOverlay().enabled());
+        QVERIFY(!sidecar->isEnabled()); // nothing is read while None is selected
+        QVERIFY(notice->text().startsWith("Off."));
+        InputOverlaySettings value; value.layout = "azerty"; value.corner = "bottom-right"; value.scale = 80; value.opacity = 70; value.sidecar = true;
+        page.setInputOverlay(value);
+        QVERIFY(page.inputOverlay() == value);
+        QVERIFY(sidecar->isEnabled());
+        auto *preview = page.findChild<InputOverlayPreview *>("inputOverlayPreview"); QVERIFY(preview);
+        QCOMPARE(preview->layoutId(), QString("azerty"));
+        // Returning to None switches the sidecar off with it.
+        layout->setCurrentIndex(0);
+        QVERIFY(!sidecar->isChecked()); QVERIFY(!page.inputOverlay().sidecar);
+        // Editing again loads the stored state rather than keeping stale widget values.
+        page.setInputOverlay(value); page.edit(options, false, false, keys); page.setInputOverlay({});
+        QVERIFY(!page.inputOverlay().enabled());
+    }
+    void fullLayoutWarnsAboutTypedTextAndOthersDoNot() {
+        SettingsPage page(caps); applyTheme(&page, "violet");
+        auto *notice = page.findChild<QLabel *>("inputOverlayNotice"); QVERIFY(notice);
+        InputOverlaySettings value; value.layout = "qwerty-full"; page.setInputOverlay(value);
+        QVERIFY(notice->text().contains("reconstruct typed text"));
+        value.layout = "qwerty"; page.setInputOverlay(value);
+        QVERIFY(!notice->text().contains("reconstruct"));
+        QVERIFY(notice->text().contains("never text"));
+    }
+    void inputOverlayPreviewPaintsLayoutOrEmptyState() {
+        InputOverlayPreview preview; applyTheme(&preview, "violet");
+        preview.resize(340, 190);
+        const QImage empty = preview.grab().toImage();
+        preview.setLayoutId("qwerty");
+        QCOMPARE(preview.layoutId(), QString("qwerty")); QVERIFY(preview.hasLayout());
+        const QImage demo = preview.grab().toImage();
+        QVERIFY(demo != empty);
+        Input::InputState none; preview.setLiveState(none);
+        const QImage live = preview.grab().toImage();
+        QVERIFY(live != demo); // live (nothing pressed) replaces the demo presses
+        preview.clearLiveState();
+        QCOMPARE(preview.grab().toImage(), demo);
+        preview.setLayoutId("unknown-layout");
+        QVERIFY(!preview.hasLayout());
+    }
+    void inputOverlayLayerFollowsPlaybackAndStaysOutOfTheWay() {
+        QTemporaryDir directory;
+        const QString clip = directory.filePath("clip.mp4");
+        QWidget video; video.resize(800, 450);
+        InputOverlayLayer layer(&video); applyTheme(&video, "violet");
+        QVERIFY(!layer.load(clip));                       // no sidecar: nothing to draw
+        QVERIFY(!layer.hasTimeline() && !layer.isVisible());
+        QFile file(Input::InputTimeline::sidecarPath(clip));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("{\"schema\":1,\"layout\":\"qwerty\",\"durationMs\":4000,\"events\":[[1000,\"key.w\",1],[2000,\"key.w\",0]]}");
+        file.close();
+        QVERIFY(layer.load(clip) && layer.hasTimeline());
+        InputOverlaySettings settings; settings.layout = "qwerty"; settings.corner = "bottom-right"; settings.scale = 100; settings.opacity = 100;
+        layer.setSettings(settings);
+        layer.place(QRect(0, 0, 800, 450));
+        layer.show();
+        QVERIFY(layer.testAttribute(Qt::WA_TransparentForMouseEvents)); // never steals clicks from the player controls
+        QVERIFY(layer.geometry().right() < 800 && layer.geometry().bottom() < 450);
+        QVERIFY(layer.geometry().center().x() > 400 && layer.geometry().center().y() > 225); // bottom-right
+        QVERIFY(layer.width() > 200 && layer.width() <= 800 * 0.31);
+        layer.setPositionMs(0);
+        const QImage idle = layer.grab().toImage();
+        layer.setPositionMs(1500);
+        const QImage held = layer.grab().toImage();
+        QVERIFY(idle != held);                            // W is down at 1.5 s
+        layer.setPositionMs(2500);
+        QCOMPARE(layer.grab().toImage(), idle);           // released again, also after a forward seek
+        layer.setPositionMs(1500);
+        QCOMPARE(layer.grab().toImage(), held);           // and when seeking backwards
+        settings.corner = "top-left"; layer.setSettings(settings); layer.place(QRect(0, 0, 800, 450));
+        QVERIFY(layer.geometry().center().x() < 400 && layer.geometry().center().y() < 225);
+        layer.clear();
+        QVERIFY(!layer.hasTimeline() && !layer.isVisible());
     }
     void failedStartupSavePreservesCurrentValues() {
         QTemporaryDir directory;

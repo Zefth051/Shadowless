@@ -38,6 +38,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     m_plugin = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../plugins/libshadowless-overlay.so");
     m_dashboard->notice(probeError); OverlaySurface::prepare(m_dashboard.get());
     setAccent(m_settings.accent());
+    m_dashboard->setInputOverlay(m_settings.inputOverlay());
     OverlaySurface::prepare(m_indicator.get(), true);
     OverlaySurface::setPosition(m_indicator.get(), m_indicatorPosition);
     m_tray.setToolTip("Shadowless");
@@ -132,7 +133,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence());
         m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression());
     });
-    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active(), m_shortcutKeys, m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch()); m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence()); m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression()); });
+    connect(m_dashboard.get(), &Dashboard::settingsRequested, this, [this] { m_dashboard->settingsPage()->edit(m_options, m_indicatorEnabled, m_engine.active() && !m_stopping, m_shortcutKeys, m_accent, m_indicatorPosition, m_settings.launchAtLogin(), m_settings.startReplayOnLaunch()); m_dashboard->settingsPage()->setDiscordPresence(m_settings.discordPresence()); m_dashboard->settingsPage()->setIdleCompression(m_settings.idleCompression()); m_dashboard->settingsPage()->setInputOverlay(m_settings.inputOverlay()); });
     connect(m_dashboard.get(), &Dashboard::overlayEnabled, this, [this](bool enabled) {
         auto scene = m_scene;
         scene.enabled = enabled;
@@ -151,11 +152,14 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
             page->showError(error); return;
         }
         m_settings.setDiscordPresence(page->discordPresence());
+        m_settings.setInputOverlay(page->inputOverlay());
+        m_dashboard->setInputOverlay(m_settings.inputOverlay());
         m_settings.setIdleCompression(page->idleCompression()); m_compressor.setRoot(m_options.outputDirectory); m_compressor.setEnabled(page->idleCompression());
         m_indicatorPosition = position;
         OverlaySurface::setPosition(m_indicator.get(), position);
         if (m_accent != accent) setAccent(accent);
-        if (!m_engine.active()) m_options = options;
+        // While the engine is still shutting down the new capture options wait for stopped(); settings stay editable.
+        if (!m_engine.active()) m_options = options; else if (m_stopping) m_deferredOptions = options;
         m_indicatorEnabled = indicator; m_shortcutKeys = keys; m_shortcuts.setKeys(keys); m_dashboard->setShortcutKeys(keys); persist(); refresh(); m_dashboard->home(); m_dashboard->refreshLibrary(m_options.outputDirectory);
     });
     connect(m_dashboard->overlayEditor(), &OverlayEditor::changed, this, &Controller::apply);
@@ -188,7 +192,9 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         if (message.startsWith("Shadowless overlay metrics:")) qInfo().noquote() << message;
     });
     connect(&m_engine, &GsrCapture::stopped, this, [this] {
-        m_stopping = false; m_saving = false; refresh();
+        m_stopping = false; m_saving = false;
+        if (m_deferredOptions) { m_options = *std::exchange(m_deferredOptions, std::nullopt); persist(); }
+        refresh();
         m_dashboard->refreshLibrary(m_options.outputDirectory);
         drainPending(); finishQuitIfReady();
     });
@@ -265,7 +271,7 @@ void Controller::command(const QString &command) {
 void Controller::refresh() {
     m_dashboard->overlayEditor()->setPreviewSocket(m_engine.running() && !m_stopping ? m_engine.overlaySocketPath() + ".preview" : QString());
     m_dashboard->setOverlayBusy(m_validating || m_overlays.busy() || m_pending.has_value() || m_stopping);
-    m_dashboard->settingsPage()->setCaptureActive(m_engine.active() || bool(m_afterGame));
+    m_dashboard->settingsPage()->setCaptureActive((m_engine.active() && !m_stopping) || bool(m_afterGame));
     m_dashboard->updateState(m_options, m_scene, m_engine.active(), m_engine.running(), m_saving, m_stopping,
                              m_engine.replayRecording(), m_engine.busy(), m_engine.recordingPaused(),
                              m_engine.recordingPausePending(), m_engine.recordingPauseKnown());

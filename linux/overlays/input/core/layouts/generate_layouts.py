@@ -110,7 +110,7 @@ OUT = os.path.dirname(os.path.abspath(__file__))
 SETS = [
     layout("qwerty", "QWERTY Keyboard + Mouse", "gameplay", mouse_with(scale(compact()))),
     layout("qwerty-full", "QWERTY Keyboard + Mouse (Full)", "full", mouse_with(scale(full()), 1.2)),
-    layout("arrows", "Arrow Keys + Mouse", "gameplay", mouse_with(scale(arrows(0, 0)), 1.0)),
+    layout("arrows", "Arrow Keys + Mouse", "gameplay", mouse_with(scale(arrows(0, 1.1)), 1.0)),
     layout("azerty", "AZERTY Keyboard + Mouse", "gameplay", mouse_with(scale(compact(True)))),
     layout("dualsense", "Dualsense Controller", "pad", dualsense()),
 ]

@@ -13,6 +13,7 @@
 // device names or wall-clock times are part of this contract.
 #include <QSet>
 #include <QString>
+#include <QStringList>
 #include <chrono>
 
 namespace Shadowless::Input {
@@ -29,6 +30,9 @@ inline qint64 monotonicMs() {
     using namespace std::chrono;
     return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
 }
+
+// Built-in layout ids in dropdown order. "none" (no overlay) is not a layout.
+inline QStringList builtinLayoutIds() { return {"qwerty", "qwerty-full", "arrows", "azerty", "dualsense"}; }
 
 inline bool isKnownPrefix(const InputId &id) {
     return id.startsWith(QLatin1String("key.")) || id.startsWith(QLatin1String("mouse."))

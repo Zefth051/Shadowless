@@ -1,4 +1,5 @@
 #include "clip_player.h"
+#include "input_overlay_layer.h"
 #include "clip_waveform.h"
 #include "clip_label.h"
 #include "../player/mpv_player.h"
@@ -185,7 +186,7 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     m_title=new QLabel; m_title->setTextFormat(Qt::PlainText); m_title->setProperty("muted",true); m_title->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred); header->addWidget(m_title,1);
     layout->addWidget(m_header);
     auto *body=new QHBoxLayout; body->setSpacing(20); auto *playback=new QVBoxLayout; playback->setSpacing(10); body->addLayout(playback,1);
-    m_video=new QWidget; m_video->setMinimumSize(320,200); m_player->setParent(m_video); m_video->installEventFilter(this); playback->addWidget(m_video,1);
+    m_video=new QWidget; m_video->setMinimumSize(320,200); m_player->setParent(m_video); m_inputLayer=new InputOverlayLayer(m_video); m_video->installEventFilter(this); playback->addWidget(m_video,1);
     m_recentPanel=new QWidget; m_recentPanel->setObjectName("clipSidebar"); m_recentPanel->setFixedWidth(220); auto *recentLayout=new QVBoxLayout(m_recentPanel); recentLayout->setContentsMargins(14,14,14,14); recentLayout->setSpacing(10);
     auto *recentTitle=new QLabel("All clips"); recentTitle->setObjectName("sectionTitle"); recentLayout->addWidget(recentTitle);
     m_gameFilter=new QComboBox; m_gameFilter->setObjectName("clipGameFilter"); m_gameFilter->setAccessibleName("Filter clips by game");
@@ -216,6 +217,9 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
     m_speed->setCurrentIndex(3); m_speed->setFixedWidth(72); utilities->addWidget(m_speed);
     m_mute=new QPushButton; m_mute->setObjectName("clipMute"); m_mute->setCheckable(true); playerIcon(m_mute,"speaker","Mute (M)"); m_mute->setAccessibleName("Mute"); m_mute->setFixedSize(30,30); utilities->addWidget(m_mute); m_volume=new QSlider(Qt::Horizontal); m_volume->setRange(0,100); m_volume->setValue(80); m_volume->setFixedWidth(60); m_volume->setAccessibleName("Playback volume"); utilities->addWidget(m_volume);
     m_edit=button("Edit clip","clipTrim",header); m_edit->setCheckable(true);
+    m_inputToggle=button("Inputs","clipInputOverlay",header); m_inputToggle->setCheckable(true); m_inputToggle->setVisible(false);
+    m_inputToggle->setToolTip("Show the recorded keyboard, mouse or gamepad overlay"); m_inputToggle->setAccessibleName("Input overlay");
+    connect(m_inputToggle,&QPushButton::toggled,this,[this](bool on) { m_inputLayer->setVisible(on&&m_inputLayer->hasTimeline()); });
     m_fullscreenButton=button("Fullscreen","clipFullscreen",utilities); playerIcon(m_fullscreenButton,"fullscreen","Fullscreen (F)"); transport->addLayout(controls); m_controls->setParent(m_video);
     m_audio=new ClipAudioTracks;
     m_audio->selectionChanged=[this] { m_player->setAudioTracks(m_audio->selectedIds()); };
@@ -349,7 +353,7 @@ void ClipPlayer::open(const QString &path) {
     });
     metadata->analyze(path,true);
     if(!m_clips.contains(path)) { auto paths=m_clips; paths.prepend(path); setClips(paths); }
-    m_title->setText(QFileInfo(path).fileName()); m_title->setToolTip(path); m_player->open(path); m_player->setVolume(m_volume->value()); m_player->setMuted(m_mute->isChecked()); m_player->setSpeed(m_speed->currentData().toDouble());
+    m_title->setText(QFileInfo(path).fileName()); m_title->setToolTip(path); m_player->open(path); { const bool inputs=m_inputLayer->load(path); const QSignalBlocker b(m_inputToggle); m_inputToggle->setChecked(inputs); m_inputToggle->setVisible(inputs&&!m_fullscreen); m_inputLayer->setVisible(inputs); layoutVideo(); } m_player->setVolume(m_volume->value()); m_player->setMuted(m_mute->isChecked()); m_player->setSpeed(m_speed->currentData().toDouble());
     m_pages->setCurrentIndex(0); showControls(); updateState(); if(m_editingEnabled) analyze();
 }
 void ClipPlayer::navigate(int delta) { const int index=m_visibleClips.indexOf(m_player->source()); if(index>=0 && index+delta>=0 && index+delta<m_visibleClips.size()) open(m_visibleClips[index+delta]); }
@@ -362,7 +366,7 @@ void ClipPlayer::updateState() {
     playerIcon(m_play,m_player->paused()?"play":"pause",m_player->paused()?"Play (Space)":"Pause (Space)"); m_play->setEnabled(m_player->loaded());
     m_time->setText(clockText(m_seek->isSliderDown()?m_seek->sliderPosition():m_player->position())+" / "+clockText(m_player->duration()));
     const QSignalBlocker block(m_seek); m_seek->setRange(0,int(qMin<qint64>(m_player->duration(),std::numeric_limits<int>::max()))); m_seek->setEnabled(m_player->loaded()); if(!m_seek->isSliderDown()) m_seek->setValue(int(m_player->position()));
-    m_timeline->position=m_player->position(); m_timeline->update();
+    m_timeline->position=m_player->position(); m_timeline->update(); m_inputLayer->setPositionMs(m_player->position());
     m_export->setEnabled(m_metadataReady&&!m_tools->busy()&&m_in->value()<m_out->value());
     if(m_highlightedSource!=m_player->source()) { m_highlightedSource=m_player->source(); m_recent->setCurrentRow(index); }
     if(m_player->paused()) showControls();
@@ -374,7 +378,7 @@ void ClipPlayer::updateTracks() {
     m_audioScroll->setFixedHeight(qMin(m_audio->visibleRowCount(),6)*52+6);
     m_audioScroll->setVisible(m_editingEnabled&&!tracks.isEmpty()&&!m_fullscreen);
 }
-void ClipPlayer::showControls() { m_header->setVisible(!m_fullscreen); m_controls->show(); m_recentPanel->setVisible(!m_fullscreen&&!m_editingEnabled); m_edit->setVisible(!m_fullscreen); m_audioScroll->setVisible(m_editingEnabled&&!m_fullscreen&&!m_audio->empty()); m_player->unsetCursor(); if(m_fullscreen&&!m_player->paused()) m_idle.start(); else m_idle.stop(); }
+void ClipPlayer::showControls() { m_header->setVisible(!m_fullscreen); m_inputToggle->setVisible(m_inputLayer->hasTimeline()&&!m_fullscreen); m_controls->show(); m_recentPanel->setVisible(!m_fullscreen&&!m_editingEnabled); m_edit->setVisible(!m_fullscreen); m_audioScroll->setVisible(m_editingEnabled&&!m_fullscreen&&!m_audio->empty()); m_player->unsetCursor(); if(m_fullscreen&&!m_player->paused()) m_idle.start(); else m_idle.stop(); }
 void ClipPlayer::setFullscreen(bool enabled) {
     if(m_fullscreen==enabled) return;
     m_fullscreen=enabled;
@@ -430,13 +434,15 @@ void ClipPlayer::hideEvent(QHideEvent *event) {
 // Video and controls sit together, centered, so a tall window does not leave a gap between them.
 void ClipPlayer::layoutVideo() {
     const QSize area=m_video->size(); const int gap=10, ch=m_controls->sizeHint().height();
-    if(m_fullscreen) { m_player->setGeometry(0,0,area.width(),area.height()); m_controls->setGeometry(0,area.height()-ch,area.width(),ch); m_controls->raise(); return; }
+    if(m_fullscreen) { m_player->setGeometry(0,0,area.width(),area.height()); m_controls->setGeometry(0,area.height()-ch,area.width(),ch); m_inputLayer->place(m_player->geometry()); m_inputLayer->stackUnder(m_controls); m_controls->raise(); return; }
     const double aspect=m_player->aspect(); const int availH=qMax(1,area.height()-ch-gap);
     int w=area.width(), h=qRound(w/aspect); if(h>availH) { h=availH; w=qRound(h*aspect); }
     const int top=(area.height()-(h+gap+ch))/2, cw=qMin(area.width(),qMax(w,m_controls->sizeHint().width()));
     m_player->setGeometry((area.width()-w)/2,top,w,h);
     m_controls->setGeometry((area.width()-cw)/2,top+h+gap,cw,ch);
+    m_inputLayer->place(m_player->geometry()); m_inputLayer->stackUnder(m_controls);
 }
+void ClipPlayer::setInputOverlay(const InputOverlaySettings &settings) { m_inputLayer->setSettings(settings); layoutVideo(); }
 bool ClipPlayer::eventFilter(QObject *watched,QEvent *event) {
     if(watched==m_video&&event->type()==QEvent::Resize) layoutVideo();
     auto *widget=qobject_cast<QWidget *>(watched); if(!isVisible()||!widget||(widget!=this&&!isAncestorOf(widget))) return QWidget::eventFilter(watched,event);

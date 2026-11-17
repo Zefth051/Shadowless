@@ -29,6 +29,7 @@ private:
     GsrOptions m_options;
     OverlayScene m_scene, m_applying;
     std::optional<OverlayScene> m_pending;
+    std::optional<GsrOptions> m_deferredOptions; // saved while capture was stopping
     GsrCapture m_engine;
     OverlayClient m_overlays;
     Shortcuts m_shortcuts;

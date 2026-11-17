@@ -1,5 +1,7 @@
 #include "fake_input_source.h"
 #include "input_renderer.h"
+#include "input_timeline.h"
+#include <QTemporaryDir>
 #include "layout.h"
 #include <QJsonArray>
 #include <QJsonObject>
@@ -104,6 +106,49 @@ private slots:
         QCOMPARE(renderInputOverlay(Layout(), {}, QSize(10, 10)).pixelColor(5, 5).alpha(), 0);
         RenderStyle s; s.opacity = 0;
         QCOMPARE(renderInputOverlay(l, {}, QSize(100, 60), s).pixelColor(50, 30).alpha(), 0);
+    }
+    void timelineReplaysEventsAndSeeksBackwards() {
+        QJsonObject json{{"schema", 1}, {"layout", "qwerty"}, {"durationMs", 5000},
+            {"events", QJsonArray{QJsonArray{900, "key.w", 0}, QJsonArray{100, "key.w", 1}, QJsonArray{300, "mouse.left", 1}}}};
+        InputTimeline t; QString error;
+        QVERIFY2(InputTimeline::fromJson(json, &t, &error), qPrintable(error));
+        QCOMPARE(t.eventCount(), 3); QCOMPARE(t.durationMs(), qint64(5000)); QVERIFY(t.isValid());
+        QVERIFY(t.stateAt(50).pressed().isEmpty());
+        QVERIFY(t.stateAt(100).isDown("key.w"));           // events are sorted despite the input order
+        QVERIFY(t.stateAt(400).isDown("mouse.left") && t.stateAt(400).isDown("key.w"));
+        QVERIFY(!t.stateAt(900).isDown("key.w") && t.stateAt(900).isDown("mouse.left"));
+        QVERIFY(t.stateAt(120).isDown("key.w") && !t.stateAt(120).isDown("mouse.left")); // backwards seek
+        QVERIFY(t.stateAt(1 << 20).isDown("mouse.left"));
+    }
+    void timelineDropsIdsOutsideTheRecordedLayoutAndRejectsGarbage() {
+        InputTimeline t; QString error;
+        QJsonObject json{{"schema", 1}, {"layout", "qwerty"},
+            {"events", QJsonArray{QJsonArray{10, "key.enter", 1}, QJsonArray{20, "key.w", 1}}}};
+        QVERIFY(InputTimeline::fromJson(json, &t, &error));
+        QCOMPARE(t.eventCount(), 1); // key.enter is not in the compact layout
+        QVERIFY(!t.stateAt(100).isDown("key.enter"));
+        auto bad = [&](QJsonObject o) { InputTimeline x; QString e; return InputTimeline::fromJson(o, &x, &e); };
+        QVERIFY(!bad({{"schema", 2}, {"layout", "qwerty"}}));
+        QVERIFY(!bad({{"schema", 1}, {"layout", "no-such-layout"}}));
+        QVERIFY(!bad({{"schema", 1}, {"layout", "../x"}}));
+        QVERIFY(!bad({{"schema", 1}, {"layout", "qwerty"}, {"events", QJsonArray{QJsonArray{1, "key.w"}}}}));
+        QVERIFY(!bad({{"schema", 1}, {"layout", "qwerty"}, {"events", QJsonArray{QJsonArray{-1, "key.w", 1}}}}));
+        QVERIFY(!bad({{"schema", 1}, {"layout", "qwerty"}, {"events", QJsonArray{QJsonArray{1, "key.w", 2}}}}));
+        QVERIFY(!bad({{"schema", 1}, {"layout", "qwerty"}, {"events", QJsonArray{QJsonArray{1, "text.hello", 1}}}}));
+        QJsonArray many; for (int i = 0; i <= InputTimeline::kMaxEvents; ++i) many.append(QJsonArray{i, "key.w", i % 2});
+        QVERIFY(!bad({{"schema", 1}, {"layout", "qwerty"}, {"events", many}}));
+    }
+    void timelineLoadsFromFileAndNamesSidecarNextToClip() {
+        QCOMPARE(InputTimeline::sidecarPath("/clips/a.mp4"), QString("/clips/a.mp4.inputs.json"));
+        QTemporaryDir dir; const QString path = dir.filePath("c.mp4.inputs.json");
+        QFile f(path); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("{\"schema\":1,\"layout\":\"arrows\",\"events\":[[5,\"key.up\",1]]}"); f.close();
+        InputTimeline t; QString error;
+        QVERIFY2(InputTimeline::load(path, &t, &error), qPrintable(error));
+        QCOMPARE(t.layoutId(), QString("arrows"));
+        QVERIFY(t.stateAt(5).isDown("key.up"));
+        QVERIFY(!InputTimeline::load(dir.filePath("missing.json"), &t, &error));
+        QVERIFY(f.open(QIODevice::WriteOnly)); f.write("not json"); f.close();
+        QVERIFY(!InputTimeline::load(path, &t, &error));
     }
     void fakeSourceEnforcesAllowlistAndReleasesOnStop() {
         qRegisterMetaType<InputEvent>(); qRegisterMetaType<InputStatus>();
