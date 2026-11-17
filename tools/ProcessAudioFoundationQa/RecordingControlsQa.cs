@@ -59,7 +59,7 @@ internal static class RecordingControlsQa
             Click("PauseRecordingMenuItem");
             Require(pauses == 1 && toggles == 0, "Pause rebuilt the capture pipeline.");
             Require(!Control<Button>("SaveReplayButton").IsEnabled, "Paused capture still offers clip saving.");
-            Require(Control<TextBlock>("StatusTitleText").Text == Localization.Text("L.Status.RecordingPaused"),
+            Require(Control<TextBlock>("StatusTitleText").Text == Shadowless.Localization.Text("L.Status.RecordingPaused"),
                 "Dashboard did not identify the paused recording.");
             Require(Control<MenuItem>("ResumeRecordingMenuItem").IsEnabled && !Control<MenuItem>("PauseRecordingMenuItem").IsEnabled,
                 "Paused recording did not offer Resume exclusively.");
@@ -82,8 +82,8 @@ internal static class RecordingControlsQa
                 "Recording mode hides its replay-buffer settings.");
             Require(Control<FrameworkElement>("ReplayToggleHotkeySettings").Visibility == Visibility.Visible,
                 "Recording mode hides the separate capture-toggle hotkey.");
-            Require(Control<TextBlock>("PrimaryHotkeyLabel").Text == Localization.Text("L.Hotkey.SaveReplay") &&
-                Control<TextBlock>("ToggleHotkeyLabel").Text == Localization.Text("L.Hotkey.ToggleRecording"),
+            Require(Control<TextBlock>("PrimaryHotkeyLabel").Text == Shadowless.Localization.Text("L.Hotkey.SaveReplay") &&
+                Control<TextBlock>("ToggleHotkeyLabel").Text == Shadowless.Localization.Text("L.Hotkey.ToggleRecording"),
                 "Recording hotkey labels confuse clip saving and capture start/stop.");
             Click("CancelSettingsButton");
             window.UpdateRuntimeState(false);
