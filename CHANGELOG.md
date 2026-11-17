@@ -4,13 +4,26 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Pause/Resume hotkey:** A configurable shortcut (Ctrl+Shift+F8 by default) pauses and resumes a standalone recording. It is validated so it cannot duplicate another shortcut.
+- **Dashboard action menus:** The Instant Clip tile opens a menu to enable or disable it and to save a clip. The recording tile opens a menu to start, pause, resume or stop. Both outputs can run together; Instant Clip can be released and recreated while a recording continues.
+- **System audio track in advanced mode:** "System + selected apps" records all audio except the selected applications on the first unused track (1-6), with its own saved volume and mute. If all six tracks are taken you get a clear error instead of a silent override.
+
 ### Improved
 
+- **Microphone fallback:** If the selected microphone is missing, Shadowless uses the current default input and returns to your preferred device when it reappears, without changing the saved preference.
 - **Settings reachable beneath notifications:** Overlay notifications are now fully click-through at both the native and WPF level, so the Settings button can always be used, including right after turning Instant Clip off.
+- The replay control is now named "Instant Clip" across the interface.
 
-### Known limitations
+### Changed
 
-- The cause of the reported delay entering Settings was identified by code analysis only; it needs confirmation on Windows 11. Windows CI builds this change but cannot exercise the UI.
+- Per-application audio routing now requires Windows build 20348 or newer (Windows 11 or Windows Server 2022). Older builds keep mixed device audio and report routing as unavailable.
+
+### Verification status
+
+- **Checked by Windows CI** (windows-2022, run 44115108863): Release build, full analyzers, GPU capability model, replay folder routing, localization dictionaries and dashboard layout, and the distribution and update policy checks. This shows the code builds and the static checks pass; it does not exercise the UI or audio.
+- **Needs testing on Windows 11:** the pause hotkey, both dashboard menus (including keyboard navigation) and running Instant Clip with a recording at the same time; the System track (play tones from two selected apps and one unselected app, in replay clips and recordings, with AAC and Opus, plus app restarts and all six tracks occupied); microphone fallback and its live restore; and entering Settings right after turning Instant Clip off. The cause of that delay was identified by code analysis only.
 
 ## [0.3.2] - 2026-11-16
 
