@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="/input-layouts">
+    <file alias="qwerty.json">qwerty.json</file>
+    <file alias="qwerty-full.json">qwerty-full.json</file>
+    <file alias="arrows.json">arrows.json</file>
+    <file alias="azerty.json">azerty.json</file>
+    <file alias="dualsense.json">dualsense.json</file>
+  </qresource>
+</RCC>
