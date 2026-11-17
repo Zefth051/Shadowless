@@ -589,6 +589,8 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     qApp->installEventFilter(this);
 }
 
+void Dashboard::setInputOverlay(const InputOverlaySettings &settings) { m_player->setInputOverlay(settings); }
+
 void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool active, bool ready, bool saving, bool stopping,
                             bool replayRecording, bool busy, bool paused, bool pausePending, bool pauseKnown) {
     m_overlayPreview->setVisible(!scene.layers.isEmpty());

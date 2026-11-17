@@ -12,6 +12,7 @@
 #include "../ui/clip_notification.h"
 #include "../ui/theme.h"
 #include "../ui/input_overlay_preview.h"
+#include "../ui/input_overlay_layer.h"
 #include <QCheckBox>
 #include <QTableWidget>
 #include <QComboBox>
@@ -279,6 +280,40 @@ private slots:
         QCOMPARE(preview.grab().toImage(), demo);
         preview.setLayoutId("unknown-layout");
         QVERIFY(!preview.hasLayout());
+    }
+    void inputOverlayLayerFollowsPlaybackAndStaysOutOfTheWay() {
+        QTemporaryDir directory;
+        const QString clip = directory.filePath("clip.mp4");
+        QWidget video; video.resize(800, 450);
+        InputOverlayLayer layer(&video); applyTheme(&video, "violet");
+        QVERIFY(!layer.load(clip));                       // no sidecar: nothing to draw
+        QVERIFY(!layer.hasTimeline() && !layer.isVisible());
+        QFile file(Input::InputTimeline::sidecarPath(clip));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("{\"schema\":1,\"layout\":\"qwerty\",\"durationMs\":4000,\"events\":[[1000,\"key.w\",1],[2000,\"key.w\",0]]}");
+        file.close();
+        QVERIFY(layer.load(clip) && layer.hasTimeline());
+        InputOverlaySettings settings; settings.layout = "qwerty"; settings.corner = "bottom-right"; settings.scale = 100; settings.opacity = 100;
+        layer.setSettings(settings);
+        layer.place(QRect(0, 0, 800, 450));
+        layer.show();
+        QVERIFY(layer.testAttribute(Qt::WA_TransparentForMouseEvents)); // never steals clicks from the player controls
+        QVERIFY(layer.geometry().right() < 800 && layer.geometry().bottom() < 450);
+        QVERIFY(layer.geometry().center().x() > 400 && layer.geometry().center().y() > 225); // bottom-right
+        QVERIFY(layer.width() > 200 && layer.width() <= 800 * 0.31);
+        layer.setPositionMs(0);
+        const QImage idle = layer.grab().toImage();
+        layer.setPositionMs(1500);
+        const QImage held = layer.grab().toImage();
+        QVERIFY(idle != held);                            // W is down at 1.5 s
+        layer.setPositionMs(2500);
+        QCOMPARE(layer.grab().toImage(), idle);           // released again, also after a forward seek
+        layer.setPositionMs(1500);
+        QCOMPARE(layer.grab().toImage(), held);           // and when seeking backwards
+        settings.corner = "top-left"; layer.setSettings(settings); layer.place(QRect(0, 0, 800, 450));
+        QVERIFY(layer.geometry().center().x() < 400 && layer.geometry().center().y() < 225);
+        layer.clear();
+        QVERIFY(!layer.hasTimeline() && !layer.isVisible());
     }
     void failedStartupSavePreservesCurrentValues() {
         QTemporaryDir directory;

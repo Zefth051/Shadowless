@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QWidget>
 #include <QPointer>
+#include "../settings/settings.h"
 class QLabel;
 class QSlider;
 class QPushButton;
@@ -21,6 +22,7 @@ class MpvPlayer;
 class MediaTools;
 class ClipTimeline;
 class ClipAudioTracks;
+class InputOverlayLayer;
 class ClipPlayer : public QWidget {
     Q_OBJECT
 public:
@@ -32,6 +34,7 @@ public:
     bool editing() const { return m_editingEnabled; }
     void setFullscreen(bool enabled);
     bool handleEscape();
+    void setInputOverlay(const InputOverlaySettings &settings);
 signals:
     void back();
     void fullscreenChanged(bool enabled);
@@ -56,6 +59,8 @@ private:
     QWidget *m_header, *m_controls, *m_editing, *m_recentPanel;
     ClipAudioTracks *m_audio;
     QWidget *m_video;
+    InputOverlayLayer *m_inputLayer;
+    QPushButton *m_inputToggle;
     void layoutVideo();
     QScrollArea *m_audioScroll;
     ClipTimeline *m_timeline;

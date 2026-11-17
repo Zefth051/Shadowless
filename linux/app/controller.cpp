@@ -38,6 +38,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     m_plugin = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath("../plugins/libshadowless-overlay.so");
     m_dashboard->notice(probeError); OverlaySurface::prepare(m_dashboard.get());
     setAccent(m_settings.accent());
+    m_dashboard->setInputOverlay(m_settings.inputOverlay());
     OverlaySurface::prepare(m_indicator.get(), true);
     OverlaySurface::setPosition(m_indicator.get(), m_indicatorPosition);
     m_tray.setToolTip("Shadowless");
@@ -152,6 +153,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         }
         m_settings.setDiscordPresence(page->discordPresence());
         m_settings.setInputOverlay(page->inputOverlay());
+        m_dashboard->setInputOverlay(m_settings.inputOverlay());
         m_settings.setIdleCompression(page->idleCompression()); m_compressor.setRoot(m_options.outputDirectory); m_compressor.setEnabled(page->idleCompression());
         m_indicatorPosition = position;
         OverlaySurface::setPosition(m_indicator.get(), position);
