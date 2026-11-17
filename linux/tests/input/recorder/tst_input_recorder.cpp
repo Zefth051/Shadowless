@@ -37,6 +37,8 @@ private slots:
     void invalidRequests();
     void atomicFailures();
     void atomicReplacement();
+    void retentionCanChangeAtRuntime();
+    void truncatedOnlyWhenTheWindowLostEvents();
 };
 
 void RecorderTests::replayWindow() {
@@ -287,3 +289,45 @@ void RecorderTests::atomicReplacement() {
 
 QTEST_GUILESS_MAIN(RecorderTests)
 #include "tst_input_recorder.moc"
+
+// A replay-only capture can switch to unbounded retention when a recording starts, without losing what it holds.
+void RecorderTests::retentionCanChangeAtRuntime() {
+    QTemporaryDir dir;
+    FakeInputSource source;
+    source.start({"key.w"});
+    InputRecorder recorder(&source, "qwerty", 1000);
+    recorder.start();
+    const qint64 t = monotonicMs();
+    source.inject("key.w", true, t - 5000);   // outside the 1 s replay buffer
+    source.inject("key.w", false, t - 4900);
+    source.inject("key.w", true, t);
+    recorder.setRetentionMs(0);               // a recording needs everything from now on
+    source.inject("key.w", false, t + 10);
+    QString error;
+    const QString clip = dir.filePath("a.mp4");
+    QVERIFY2(recorder.writeWindow(clip, t - 10, t + 10, &error), qPrintable(error));
+    const auto events = readSidecar(clip).value("events").toArray();
+    QCOMPARE(events.size(), 2);               // nothing held at the window start, then down + up
+    QCOMPARE(events.at(0).toArray().at(0).toInt(), 10);
+    recorder.setRetentionMs(100);             // back to a bounded buffer: old events are evicted at once
+    QVERIFY2(recorder.writeWindow(dir.filePath("b.mp4"), t - 6000, t + 10, &error), qPrintable(error));
+    QVERIFY(readSidecar(dir.filePath("b.mp4")).value("events").toArray().size() <= 2);
+}
+
+// The hard cap only matters for windows that start before the events it dropped.
+void RecorderTests::truncatedOnlyWhenTheWindowLostEvents() {
+    QTemporaryDir dir;
+    FakeInputSource source;
+    source.start({"key.w"});
+    InputRecorder recorder(&source, "qwerty", 0);
+    recorder.start();
+    const qint64 t = monotonicMs();
+    for (int i = 0; i < 200100; ++i) source.inject("key.w", i % 2 == 0, t + i);
+    QString error;
+    QVERIFY2(recorder.writeWindow(dir.filePath("early.mp4"), t, t + 200100, &error), qPrintable(error));
+    QVERIFY(readSidecar(dir.filePath("early.mp4")).value("truncated").toBool());
+    QVERIFY2(recorder.writeWindow(dir.filePath("late.mp4"), t + 150000, t + 200100, &error), qPrintable(error));
+    const auto late = readSidecar(dir.filePath("late.mp4"));
+    QVERIFY(!late.contains("truncated"));     // complete: nothing in this window was dropped
+    QCOMPARE(late.value("durationMs").toInt(), 50100);
+}

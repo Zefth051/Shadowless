@@ -32,7 +32,7 @@ public:
     explicit TestSource(const QString &path) : EvdevInputSource(path) {}
     QHash<QString, int> readers;
     QList<int> opened;
-    bool denied = false;
+    bool denied = false, holdWOnOpen = false;
     int openError = 0;
     void triggerRange(int minimum, int maximum) {
         info.leftMinimum = info.rightMinimum = minimum;
@@ -45,6 +45,7 @@ protected:
         if (fd < 0) { errno = ENOENT; return -1; }
         const int owned = dup(fd);
         if (owned >= 0) opened.append(owned);
+        if (owned >= 0 && holdWOnOpen) snapshotFd = owned; // the fixture reports W as held from the first query
         return owned;
     }
     DeviceInfo info;
@@ -224,6 +225,16 @@ private slots:
         pipe.send(EV_SYN,SYN_REPORT,0);
         QTRY_COMPARE(spy.size(),3);
         QCOMPARE(eventAt(spy,2).id,"key.w"); QVERIFY(eventAt(spy,2).down);
+    }
+    void reportsInputsAlreadyHeldWhenTheDeviceIsOpened() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.readers.insert("event0",pipe.fds[0]); touch(dir.filePath("event0"));
+        source.holdWOnOpen = true;                      // W is physically held before the source starts
+        QSignalSpy spy(&source,&InputSource::inputChanged); source.start({"key.w","key.a"});
+        QCOMPARE(spy.size(),1);                          // the held key is reported, nothing outside the allowlist
+        QCOMPARE(eventAt(spy,0).id,"key.w"); QVERIFY(eventAt(spy,0).down);
+        pipe.send(EV_KEY,KEY_W,0); pipe.send(EV_SYN,SYN_REPORT,0);
+        QTRY_COMPARE(spy.size(),2); QVERIFY(!eventAt(spy,1).down);
     }
     void triggerCalibrationAndAllowlist() {
         QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());

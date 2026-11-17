@@ -1,8 +1,6 @@
 #include "input_recorder.h"
 #include "input_timeline.h"
 #include "layout.h"
-#include <QJsonArray>
-#include <QJsonDocument>
 #include <QSaveFile>
 #include <algorithm>
 
@@ -26,7 +24,7 @@ void InputRecorder::start() {
     if (m_started || !m_source) return;
     m_events.clear();
     m_beforeBuffer.clear();
-    m_truncated = false;
+    m_truncatedUntilMs = -1;
     m_latestMs = 0;
     m_started = true;
     m_connection = connect(m_source, &InputSource::inputChanged, this, &InputRecorder::record);
@@ -36,6 +34,11 @@ void InputRecorder::stop() {
     m_started = false;
     disconnect(m_connection);
     m_connection = {};
+}
+
+void InputRecorder::setRetentionMs(qint64 retentionMs) {
+    m_retentionMs = retentionMs;
+    evict(qMax(monotonicMs(), m_latestMs));
 }
 
 void InputRecorder::dropOldest() {
@@ -56,8 +59,8 @@ void InputRecorder::record(const InputEvent &event) {
     m_events.push_back(event);
     evict(m_latestMs);
     while (m_events.size() > size_t(InputTimeline::kMaxEvents)) {
+        m_truncatedUntilMs = qMax(m_truncatedUntilMs, m_events.front().tMs);
         dropOldest();
-        m_truncated = true;
     }
 }
 
@@ -75,25 +78,35 @@ bool InputRecorder::writeWindow(const QString &clipPath, qint64 windowStartMs,
     while (first != m_events.cend() && first->tMs < windowStartMs) held.apply(*first++);
     QStringList ids(held.pressed().begin(), held.pressed().end());
     std::sort(ids.begin(), ids.end());
-    QJsonArray events;
-    for (const InputId &id : ids) events.append(QJsonArray{0, id, 1});
+    // Ids are allowlisted `[a-z0-9.]` strings, so the JSON can be written directly without per-event allocations.
+    struct Row { qint64 t; const InputId *id; bool down; };
+    std::vector<Row> rows;
+    rows.reserve(ids.size() + m_events.size());
+    for (const InputId &id : ids) rows.push_back({0, &id, true});
     for (auto it = first; it != m_events.cend() && it->tMs <= windowEndMs; ++it) {
         const qint64 time = it->tMs - windowStartMs;
         // Keep every file readable by the fixed v1 reader.
         if (time >= 100000000000LL)
             return fail(error, QStringLiteral("Input recording event exceeds the v1 time limit"));
-        events.append(QJsonArray{time, it->id, it->down ? 1 : 0});
+        rows.push_back({time, &it->id, it->down});
     }
-    bool truncated = m_truncated;
-    while (events.size() > InputTimeline::kMaxEvents) {
-        // Reserve space for the required initial held state; drop oldest real edges.
-        events.removeAt(ids.size());
+    // The cap flag only applies when the lost events could have belonged to this window.
+    bool truncated = windowStartMs <= m_truncatedUntilMs;
+    if (rows.size() > size_t(InputTimeline::kMaxEvents)) {
+        // Keep the required initial held state; drop the oldest real edges.
+        rows.erase(rows.begin() + ids.size(), rows.begin() + ids.size() + (rows.size() - size_t(InputTimeline::kMaxEvents)));
         truncated = true;
     }
-    QJsonObject json{{"schema", 1}, {"layout", m_layoutId},
-                     {"durationMs", windowEndMs - windowStartMs}, {"events", events}};
-    if (truncated) json.insert("truncated", true);
-    const QByteArray bytes = QJsonDocument(json).toJson(QJsonDocument::Compact);
+    QByteArray bytes;
+    bytes.reserve(int(rows.size() * 24 + 128));
+    bytes += "{\"schema\":1,\"layout\":\"" + m_layoutId.toLatin1() + "\",\"durationMs\":" + QByteArray::number(windowEndMs - windowStartMs);
+    if (truncated) bytes += ",\"truncated\":true";
+    bytes += ",\"events\":[";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        if (i) bytes += ',';
+        bytes += '[' + QByteArray::number(rows[i].t) + ",\"" + rows[i].id->toLatin1() + "\"," + (rows[i].down ? '1' : '0') + ']';
+    }
+    bytes += "]}";
     QSaveFile file(InputTimeline::sidecarPath(clipPath));
     // Never fall back to writing the destination directly if a temporary file fails.
     file.setDirectWriteFallback(false);

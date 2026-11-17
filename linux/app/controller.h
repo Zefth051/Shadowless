@@ -41,7 +41,9 @@ private:
     // Optional sidecar (<clip>.inputs.json): allowlisted events of the selected layout, timed against the clip.
     std::unique_ptr<Input::InputRecorder> m_recorder;
     QString m_recorderLayout;
-    qint64 m_captureStartMs = 0, m_clipRequestMs = 0, m_recordingStartMs = 0;
+    qint64 m_captureStartMs = 0, m_clipRequestMs = 0, m_recordingStartMs = 0, m_recordingStopMs = 0;
+    QHash<QString, QSet<Input::InputId>> m_allowlists; // parsed once per built-in layout
+    QSet<Input::InputId> allowlistFor(const QString &layoutId);
     bool m_recordingPausedOnce = false;
     void writeInputSidecar(const QString &clip, bool recording);
     GsrCapture m_engine;

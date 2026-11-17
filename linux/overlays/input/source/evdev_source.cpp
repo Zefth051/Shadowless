@@ -209,6 +209,9 @@ struct EvdevInputSource::Impl {
             QObject::connect(device->notifier, &QSocketNotifier::activated, q, [this, path, weak] {
                 if (auto current = weak.lock()) readDevice(path, current);
             });
+            // Inputs already held when the device is opened (source restarted mid-game) never produce a down edge.
+            resync(device);
+            if (!started) return;
         }
         status();
     }

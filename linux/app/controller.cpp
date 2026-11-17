@@ -207,7 +207,7 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
     });
     connect(&m_engine, &GsrCapture::started, this, [this] {
         m_captureStartMs = Input::monotonicMs();
-        if (m_options.continuousRecording) { m_recordingStartMs = m_captureStartMs; m_recordingPausedOnce = false; }
+        if (m_options.continuousRecording) { m_recordingStartMs = m_captureStartMs; m_recordingStopMs = 0; m_recordingPausedOnce = false; }
         refresh(); const auto scene = m_pending.value_or(m_scene); m_pending.reset(); apply(scene);
     });
     connect(&m_engine, &GsrCapture::diagnostic, this, [](const QString &message) {
@@ -224,7 +224,11 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         if ((m_saving || m_recordingSave) && !m_quitting) m_notification->present("Clip could not be saved", message, 3500, ClipNotification::Failed);
         m_saving = false; m_recordingSave = false; m_dashboard->notice(message); refresh();
     });
-    connect(&m_engine, &GsrCapture::recordingChanged, this, [this] { refresh(); });
+    connect(&m_engine, &GsrCapture::recordingChanged, this, [this](bool recording) {
+        // The recorder log line marks the first frame; the request time would shift every event early.
+        if (recording && !m_options.continuousRecording) { m_recordingStartMs = Input::monotonicMs(); m_recordingStopMs = 0; m_recordingPausedOnce = false; }
+        refresh();
+    });
     connect(&m_engine, &GsrCapture::recordingPauseChanged, this, [this] {
         if (m_engine.recordingPaused()) m_recordingPausedOnce = true; // paused time is cut from the video, so the sidecar would drift
         refresh();
@@ -279,7 +283,12 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         toggleCapture();
     });
 }
-Controller::~Controller() = default;
+Controller::~Controller() {
+    // The input source emits release events when it stops; deliver them while the widgets they update still exist.
+    m_input.disconnect(this);
+    m_recorder.reset();
+    m_input.stop();
+}
 void Controller::show() { if (!m_quitting && !m_authenticating) { m_dashboard->refreshLibrary(m_options.outputDirectory); OverlaySurface::show(m_dashboard.get()); } }
 void Controller::hide() {
     m_restoreAfterAuthentication = false;
@@ -329,6 +338,7 @@ void Controller::toggleCapture() {
             m_recordingSave = true;
             m_notification->present("Saving recording…", {}, 30000, ClipNotification::Saving);
         }
+        m_recordingStopMs = Input::monotonicMs();
         m_stopping = true; m_engine.stop();
     }
     else {
@@ -367,8 +377,8 @@ void Controller::togglePause() {
 void Controller::toggleReplayRecording() {
     if (!m_engine.running() || m_engine.busy() || m_afterGame || m_saving || m_stopping || m_options.continuousRecording) return;
     if (m_engine.replayRecording()) {
-        m_recordingSave = true; m_notification->present("Saving recording…", {}, 30000, ClipNotification::Saving); m_engine.stopReplayRecording();
-    } else identifyGame([this](const QString &game) { m_recordingGame = game; m_recordingStartMs = Input::monotonicMs(); m_recordingPausedOnce = false; m_engine.startReplayRecording(); refresh(); });
+        m_recordingSave = true; m_recordingStopMs = Input::monotonicMs(); m_notification->present("Saving recording…", {}, 30000, ClipNotification::Saving); m_engine.stopReplayRecording();
+    } else identifyGame([this](const QString &game) { m_recordingGame = game; m_recordingStopMs = 0; m_engine.startReplayRecording(); refresh(); });
     refresh();
 }
 void Controller::updateAudioLevels() {
@@ -431,7 +441,7 @@ bool Controller::persist(QString *result) {
 void Controller::writeInputSidecar(const QString &clip, bool recording) {
     if (!m_recorder) return;
     const qint64 now = Input::monotonicMs();
-    const auto window = recording ? Input::recordingClipWindow(m_recordingStartMs, now, m_recordingPausedOnce)
+    const auto window = recording ? Input::recordingClipWindow(m_recordingStartMs, m_recordingStopMs > 0 ? m_recordingStopMs : now, m_recordingPausedOnce)
         : Input::replayClipWindow(m_clipRequestMs > 0 ? m_clipRequestMs : now, qint64(m_options.bufferSeconds) * 1000, m_captureStartMs);
     if (!window.valid) return;
     QString error;
@@ -440,6 +450,14 @@ void Controller::writeInputSidecar(const QString &clip, bool recording) {
 // Starts, restarts or stops the single input source so it reads only what is needed right now: the layout
 // previewed in the Capture overlays editor, and the stored layout while capture runs with saved events on.
 // Nothing is read while neither applies.
+QSet<Input::InputId> Controller::allowlistFor(const QString &layoutId) {
+    auto found = m_allowlists.find(layoutId);
+    if (found == m_allowlists.end()) {
+        Input::Layout layout; QString error;
+        found = m_allowlists.insert(layoutId, Input::Layout::builtin(layoutId, &layout, &error) ? layout.allowlist() : QSet<Input::InputId>{});
+    }
+    return *found;
+}
 void Controller::updateInputSource() {
     const auto config = m_settings.inputOverlay();
     const bool recording = config.sidecar && config.enabled() && m_engine.active();
@@ -449,10 +467,11 @@ void Controller::updateInputSource() {
         m_recorderLayout = config.layout;
         m_recorder->start();
     }
+    // Replay-only capture needs just the buffer; a recording needs everything since its first frame.
+    if (m_recorder) m_recorder->setRetentionMs(m_options.continuousRecording || m_engine.replayRecording() ? 0 : qint64(m_options.bufferSeconds) * 1000 + 10000);
     QSet<Input::InputId> wanted;
-    Input::Layout layout; QString error;
-    if (!m_inputPreviewLayout.isEmpty() && Input::Layout::builtin(m_inputPreviewLayout, &layout, &error)) wanted = layout.allowlist();
-    if (recording && Input::Layout::builtin(config.layout, &layout, &error)) wanted.unite(layout.allowlist());
+    if (!m_inputPreviewLayout.isEmpty()) wanted = allowlistFor(m_inputPreviewLayout);
+    if (recording) wanted.unite(allowlistFor(config.layout));
     if (wanted == m_inputAllowlist && (wanted.isEmpty() == (m_input.status() == Input::InputStatus::Stopped))) return;
     m_input.stop();
     m_inputState.clear();
@@ -468,7 +487,7 @@ void Controller::quit() {
     m_quitting = true; m_compressor.setBusy(true); m_presence.stop(); m_dashboard->hide(); m_indicator->hide();
     m_notification->dismiss();
     if (m_options.continuousRecording || m_engine.replayRecording()) m_recordingSave = true;
-    if (m_engine.active()) { m_stopping = true; m_engine.stop(); }
+    if (m_engine.active()) { m_recordingStopMs = Input::monotonicMs(); m_stopping = true; m_engine.stop(); }
     else { drainPending(); finishQuitIfReady(); }
     updateInputSource();
 }

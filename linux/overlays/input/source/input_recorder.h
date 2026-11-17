@@ -12,6 +12,8 @@ public:
     // Starts a fresh recording session. Does not start or stop the shared source.
     void start();
     void stop();
+    // Replay-only capture needs just the buffer length; a recording needs everything since it started (<= 0).
+    void setRetentionMs(qint64 retentionMs);
     bool writeWindow(const QString &clipPath, qint64 windowStartMs, qint64 windowEndMs,
                      QString *error);
 private:
@@ -25,7 +27,7 @@ private:
     QSet<InputId> m_allowlist;
     bool m_layoutValid = false;
     bool m_started = false;
-    bool m_truncated = false;
+    qint64 m_truncatedUntilMs = -1; // newest event lost to the hard cap; windows starting after it are complete
     qint64 m_latestMs = 0;
     QMetaObject::Connection m_connection;
     std::deque<InputEvent> m_events;
