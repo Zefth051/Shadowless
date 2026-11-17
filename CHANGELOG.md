@@ -26,7 +26,7 @@ All notable user-facing changes are documented here.
 
 ### Verification status
 
-- **Added to Windows CI (this release):** Discord presence protocol QA, process audio foundation model QA, automatic capture policy QA and the fullscreen input/overlay QA now run on windows-2022, together with the existing build, analyzers and replay folder routing checks. Results are listed below once the run completes.
+- **Added to Windows CI (this release):** Discord presence protocol QA, process audio foundation model QA, automatic capture policy QA and the fullscreen input/overlay QA now run on windows-2022, together with the existing build, analyzers and replay folder routing checks. All of them passed on branch rc/windows-0.3.3 (run 44144175222); wiring them also exposed and fixed a compile error in the QA project.
 
 - **Checked by Windows CI** (windows-2022, run 44115108863): Release build, full analyzers, GPU capability model, replay folder routing, localization dictionaries and dashboard layout, and the distribution and update policy checks. This shows the code builds and the static checks pass; it does not exercise the UI or audio.
 - **Needs testing on Windows 11:** the pause hotkey, both dashboard menus (including keyboard navigation) and running Instant Clip with a recording at the same time; the System track (play tones from two selected apps and one unselected app, in replay clips and recordings, with AAC and Opus, plus app restarts and all six tracks occupied); microphone fallback and its live restore; and entering Settings right after turning Instant Clip off. The cause of that delay was identified by code analysis only.
