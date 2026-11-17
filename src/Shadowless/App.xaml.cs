@@ -4008,6 +4008,18 @@ public partial class App : Application
     {
         try
         {
+            // Windows reserves device names even when followed by an extension.
+            foreach (string reserved in new[] { "CON", "con.notes", "NUL.game", "COM1.save", "LPT9.clip" })
+            {
+                if (ReplayPaths.SanitizeFolderName(reserved) != "Game")
+                    throw new InvalidOperationException($"Reserved replay folder was accepted: {reserved}");
+            }
+            foreach (string ordinary in new[] { "Control", "Console.Game", "COM10.save", "Game.With.Dots" })
+            {
+                if (ReplayPaths.SanitizeFolderName(ordinary) != ordinary)
+                    throw new InvalidOperationException($"Valid replay folder was changed: {ordinary}");
+            }
+
             string? automaticGame =
                 ObsReplayEngine.ResolveReplayGameExecutable(
                     isAutomaticCapture: true,
