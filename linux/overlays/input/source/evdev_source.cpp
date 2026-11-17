@@ -81,12 +81,18 @@ struct EvdevInputSource::Impl {
         }
         cachedStatus(entry);
     }
+    // scan() may run from the retry timer's own timeout: never delete the timer inside its signal.
+    void dropRetryTimer() {
+        if (!retryTimer) return;
+        retryTimer->stop();
+        retryTimer.release()->deleteLater();
+    }
     void scheduleRetry() {
         qint64 next = std::numeric_limits<qint64>::max();
         for (const auto &entry : negative)
             if (entry.second.nextMs >= 0) next = std::min(next, entry.second.nextMs);
         if (next == std::numeric_limits<qint64>::max()) {
-            retryTimer.reset();
+            dropRetryTimer();
             return;
         }
         if (!retryTimer) {
@@ -277,7 +283,10 @@ struct EvdevInputSource::Impl {
                 failedAttempt(entry); continue;
             }
             if (!q->probeDevice(fd, &device->info)) {
-                entry.rejected = true;
+                // A device that is not a keyboard, mouse or gamepad is rejected for good; a failing probe
+                // (for example a node that is still initializing) is retried like an open error.
+                entry.rejected = !device->info.probeError;
+                if (!entry.rejected) entry.error = EIO;
                 failedAttempt(entry); continue;
             }
             negative.erase(path);
@@ -318,7 +327,9 @@ struct EvdevInputSource::Impl {
                     if (event->mask & (IN_DELETE | IN_MOVED_FROM)) {
                         negative.erase(path);
                         remove(path);
-                    } else if (event->mask & (IN_ATTRIB | IN_CREATE)) {
+                    } else if (event->mask & (IN_CREATE | IN_MOVED_TO)) {
+                        negative.erase(path);              // a new node under an old name: forget everything about it
+                    } else if (event->mask & IN_ATTRIB) {
                         const auto cached = negative.find(path);
                         if (cached != negative.end() && !cached->second.rejected) negative.erase(cached);
                     }
@@ -350,7 +361,7 @@ void EvdevInputSource::start(const QSet<InputId> &allowlist) {
 void EvdevInputSource::stop() {
     if (!d->started) return;
     d->started = false;
-    d->debounce->stop(); d->retryTimer.reset(); d->negative.clear();
+    d->debounce->stop(); d->dropRetryTimer(); d->negative.clear();
     delete d->monitorNotifier; d->monitorNotifier = nullptr;
     if (d->monitor >= 0) close(d->monitor);
     d->monitor = d->directoryWatch = d->parentWatch = -1;
@@ -366,12 +377,23 @@ void EvdevInputSource::setRetryPolicy(int initialMs, int maxMs, int maxAttempts)
     d->maxMs = std::max(d->initialMs, maxMs);
     d->maxAttempts = std::max(1, maxAttempts);
 }
+void EvdevInputSource::retryInaccessible() {
+    if (!d->started) return;
+    for (auto it = d->negative.begin(); it != d->negative.end();) {
+        if (it->second.rejected) ++it; else it = d->negative.erase(it);
+    }
+    d->debounce->stop();
+    d->scan();
+}
 int EvdevInputSource::openDevice(const QString &path) {
     return open(QFile::encodeName(path).constData(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
 }
 bool EvdevInputSource::probeDevice(int fd, DeviceInfo *info) {
     std::array<unsigned long, keyWords> keys{};
-    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(keys)), keys.data()) < 0) return false;
+    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(keys)), keys.data()) < 0) {
+        info->probeError = errno != ENOTTY && errno != EINVAL; // ENOTTY/EINVAL: not an evdev node at all
+        return false;
+    }
     const bool keyboard = bit(keys, KEY_A) && bit(keys, KEY_Z) && bit(keys, KEY_ENTER);
     const bool mouse = bit(keys, BTN_LEFT);
     const bool gamepad = bit(keys, BTN_SOUTH) || bit(keys, BTN_EAST);

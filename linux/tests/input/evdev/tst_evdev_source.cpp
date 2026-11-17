@@ -45,7 +45,7 @@ public:
     QHash<QString, int> readers;
     QList<qint64> attemptTimes;
     QList<int> opened;
-    bool denied = false, holdWOnOpen = false, rejected = false, failConfiguration = false;
+    bool denied = false, holdWOnOpen = false, rejected = false, failConfiguration = false, transientProbe = false;
     QHash<QString, int> attempts;
     int openError = 0;
     void triggerRange(int minimum, int maximum) {
@@ -68,6 +68,7 @@ protected:
     DeviceInfo info;
     bool probeDevice(int, DeviceInfo *result) override {
         *result = info;
+        result->probeError = transientProbe;
         return !rejected;
     }
 };
@@ -221,6 +222,46 @@ private slots:
         pipe.send(EV_KEY, KEY_A, 1); pipe.send(EV_KEY, KEY_W, 1);
         QTRY_COMPARE_WITH_TIMEOUT(spy.size(), 1, 200);
         QCOMPARE(eventAt(spy, 0).id, "key.w"); QVERIFY(eventAt(spy, 0).down);
+    }
+    // A failing probe (node still initializing) is not "not an input device": it is retried with backoff.
+    void failingProbeIsRetriedNotRejected() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.setRetryPolicy(5, 10, 6); source.rejected = true; source.transientProbe = true;
+        source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));
+        source.start({"key.w"});
+        QVERIFY(source.status() != InputStatus::Active);
+        QTRY_VERIFY_WITH_TIMEOUT(source.attempts.value("event0") >= 2, 300);   // retried, not dropped for good
+        source.rejected = false;
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::Active, 300);
+    }
+    // A node moved into place under a name that was rejected before is a new device: the old verdict is dropped.
+    void movedInNodeForgetsTheOldVerdict() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.setRetryPolicy(5, 10, 2); source.rejected = true;
+        source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));
+        source.start({"key.w"});
+        QTest::qWait(60); QCOMPARE(source.attempts.value("event0"), 1);        // rejected for good
+        source.rejected = false;
+        touch(dir.filePath("event0.new"));
+        QCOMPARE(::rename(QFile::encodeName(dir.filePath("event0.new")).constData(), QFile::encodeName(dir.filePath("event0")).constData()), 0);   // IN_MOVED_TO
+        QTRY_COMPARE_WITH_TIMEOUT(source.status(), InputStatus::Active, 300);
+    }
+    // A permission change that sends no inotify attribute event is picked up by an explicit retry.
+    void retryInaccessibleRecoversDormantNodeWithoutAnyEvent() {
+        QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
+        source.retryInaccessible();                                                 // not started: harmless
+        source.setRetryPolicy(5, 10, 1); source.denied = true;
+        source.readers.insert("event0", pipe.fds[0]); touch(dir.filePath("event0"));
+        source.start({"key.w"}); QCOMPARE(source.status(), InputStatus::PermissionDenied);
+        source.denied = false;
+        QTest::qWait(80);
+        QCOMPARE(source.attempts.value("event0"), 1);                              // dormant: nothing retries by itself
+        QCOMPARE(source.status(), InputStatus::PermissionDenied);
+        source.retryInaccessible();
+        QCOMPARE(source.status(), InputStatus::Active);
+        QCOMPARE(source.attempts.value("event0"), 2);
+        source.retryInaccessible();                                                 // nothing cached: no extra opens of live devices
+        QCOMPARE(source.attempts.value("event0"), 2);
     }
     void deleteRecreateRecoversDormantNode() {
         QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
