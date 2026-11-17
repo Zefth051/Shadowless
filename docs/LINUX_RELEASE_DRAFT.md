@@ -1,23 +1,22 @@
 # Shadowless Linux 0.3.6 — four-track recording and refreshed dashboard
 
-This release adds optional four-track recording (PC / Game / Music / Microphone),
-dynamic application audio, pause/resume for continuous recording, a Windows-style
-audio dashboard and several editor improvements. Existing clips and settings are
-preserved; new features are opt-in.
+Existing clips and settings are preserved; new features are opt-in. Update from inside the app (**Check for updates**), then quit and reopen.
 
-### Highlights
+## What changed and why
 
-- **Four-track recording** with independent volume/mute per source and named MP4 tracks.
-- **Dynamic application audio:** apps that start after capture begins are picked up without restarting video.
-- **Pause/Resume** for standalone continuous recording; basic **Discord Rich Presence**.
-- **Dashboard:** stacked full-width audio cards with volume popups, new Game/Music icons, larger capture tiles and a frameless overlay.
-- **Editor:** filters by game/mode, waveforms on every row.
-- **Opt-in idle compression** of old clips to HEVC with validation.
-- **KDE Plasma:** removes the probable cause of the Settings scroll crash (unconfirmed on a real session).
+- **Four-track recording (PC / Game / Music / Microphone).** Streamers and editors wanted to rebalance game, music and voice after the fact. Each source gets its own volume and mute, a named track inside the MP4, and can be exported on its own. It needs Game and Music assigned to real applications; old modes and files are untouched.
+- **Dynamic application audio.** Apps that start playing after capture begins (a launcher, Discord, a browser) used to be missed. They are now discovered and buffered without restarting video or losing replay history. Per-application tracks appear in the editor under *More tracks*.
+- **Pause / Resume** for standalone continuous recording, so loading screens do not end up in the file.
+- **Discord Rich Presence (basic):** capture state and detected game name, via the local Discord client only.
+- **Idle clip compression (opt-in, off by default).** While no game is open, old H.264 clips can be re-encoded to HEVC to save disk space. The original is replaced only if validation and an SSIM quality check pass; otherwise it is left untouched.
+- **Editor:** filter the sidebar by game folder and recording mode, waveforms on every audio row, track selectors kept on the left.
+- **Dashboard and overlay:** the audio sources are stacked, full-width cards in the Windows style (mute icon, name, divider and a `100%` button opening a volume popup) with new Game/Music icons and larger Instant Clip / Recording tiles. The home page is frameless with a floating header. This was done so both platforms look and behave alike.
+- **KDE Plasma:** removed a graphics opacity effect over the scrolled Settings page, the probable cause of the reported crash when scrolling Settings on Plasma. Not yet confirmed on a real Plasma session; please report if it persists.
+- **Editor waveforms** keep a dark background and stay readable with custom accents.
 
-### Known limitations
+## Known limitations
 
-- Live four-track capture, dynamic discovery, pause/finalization, Discord presence and Plasma behavior are verified only with fixtures.
+- Live four-track capture, dynamic application discovery, pause/finalization and Discord presence were verified with test fixtures only. Live Plasma validation is pending.
 
 ### Download and compatibility
 
