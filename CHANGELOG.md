@@ -4,6 +4,27 @@ All notable user-facing changes are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Peripheral overlay (Linux):** In **Capture overlays**, pick a Medal-style overlay of pressed keys, mouse buttons or gamepad inputs: QWERTY (compact or full), arrow keys, AZERTY or DualSense. A live preview shows your real input, and the overlay appears on the capture preview in the corner you choose, with its own size and opacity. It is off by default and nothing is read until you choose one.
+- **Input events next to clips (opt-in):** With "Save input events next to each clip", a small `<clip>.inputs.json` stores only the keys of the chosen overlay with their timing, never text. The clip player shows them over the clean video with an **Inputs** toggle, so the footage itself is never altered. The sidecar is moved to Trash together with its clip.
+
+### Improved
+
+- **Settings stay editable while capture stops:** After turning Instant Clip off you can open Settings immediately. Capture options changed during shutdown apply as soon as it finishes instead of being dropped.
+
+### Privacy and permissions
+
+- Input is read only while the Capture overlays editor shows an overlay, or while capture runs with saved events on. Keys outside the selected overlay are discarded immediately; the "Full" keyboard overlay warns that key timing could reveal typed text.
+- Shadowless never changes permissions and does not ask you to join the `input` group. If devices are unreadable, the editor shows a narrow `udev` rule (docs/LINUX_INPUT_OVERLAY.md) that you install yourself.
+
+### Known limitations
+
+- Verified with unit tests and simulated devices only. Real keyboards, hotplug on a live desktop and a physical DualSense are untested; overlay timing against the video is expected to be within about half a second and has not been measured.
+- Recordings that were paused have no saved input events (paused time is cut from the video). Enabling saved events during capture covers only inputs from that moment.
+- Exported clips do not include the overlay, and burning it into captured video (phase 2) is not part of this release.
+- Windows has no peripheral overlay yet.
+
 ## [0.3.6] - 2026-11-16
 
 ### Added

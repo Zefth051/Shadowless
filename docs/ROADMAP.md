@@ -216,3 +216,13 @@ publication or installed AppImage replacement is part of this change.
 - Editor audio rows: the PC group is no longer duplicated in More tracks (a group with one source is shown only as its group row). Clicking a group whose members were changed individually asks for confirmation (Cancel / Ok) and Ok turns all of its tracks on; when all are on, one click turns them all off. Waveforms are drawn for every row in playback and editing; clip analysis now starts when a clip opens instead of only in edit mode. Verified with offscreen fixtures only.
 - Linux overlay restyled toward the Windows look: no outer window frame on the home page; the header (brand, Capture overlays, Settings, Esc) floats at the screen edges, content is translucent cards over a darker dim, and Settings/editor pages keep a solid surface. Layout checked in an offscreen render only; layer-surface behavior on a real Hyprland/Plasma session is unverified.
 - The player shows no audio tracks; they appear only while editing. "PC (other)" is never listed under More tracks. The two failing dashboard tests were outdated (grouped PC/Game audio is now the default) and were updated; UI suite 76/76.
+
+## Input overlay, phase 1 — 2026-11-17
+
+- [x] ~~Medal-style peripheral overlay on Linux inside Capture overlays: five layouts (QWERTY, QWERTY full, arrows, AZERTY, DualSense), live preview, position/size/opacity, drawn on the preview canvas.~~ Opt-in; reads input only while the editor shows it or while saved events are on. Allowlist-only evdev source with hotplug and DualSense mapping; permissions are guided with a narrow `udev` rule, never changed automatically. Unit and simulated-device tests pass; real hardware (keyboard, hotplug, DualSense) is unverified.
+- [x] ~~Editable overlay in the clip player over clean video (`<clip>.inputs.json`, schema v1).~~ Opt-in sidecar, atomic writes, removed with the clip. Recorded timing is aligned to the buffer window or recording start and still needs measurement against real clips; paused recordings are skipped.
+- [ ] Phase 2: burn the overlay into captured frames through the GSR composition plugin, only if the cost is low. Out of scope for this round.
+- [ ] KPS overlay on top of the same event stream (counting window and display behavior still to design).
+- [ ] Windows port: the layout JSON and sidecar schema are shared; a Windows input source (`WH_KEYBOARD_LL`/`WH_MOUSE_LL` with scan codes, gamepad API) and WPF rendering are pending.
+- [ ] Export with the overlay burned in, and moving the overlay by dragging in the player.
+

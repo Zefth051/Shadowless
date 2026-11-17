@@ -43,6 +43,7 @@ interactive elements) is the only set a source may emit.
 * `events`: `[t_ms, id, down]`, ordered by `t_ms`, relative to the start of the clip (replay
   buffer clips: relative to the clip's first frame). `down` is `1` or `0`.
 * No wall-clock time, device names, text, scan codes or ids outside the layout allowlist.
+* `InputRecorder::writeWindow(clip, startMs, endMs)` takes `monotonicMs()` bounds: a replay clip is the buffer window that ended when the save was requested; a recording runs from its first frame to the stop request. Paused recordings are skipped. Enabling saved events mid-capture covers only inputs from that moment.
 * Written to `*.tmp` then renamed; at most 200 000 events (excess dropped, `"truncated":true`).
 * Missing or invalid sidecar means "no overlay"; the clip is never modified.
 * KPS and other statistics are derived from these events later; nothing else is stored.
