@@ -78,11 +78,12 @@ thread and unchanged clips reuse thumbnails while Shadowless is running.
 replays and recordings by game (off by default). Existing clips are left in place.
 The library scans nested folders and offers **All games**, individual game folders,
 and **Desktop / Unidentified** filters, showing the newest 20 clips in the selected
-collection. Detection queries the focused Hyprland client only when saving a replay
-or starting a recording. It uses the bundled Windows executable catalog (including
-Wine/Proton process metadata) and native Steam window identities. Unknown or conflicting identities
-stay in the main folder; no game hooks or continuous detection are installed. Plasma currently saves to
-the main folder because reliable focused-game detection is unavailable there.
+collection. Detection runs when saving a replay or starting a recording. On Hyprland it
+queries the focused client; on Plasma it scans the current user's processes. It uses the
+bundled Windows executable catalog (including Wine/Proton process metadata) and, on Hyprland,
+native Steam window titles. Unknown, ambiguous or conflicting identities stay in the main
+folder; no game hooks are installed. The Plasma scan cannot tell which window has focus, so it
+names a game only when exactly one known title is running. Game names cannot be edited in the app yet.
 
 Saving shows a rounded passive card with a status icon and distinct title/detail,
 even with the dashboard hidden, and plays
@@ -176,11 +177,10 @@ audio; opening one later does not restart the video encoder or clear the buffer.
 Sources sharing an application audio identity share a track, including browser
 tabs that use the same identity.
 
-The dashboard gives each discovered source **Track** and **Game** controls.
-**Track** chooses its default inclusion in saved clips; the independently buffered
-source remains available in the editor. **Game** moves that application's audio
-out of PC and into Game. Known catalog names are suggested automatically; use
-Game to correct an unidentified game or application. Choices persist between
+Per-application **Track** and **Game** assignments are available in the editor's **More tracks**
+view and in the Four-tracks setup; the main dashboard shows only the PC / Game / Microphone groups.
+Known catalog names are classified as Game automatically; assign a game manually in Four tracks
+to correct an unidentified one. Choices persist between
 launches. Closed or quiet applications retain their identity for the session.
 
 The editor presents **PC**, **Game** and **Microphone** groups for new automatic

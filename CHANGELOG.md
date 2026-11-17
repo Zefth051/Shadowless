@@ -14,6 +14,16 @@ All notable user-facing changes are documented here.
 - **Input devices that cannot be read are no longer retried on every device event:** Unreadable devices are retried a bounded number of times with backoff instead of continuously. After a reconnect or when the system updates a device's permissions (for example after installing the udev rule) the overlay recovers by itself, and opening Capture overlays retries them once more.
 - **Settings stay editable while capture stops:** After turning Instant Clip off you can open Settings immediately. Capture options changed during shutdown apply as soon as it finishes instead of being dropped.
 
+### Fixed
+
+- **Peripheral overlay preview no longer fakes input:** The preview and the Capture overlays canvas showed invented pressed keys. They now stay neutral unless real input arrives, and a status label under the preview shows LIVE, IDLE, DISCONNECTED, PERMISSION DENIED or ERROR (never LIVE without a readable source).
+- **Overlay position:** Bottom corners sat too high because the canvas reserved space for its status text. The capture status is now a label under the canvas and overlays respect the corner margins.
+- **Mouse alignment and QWERTY Full:** The mouse is vertically centred on the keyboard. QWERTY Full now stacks the mouse above the arrow keys in one column for a compact silhouette and draws larger by default (38 % of the video width, same visual style) so it stays readable at 720p and 1080p. The DualSense layout is a smaller, labelled placeholder.
+- **Notices at the bottom of the main window** scroll inside a bounded box instead of being cut off; confirmations are styled apart from warnings.
+- **Duplicate "Save N sec" button removed** from the main window; saving stays in the Instant Clip card menu and the hotkey.
+- **Game detection with ambiguous catalog entries:** The process scanner no longer reports a game when an executable is listed under several titles.
+- **README:** Game detection, Plasma behaviour and the per-application Game controls are described as they work today.
+
 ### Privacy and permissions
 
 - Input is read only while the Capture overlays editor shows an overlay, or while capture runs with saved events on. Keys outside the selected overlay are discarded immediately; the "Full" keyboard overlay warns that key timing could reveal typed text.
