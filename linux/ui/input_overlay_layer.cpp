@@ -34,7 +34,7 @@ void InputOverlayLayer::setPositionMs(qint64 ms) {
 void InputOverlayLayer::place(const QRect &video) {
     m_video = video;
     if (!hasTimeline() || video.isEmpty()) return;
-    setGeometry(Input::overlayRect(video, m_layout.size(), m_settings.corner, m_settings.scale, m_layout.scope() == "pad"));
+    setGeometry(Input::overlayRect(video, m_layout.size(), m_settings.corner, m_settings.scale, m_layout.scope()));
 }
 void InputOverlayLayer::paintEvent(QPaintEvent *) {
     if (!hasTimeline()) return;

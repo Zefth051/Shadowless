@@ -68,9 +68,10 @@ private:
     Library *m_library;
     ClipPlayer *m_player;
     OverlayCanvas *m_overlayPreview;
+    QScrollArea *m_noticeBox;
     QLabel *m_status, *m_detail, *m_disk, *m_notice, *m_footer, *m_layerStatus;
     QProgressBar *m_diskUsage;
-    QPushButton *m_action, *m_replay, *m_record, *m_layers, *m_layerToggle, *m_pause;
+    QPushButton *m_replay, *m_record, *m_layers, *m_layerToggle, *m_pause;
     QPushButton *m_systemAudio, *m_microphone, *m_back, *m_settingsButton, *m_folder, *m_openFolder, *m_format;
     QPushButton *m_audioSettings, *m_gameAudio, *m_musicAudio, *m_fourTrackSetup;
     QAction *m_replayToggle, *m_replaySave, *m_recordToggle, *m_recordPause;

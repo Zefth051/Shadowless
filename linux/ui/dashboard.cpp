@@ -33,6 +33,28 @@
 
 namespace Shadowless {
 namespace {
+// Holds the notice label: grows with its text up to a cap, then scrolls.
+class NoticeScroll : public QScrollArea {
+public:
+    static constexpr int MaxHeight = 96;
+    explicit NoticeScroll(QLabel *label) {
+        setObjectName("noticeScroll"); setFrameShape(QFrame::NoFrame); setWidgetResizable(true);
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        setWidget(label);
+    }
+    QSize sizeHint() const override {
+        const int width = qMax(viewport()->width(), 200);
+        const int height = widget()->hasHeightForWidth() ? widget()->heightForWidth(width) : widget()->sizeHint().height();
+        return {QScrollArea::sizeHint().width(), qMin(height, MaxHeight)};
+    }
+    QSize minimumSizeHint() const override { return {0, qMin(sizeHint().height(), 40)}; }
+protected:
+    void resizeEvent(QResizeEvent *event) override { QScrollArea::resizeEvent(event); setFixedHeight(sizeHint().height()); }
+};
+} // namespace
+
+namespace {
 class CaptureModeTile : public QPushButton {
 public:
     CaptureModeTile(const QString &title, const QString &detail) : QPushButton(title), m_detail(detail) {
@@ -425,10 +447,6 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     });
     homeLayout->addWidget(audioCard);
 
-    m_action = new QPushButton;
-    m_action->setObjectName("captureAction");
-    homeLayout->addWidget(m_action);
-
     // Format, free space and save folder share one card so they read as a group, separate from the audio card above.
     auto *storageCard = new QFrame;
     storageCard->setObjectName("panel");
@@ -522,9 +540,11 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
     m_notice->setObjectName("notice");
     m_notice->setTextFormat(Qt::PlainText);
     m_notice->setWordWrap(true);
-    m_notice->setMaximumHeight(80);
     m_notice->hide();
-    shell->addWidget(m_notice);
+    // Long or stacked messages scroll inside a bounded box instead of being clipped or pushing the page.
+    m_noticeBox = new NoticeScroll(m_notice);
+    m_noticeBox->hide();
+    shell->addWidget(m_noticeBox);
     auto *divider = new QFrame;
     m_divider = divider;
     divider->setObjectName("divider");
@@ -537,7 +557,6 @@ Dashboard::Dashboard(const GsrCapabilities &caps) {
 
     connect(close, &QPushButton::clicked, this, &Dashboard::hideRequested);
     connect(m_back, &QPushButton::clicked, this, &Dashboard::escape);
-    connect(m_action, &QPushButton::clicked, this, &Dashboard::saveReplay);
 
     connect(m_systemAudio, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(false, checked); });
     connect(m_microphone, &QPushButton::clicked, this, [this](bool checked) { emit audioChanged(true, checked); });
@@ -670,9 +689,7 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
     m_fourTrackSetup->setToolTip(active ? "Stop capture before setting up four tracks" :
         "Choose separate PC, Game, Music and Microphone recording tracks");
     m_audioSettings->setText(o.applicationAudio ? "Application audio settings" : "Audio settings");
-    m_action->setVisible(active && !o.continuousRecording);
-    m_action->setText(saving ? "Saving…" : QString("Save %1 sec").arg(o.bufferSeconds));
-    m_action->setEnabled(available && ready && !o.continuousRecording);
+    m_replaySave->setText(saving ? "Saving replay…" : QString("Save replay (last %1 sec)").arg(o.bufferSeconds));
 
     m_format->setText(QString("%1  ·  %2 FPS  ·  %3").arg(o.codec.toUpper()).arg(o.frameRate).arg(o.container.toUpper()));
     m_layerToggle->setChecked(scene.enabled);
@@ -690,7 +707,10 @@ void Dashboard::updateState(const GsrOptions &o, const OverlayScene &scene, bool
 void Dashboard::notice(const QString &message) {
     m_notice->setText(message);
     m_notice->setToolTip(message);
-    m_notice->setVisible(m_pages->currentWidget() == m_home && !message.isEmpty());
+    m_notice->setProperty("tone", message.startsWith("Saved ") ? "info" : "warning"); // confirmations vs problems
+    m_notice->style()->unpolish(m_notice); m_notice->style()->polish(m_notice);
+    m_noticeBox->setVisible(m_pages->currentWidget() == m_home && !message.isEmpty());
+    m_noticeBox->setFixedHeight(m_noticeBox->sizeHint().height());
 }
 
 void Dashboard::setShortcutKeys(const QStringList &keys) {
@@ -723,12 +743,12 @@ void Dashboard::showPage(QWidget *page, int width) {
     m_settingsButton->setVisible(dashboard);
     m_layers->setVisible(dashboard);
     m_panelWidth = width;
-    m_panelHeight = dashboard ? 740 : 780;
+    m_panelHeight = dashboard ? 700 : 780;
     m_panel->setProperty("floating", dashboard); // home: cards float on the dimmed screen like the Windows overlay
     m_panel->style()->unpolish(m_panel); m_panel->style()->polish(m_panel);
     m_divider->setVisible(chrome && !dashboard);
     m_pages->setCurrentWidget(page);
-    m_notice->setVisible(dashboard && !m_notice->text().isEmpty());
+    m_noticeBox->setVisible(dashboard && !m_notice->text().isEmpty());
     positionPanel();
 }
 

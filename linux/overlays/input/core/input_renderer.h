@@ -8,8 +8,8 @@
 namespace Shadowless::Input {
 struct RenderStyle {
     QColor accent{"#8b5cf6"}; // pressed fill
-    QColor idle{18, 18, 20, 200};
-    QColor outline{255, 255, 255, 60};
+    QColor idle{18, 18, 20, 215};
+    QColor outline{255, 255, 255, 110};
     QColor text{235, 235, 240};
     double opacity = 1.0;     // 0..1 applied to the whole image
 };
@@ -24,6 +24,8 @@ namespace Shadowless::Input {
 // clamped so it never exceeds 90% of the video. Shared by the clip player and the overlay editor canvas.
 // A few representative inputs held down (W, left click, a face button...) for previews and screenshots.
 InputState demoState(const Layout &layout);
-// `compact` (gamepads) uses a smaller default width so a tall controller does not dwarf keyboard layouts.
-QRect overlayRect(const QRect &video, const QSizeF &layoutSize, const QString &corner, int scalePercent, bool compact = false);
+// Default share of the video width by layout scope: gamepads are smaller so a tall controller does not
+// dwarf keyboards; the full keyboard is larger so its many keys stay legible.
+double defaultWidthFraction(const QString &scope);
+QRect overlayRect(const QRect &video, const QSizeF &layoutSize, const QString &corner, int scalePercent, const QString &scope = {});
 } // namespace Shadowless::Input

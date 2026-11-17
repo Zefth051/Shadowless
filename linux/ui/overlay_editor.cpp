@@ -100,7 +100,7 @@ void OverlayCanvas::paintEvent(QPaintEvent *) {
     }
     painter.setOpacity(1.);
     if (m_inputLayout.isValid()) {
-        const QRect box = Input::overlayRect(canvas.toRect(), m_inputLayout.size(), m_input.corner, m_input.scale, m_inputLayout.scope() == "pad");
+        const QRect box = Input::overlayRect(canvas.toRect(), m_inputLayout.size(), m_input.corner, m_input.scale, m_inputLayout.scope());
         Input::RenderStyle style;
         style.accent = palette().color(QPalette::Accent); style.opacity = m_input.opacity / 100.;
         const qreal ratio = devicePixelRatioF();

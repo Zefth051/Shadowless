@@ -1,9 +1,9 @@
 {"schema": 1, "id": "arrows", "name": "Arrow Keys + Mouse", "scope": "gameplay", "width": 7.2, "height": 4.4,
  "elements": [
-  {"id": "key.up", "label": "↑", "shape": "round", "x": 1.1, "y": 1.21, "w": 1.0, "h": 1.0, "evdev": 103, "win": 57416},
-  {"id": "key.left", "label": "←", "shape": "round", "x": 0.0, "y": 2.31, "w": 1.0, "h": 1.0, "evdev": 105, "win": 57419},
-  {"id": "key.down", "label": "↓", "shape": "round", "x": 1.1, "y": 2.31, "w": 1.0, "h": 1.0, "evdev": 108, "win": 57424},
-  {"id": "key.right", "label": "→", "shape": "round", "x": 2.2, "y": 2.31, "w": 1.0, "h": 1.0, "evdev": 106, "win": 57421},
+  {"id": "key.up", "label": "↑", "shape": "round", "x": 1.1, "y": 1.15, "w": 1.0, "h": 1.0, "evdev": 103, "win": 57416},
+  {"id": "key.left", "label": "←", "shape": "round", "x": 0.0, "y": 2.25, "w": 1.0, "h": 1.0, "evdev": 105, "win": 57419},
+  {"id": "key.down", "label": "↓", "shape": "round", "x": 1.1, "y": 2.25, "w": 1.0, "h": 1.0, "evdev": 108, "win": 57424},
+  {"id": "key.right", "label": "→", "shape": "round", "x": 2.2, "y": 2.25, "w": 1.0, "h": 1.0, "evdev": 106, "win": 57421},
   {"shape": "mouseBody", "x": 4.2, "y": 0, "w": 3.0, "h": 4.4},
   {"id": "mouse.left", "label": "", "shape": "mouseLeft", "x": 4.32, "y": 0.12, "w": 1.35, "h": 1.7, "evdev": 272, "vk": 1},
   {"id": "mouse.right", "label": "", "shape": "mouseRight", "x": 5.73, "y": 0.12, "w": 1.35, "h": 1.7, "evdev": 273, "vk": 2},

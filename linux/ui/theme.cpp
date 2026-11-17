@@ -110,6 +110,8 @@ void applyTheme(QWidget *widget, const QString &name) {
         QFrame#segments { background: #101416; border: 1px solid %4; border-radius: 8px; }
         QFrame#divider { background: #22282c; }
         QLabel#notice { color: %1; background: #1b2024; border: 1px solid #3a2f32; border-left: 3px solid #e0a163; padding: 8px 12px; border-radius: 8px; }
+        QLabel#notice[tone="info"] { border-color: #2a3a33; border-left-color: %11; }
+        QScrollArea#noticeScroll, QScrollArea#noticeScroll > QWidget > QWidget { background: transparent; border: 0; }
         QLabel#footer { background: rgba(17, 20, 22, 225); border-radius: 8px; padding: 6px 12px; }
         QLabel#emptyClips { color: %2; background: %3; padding: 14px 12px; border-radius: 8px; }
         QLabel#overlayMark { background: %9; color: %11; border-radius: 10px; font-size: 26px; }

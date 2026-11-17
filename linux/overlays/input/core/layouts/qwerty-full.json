@@ -1,4 +1,4 @@
-{"schema": 1, "id": "qwerty-full", "name": "QWERTY Keyboard + Mouse (Full)", "scope": "full", "width": 24.45, "height": 6.775,
+{"schema": 1, "id": "qwerty-full", "name": "QWERTY Keyboard + Mouse (Full)", "scope": "full", "width": 24.05, "height": 6.775,
  "elements": [
   {"id": "key.esc", "label": "Esc", "shape": "round", "x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0, "evdev": 1, "win": 1},
   {"id": "key.f1", "label": "F1", "shape": "round", "x": 2.2, "y": 0.0, "w": 1.0, "h": 1.0, "evdev": 59, "win": 59},
@@ -75,8 +75,8 @@
   {"id": "key.left", "label": "←", "shape": "round", "x": 17.05, "y": 5.775, "w": 1.0, "h": 1.0, "evdev": 105, "win": 57419},
   {"id": "key.down", "label": "↓", "shape": "round", "x": 18.15, "y": 5.775, "w": 1.0, "h": 1.0, "evdev": 108, "win": 57424},
   {"id": "key.right", "label": "→", "shape": "round", "x": 19.25, "y": 5.775, "w": 1.0, "h": 1.0, "evdev": 106, "win": 57421},
-  {"shape": "mouseBody", "x": 21.45, "y": 0, "w": 3.0, "h": 4.4},
-  {"id": "mouse.left", "label": "", "shape": "mouseLeft", "x": 21.57, "y": 0.12, "w": 1.35, "h": 1.7, "evdev": 272, "vk": 1},
-  {"id": "mouse.right", "label": "", "shape": "mouseRight", "x": 22.98, "y": 0.12, "w": 1.35, "h": 1.7, "evdev": 273, "vk": 2},
-  {"id": "mouse.middle", "label": "", "shape": "round", "x": 22.75, "y": 0.45, "w": 0.4, "h": 0.9, "evdev": 274, "vk": 4}
+  {"shape": "mouseBody", "x": 21.05, "y": 1.188, "w": 3.0, "h": 4.4},
+  {"id": "mouse.left", "label": "", "shape": "mouseLeft", "x": 21.17, "y": 1.3079999999999998, "w": 1.35, "h": 1.7, "evdev": 272, "vk": 1},
+  {"id": "mouse.right", "label": "", "shape": "mouseRight", "x": 22.580000000000002, "y": 1.3079999999999998, "w": 1.35, "h": 1.7, "evdev": 273, "vk": 2},
+  {"id": "mouse.middle", "label": "", "shape": "round", "x": 22.35, "y": 1.638, "w": 0.4, "h": 0.9, "evdev": 274, "vk": 4}
  ]}

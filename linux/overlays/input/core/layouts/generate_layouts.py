@@ -103,13 +103,18 @@ def dualsense():
     ]
 
 def mouse_with(els, gap=1.0):
+    """Keyboard + mouse side by side, vertically centred on each other (the taller one sets the height)."""
     w = max(e["x"] + e["w"] for e in els)
-    return els + mouse(w + gap, 0)
+    top = min(e["y"] for e in els); h = max(e["y"] + e["h"] for e in els) - top
+    mouse_h = 4.4
+    shift_kb, shift_mouse = (0, (h - mouse_h) / 2) if h >= mouse_h else ((mouse_h - h) / 2, 0)
+    els = [dict(e, y=round(e["y"] - top + shift_kb, 3)) for e in els]
+    return els + mouse(round(w + gap, 3), round(shift_mouse, 3))
 
 OUT = os.path.dirname(os.path.abspath(__file__))
 SETS = [
     layout("qwerty", "QWERTY Keyboard + Mouse", "gameplay", mouse_with(scale(compact()))),
-    layout("qwerty-full", "QWERTY Keyboard + Mouse (Full)", "full", mouse_with(scale(full()), 1.2)),
+    layout("qwerty-full", "QWERTY Keyboard + Mouse (Full)", "full", mouse_with(scale(full()), .8)),
     layout("arrows", "Arrow Keys + Mouse", "gameplay", mouse_with(scale(arrows(0, 1.1)), 1.0)),
     layout("azerty", "AZERTY Keyboard + Mouse", "gameplay", mouse_with(scale(compact(True)))),
     layout("dualsense", "Dualsense Controller (placeholder)", "pad", dualsense()),

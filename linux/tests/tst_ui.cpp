@@ -362,13 +362,50 @@ private slots:
         canvas.setInputOverlay({});
         QCOMPARE(canvas.grab().toImage(), before);
     }
+    void noticeScrollsLongMessagesWithinBoundedHeight() {
+        Dashboard dashboard(caps); dashboard.resize(900, 700); dashboard.show();
+        auto *box = dashboard.findChild<QScrollArea *>("noticeScroll"); auto *notice = dashboard.findChild<QLabel *>("notice");
+        QVERIFY(box && notice);
+        dashboard.notice("Saved clip.mp4");
+        QCOMPARE(notice->property("tone").toString(), QString("info"));
+        const int shortHeight = box->height();
+        QString longText; for (int i = 0; i < 40; ++i) longText += QString("Capture diagnostic line %1: something went wrong with the device. ").arg(i);
+        dashboard.notice(longText);
+        QCOMPARE(notice->property("tone").toString(), QString("warning"));
+        QVERIFY(box->isVisible());
+        QVERIFY(box->height() >= shortHeight && box->height() <= 96);          // bounded, never grows indefinitely
+        QVERIFY(box->verticalScrollBar()->maximum() > 0);                     // the rest is reachable by scrolling
+        QCOMPARE(notice->text(), longText);                                   // nothing is truncated
+        auto *settings = dashboard.findChild<QPushButton *>("openSettings"); QVERIFY(settings && settings->isVisible());
+        QVERIFY(dashboard.rect().contains(box->mapTo(&dashboard, box->rect().bottomLeft())));
+    }
+    void builtInMouseLayoutsAreVerticallyCentredOnTheKeyboard() {
+        for (const QString id : {"qwerty", "qwerty-full", "azerty", "arrows"}) {
+            Input::Layout layout; QString error; QVERIFY(Input::Layout::builtin(id, &layout, &error));
+            double kbTop = 1e9, kbBottom = -1e9, mouseTop = 1e9, mouseBottom = -1e9;
+            for (const auto &e : layout.elements()) {
+                const bool mouse = e.id.startsWith("mouse.") || e.shape == "mouseBody";
+                (mouse ? mouseTop : kbTop) = mouse ? qMin(mouseTop, e.rect.top()) : qMin(kbTop, e.rect.top());
+                (mouse ? mouseBottom : kbBottom) = mouse ? qMax(mouseBottom, e.rect.bottom()) : qMax(kbBottom, e.rect.bottom());
+            }
+            QVERIFY2(qAbs((kbTop + kbBottom) / 2 - (mouseTop + mouseBottom) / 2) < 0.01, qPrintable(id));
+        }
+    }
+    void fullKeyboardGetsMoreRoomThanGameplayLayouts() {
+        const QRect video(0, 0, 1920, 1080);
+        const QRect full = Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 100, "full");
+        const QRect game = Input::overlayRect(video, {11.05, 5.62}, "bottom-left", 100, "gameplay");
+        QVERIFY(full.width() > game.width());
+        QVERIFY(full.width() <= video.width() * 45 / 100);                     // still moderate
+        QCOMPARE(Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 50, "full").width(), full.width() / 2);
+    }
     void overlayRectHonoursCornerMarginsAndShrinksGamepads() {
         const QRect video(0, 0, 1920, 1080);
         const QRect bl = Input::overlayRect(video, {11.05, 5.62}, "bottom-left", 100);
         QCOMPARE(bl.left(), 14); QCOMPARE(video.bottom() - bl.bottom(), 14);
         const QRect br = Input::overlayRect(video, {11.05, 5.62}, "bottom-right", 100);
         QCOMPARE(video.right() - br.right(), 14); QCOMPARE(video.bottom() - br.bottom(), 14);
-        const QRect pad = Input::overlayRect(video, {11.0, 7.6}, "bottom-left", 100, true);
+        const QRect pad = Input::overlayRect(video, {11.0, 7.6}, "bottom-left", 100, "pad");
         QVERIFY(pad.width() < bl.width());                                    // placeholder gamepad is smaller by default
         QCOMPARE(video.bottom() - pad.bottom(), 14);
     }
@@ -1351,7 +1388,7 @@ private slots:
         dashboard.updateState(GsrOptions{}, {}, true, true, false, false);
         const auto recording = button(&dashboard, "Recording");
         QVERIFY(recording && recording->isVisible() && recording->isEnabled());
-        QVERIFY(dashboard.findChild<QPushButton *>("captureAction")->isEnabled());
+        QVERIFY(!dashboard.findChild<QPushButton *>("captureAction")); // the Instant Clip card is the only save control
     }
     void exposesCaptureDeviceSelectors() {
         SettingsPage page(caps);
@@ -1731,8 +1768,8 @@ private slots:
         GsrOptions options; options.source = "DP-1"; options.bufferSeconds = 4;
         auto *replay = button(&dashboard, "Instant Clip");
         auto *record = button(&dashboard, "Recording");
-        auto *action = dashboard.findChild<QPushButton *>("captureAction");
-        QVERIFY(replay && record && action);
+        QVERIFY(replay && record);
+        QVERIFY(!dashboard.findChild<QPushButton *>("captureAction"));
         QVERIFY(!dashboard.findChild<QPushButton *>("captureToggle"));
         // Tiles are menu buttons: the first menu entry starts / stops the mode.
         auto choose = [](QPushButton *tile) { auto *menu = tile->findChild<QMenu *>("captureMenu"); QVERIFY(menu); auto *first = menu->actions().first(); if (first->isEnabled()) first->trigger(); };
@@ -1751,7 +1788,8 @@ private slots:
         dashboard.updateState(options, {}, true, true, false, false);
         QVERIFY(replay->isChecked() && !record->isChecked());
         QVERIFY(replay->isEnabled() && record->isEnabled());
-        action->click(); QCOMPARE(saved.size(), 1); QCOMPARE(action->text(), "Save 4 sec");
+        { auto *menu = replay->findChild<QMenu *>("captureMenu"); auto *save = menu->actions().at(1);
+          QVERIFY(save->isEnabled()); save->trigger(); QCOMPARE(saved.size(), 1); QVERIFY(save->text().contains("4 sec")); }
         dashboard.updateState(options, {}, true, true, false, false, true);
         QVERIFY(replay->isChecked() && record->isChecked());
         choose(record); QCOMPARE(modes.size(), 4); QVERIFY(record->isChecked());
@@ -1761,7 +1799,7 @@ private slots:
         dashboard.updateState(options, {}, true, true, false, false);
         QVERIFY(!replay->isChecked() && record->isChecked());
         QVERIFY(!replay->isEnabled() && record->isEnabled());
-        QVERIFY(!action->isVisible());
+        QVERIFY(!replay->findChild<QMenu *>("captureMenu")->actions().at(1)->isEnabled()); // no replay buffer to save while recording continuously
         choose(record); QCOMPARE(modes.size(), 5);
         dashboard.updateState(options, {}, true, true, false, true);
         QVERIFY(!replay->isEnabled() && !record->isEnabled());

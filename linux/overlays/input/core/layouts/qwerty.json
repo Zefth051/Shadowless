@@ -23,8 +23,8 @@
   {"id": "key.lctrl", "label": "Ctrl", "shape": "round", "x": 0.0, "y": 4.62, "w": 1.275, "h": 1.0, "evdev": 29, "win": 29},
   {"id": "key.lalt", "label": "Alt", "shape": "round", "x": 1.375, "y": 4.62, "w": 1.275, "h": 1.0, "evdev": 56, "win": 56},
   {"id": "key.space", "label": "", "shape": "round", "x": 2.75, "y": 4.62, "w": 3.75, "h": 1.0, "evdev": 57, "win": 57},
-  {"shape": "mouseBody", "x": 8.05, "y": 0, "w": 3.0, "h": 4.4},
-  {"id": "mouse.left", "label": "", "shape": "mouseLeft", "x": 8.17, "y": 0.12, "w": 1.35, "h": 1.7, "evdev": 272, "vk": 1},
-  {"id": "mouse.right", "label": "", "shape": "mouseRight", "x": 9.58, "y": 0.12, "w": 1.35, "h": 1.7, "evdev": 273, "vk": 2},
-  {"id": "mouse.middle", "label": "", "shape": "round", "x": 9.350000000000001, "y": 0.45, "w": 0.4, "h": 0.9, "evdev": 274, "vk": 4}
+  {"shape": "mouseBody", "x": 8.05, "y": 0.61, "w": 3.0, "h": 4.4},
+  {"id": "mouse.left", "label": "", "shape": "mouseLeft", "x": 8.17, "y": 0.73, "w": 1.35, "h": 1.7, "evdev": 272, "vk": 1},
+  {"id": "mouse.right", "label": "", "shape": "mouseRight", "x": 9.58, "y": 0.73, "w": 1.35, "h": 1.7, "evdev": 273, "vk": 2},
+  {"id": "mouse.middle", "label": "", "shape": "round", "x": 9.350000000000001, "y": 1.06, "w": 0.4, "h": 0.9, "evdev": 274, "vk": 4}
  ]}
