@@ -18,6 +18,7 @@ using namespace Shadowless::Input;
 
 // Pipe fixtures cannot implement evdev ioctls; emulate one kernel snapshot response.
 static int snapshotFd = -1;
+static int mouseBus = 0;
 static QString countedPath;
 static int identityChecks = 0;
 // Count per-node scan work without replacing the real identity lookup.
@@ -29,6 +30,15 @@ extern "C" int __wrap_stat(const char *path, struct stat *result) {
 extern "C" int __real_ioctl(int fd, unsigned long request, ...);
 extern "C" int __wrap_ioctl(int fd, unsigned long request, ...) {
     va_list args; va_start(args, request); void *data = va_arg(args, void *); va_end(args);
+    if (mouseBus && request == EVIOCGID) {
+        static_cast<input_id *>(data)->bustype = mouseBus;
+        return 0;
+    }
+    if (mouseBus && _IOC_TYPE(request) == 'E' && _IOC_NR(request) == 0x20 + EV_KEY) {
+        static_cast<unsigned long *>(data)[BTN_LEFT / (8 * sizeof(unsigned long))]
+            |= 1UL << (BTN_LEFT % (8 * sizeof(unsigned long)));
+        return _IOC_SIZE(request);
+    }
     if (fd == snapshotFd && _IOC_TYPE(request) == 'E' && _IOC_NR(request) == 0x18) {
         const auto size = _IOC_SIZE(request);
         std::memset(data, 0, size);
@@ -66,7 +76,8 @@ protected:
         return owned;
     }
     DeviceInfo info;
-    bool probeDevice(int, DeviceInfo *result) override {
+    bool probeDevice(int fd, DeviceInfo *result) override {
+        if (mouseBus) return EvdevInputSource::probeDevice(fd, result);
         *result = info;
         result->probeError = transientProbe;
         return !rejected;
@@ -88,7 +99,7 @@ static InputEvent eventAt(const QSignalSpy &spy, int i) { return qvariant_cast<I
 class EvdevTests : public QObject {
     Q_OBJECT
 private slots:
-    void cleanup() { snapshotFd = -1; countedPath.clear(); identityChecks = 0; }
+    void cleanup() { mouseBus = 0; snapshotFd = -1; countedPath.clear(); identityChecks = 0; }
     void rejectedNodesStayCached() {
         QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());
         source.rejected = true; source.readers.insert("event0", pipe.fds[0]);
@@ -376,6 +387,67 @@ private slots:
         source.stop(); touch(dir.filePath("event0")); QTest::qWait(20);
         QCOMPARE(source.status(), InputStatus::Stopped);
         QCOMPARE(statuses.size(), 5);
+    }
+    void replacementAndRenumbering() {
+        QTemporaryDir dir;
+        Pipe oldPipe, replacement, reconnected;
+        TestSource source(dir.path());
+        const auto original = dir.filePath("event2");
+        touch(original);
+        source.readers.insert("event2", oldPipe.fds[0]);
+        QSignalSpy spy(&source, &InputSource::inputChanged);
+        source.start({"key.w"});
+        oldPipe.send(EV_KEY, KEY_W, 1);
+        QTRY_COMPARE(spy.size(), 1);
+
+        touch(dir.filePath("replacement"));
+        source.readers.insert("event2", replacement.fds[0]);
+        QCOMPARE(::rename(QFile::encodeName(dir.filePath("replacement")), QFile::encodeName(original)), 0);
+        QTRY_COMPARE(spy.size(), 2);
+        QVERIFY(!eventAt(spy, 1).down);
+        replacement.send(EV_KEY, KEY_W, 1);
+        QTRY_COMPARE(spy.size(), 3);
+
+        source.readers.insert("event17", reconnected.fds[0]);
+        QVERIFY(QFile::remove(original));
+        touch(dir.filePath("event17"));
+        QTRY_COMPARE(spy.size(), 4);
+        QVERIFY(!eventAt(spy, 3).down);
+        reconnected.send(EV_KEY, KEY_W, 1);
+        QTRY_COMPARE(spy.size(), 5);
+        QVERIFY(eventAt(spy, 4).down);
+        QCOMPARE(source.status(), InputStatus::Active);
+    }
+    void aliasTakesOverAfterOriginalDisappears() {
+        QTemporaryDir dir;
+        Pipe pipe;
+        TestSource source(dir.path());
+        for (const auto &name : {"event1", "event2"}) source.readers.insert(name, pipe.fds[0]);
+        touch(dir.filePath("event1"));
+        QCOMPARE(::link(QFile::encodeName(dir.filePath("event1")), QFile::encodeName(dir.filePath("event2"))), 0);
+        source.start({"key.w"});
+        QCOMPARE(source.opened.size(), 1);
+        QVERIFY(QFile::remove(dir.filePath("event1")));
+        QTRY_COMPARE(source.attempts.value("event2"), 1);
+        QSignalSpy spy(&source, &InputSource::inputChanged);
+        pipe.send(EV_KEY, KEY_W, 1);
+        QTRY_COMPARE(spy.size(), 1);
+    }
+    void ignoresVirtualMouse() {
+        QTemporaryDir dir;
+        Pipe pipe;
+        TestSource source(dir.path());
+        touch(dir.filePath("event1"));
+        source.readers.insert("event1", pipe.fds[0]);
+        mouseBus = BUS_VIRTUAL;
+        source.start({"mouse.left"});
+        QCOMPARE(source.status(), InputStatus::NoDevices);
+        source.retryInaccessible();
+        QCOMPARE(source.opened.size(), 1);
+        source.stop();
+        mouseBus = BUS_USB;
+        source.start({"mouse.left"});
+        QCOMPARE(source.status(), InputStatus::Active);
     }
     void dualSense() {
         QTemporaryDir dir; Pipe pipe; TestSource source(dir.path());

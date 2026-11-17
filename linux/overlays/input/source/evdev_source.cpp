@@ -17,6 +17,7 @@
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <unistd.h>
 
 namespace Shadowless::Input {
@@ -24,6 +25,9 @@ namespace {
 template<size_t N> bool bit(const std::array<unsigned long, N> &bits, unsigned int n) {
     constexpr auto width = sizeof(unsigned long) * 8;
     return n / width < N && (bits[n / width] & (1UL << (n % width)));
+}
+bool sameNode(const struct stat &a, const struct stat &b) {
+    return a.st_dev == b.st_dev && a.st_ino == b.st_ino && a.st_rdev == b.st_rdev;
 }
 constexpr size_t keyWords = (KEY_MAX / (sizeof(unsigned long) * 8)) + 1;
 }
@@ -34,6 +38,7 @@ struct EvdevInputSource::Impl {
         QSocketNotifier *notifier = nullptr;
         QByteArray pending;
         DeviceInfo info;
+        struct stat identity{};
         QSet<InputId> digital, analog, held;
         bool dropped = false;
         ~Device() { delete notifier; if (fd >= 0) close(fd); }
@@ -41,7 +46,7 @@ struct EvdevInputSource::Impl {
     struct Negative {
         dev_t rdev = 0;
         ino_t inode = 0;
-        bool identityKnown = false, rejected = false, configurationFailed = false;
+        bool rejected = false, configurationFailed = false;
         int error = 0, attempts = 0, delayMs = 0;
         qint64 nextMs = -1; // -1 means dormant.
     };
@@ -235,29 +240,45 @@ struct EvdevInputSource::Impl {
         watchDirectory();
         const QDir dir(directory);
         const auto entries = dir.entryList({QStringLiteral("event*")}, QDir::System | QDir::Files | QDir::NoDotAndDotDot);
-        QSet<QString> paths;
+        std::map<QString, struct stat> paths;
         for (const auto &entry : entries) {
             bool numeric = entry.size() > 5;
             for (auto ch : entry.mid(5)) numeric = numeric && ch >= QLatin1Char('0') && ch <= QLatin1Char('9');
-            if (numeric) paths.insert(dir.filePath(entry));
+            if (!numeric) continue;
+            const auto path = dir.filePath(entry);
+            struct stat identity{};
+            // If lookup fails (e.g. directory permissions), let openDevice report and retry the error.
+            if (::stat(QFile::encodeName(path).constData(), &identity) < 0) identity = {};
+            paths.emplace(path, identity);
         }
         QStringList missing;
-        for (const auto &entry : devices) if (!paths.contains(entry.first)) missing.append(entry.first);
+        for (const auto &[path, device] : devices) {
+            const auto found = paths.find(path);
+            if (found == paths.end() || (found->second.st_mode && !sameNode(found->second, device->identity)))
+                missing.append(path);
+        }
         for (const auto &path : missing) {
             remove(path);
             if (!started) return;
         }
         for (auto it = negative.begin(); it != negative.end();) {
-            if (!paths.contains(it->first)) it = negative.erase(it);
+            if (!paths.count(it->first)) it = negative.erase(it);
             else ++it;
         }
-        for (const auto &path : paths) {
+        for (const auto &[path, identity] : paths) {
             if (!started) return;
             if (devices.count(path)) continue;
-            struct stat identity{};
-            const bool known = ::stat(QFile::encodeName(path).constData(), &identity) == 0;
+            const bool alias = identity.st_mode && std::any_of(devices.begin(), devices.end(), [&](const auto &entry) {
+                const auto &active = entry.second->identity;
+                if (S_ISCHR(identity.st_mode)) return S_ISCHR(active.st_mode) && identity.st_rdev == active.st_rdev;
+                return sameNode(identity, active);
+            });
+            if (alias) {
+                negative.erase(path);
+                continue;
+            }
             auto cached = negative.find(path);
-            if (cached != negative.end() && known && cached->second.identityKnown
+            if (cached != negative.end()
                 && (cached->second.rdev != identity.st_rdev || cached->second.inode != identity.st_ino)) {
                 negative.erase(cached);
                 cached = negative.end();
@@ -267,9 +288,18 @@ struct EvdevInputSource::Impl {
                 continue;
             }
             auto &entry = negative[path];
-            entry.identityKnown = known;
             entry.rdev = identity.st_rdev; entry.inode = identity.st_ino;
             entry.configurationFailed = false;
+            // uinput can advertise a physical bus type. Its kernel input node still has a virtual parent.
+            if (S_ISCHR(identity.st_mode)) {
+                const auto sysPath = QStringLiteral("/sys/dev/char/%1:%2")
+                    .arg(major(identity.st_rdev)).arg(minor(identity.st_rdev));
+                if (QFileInfo(sysPath).canonicalFilePath().startsWith(QStringLiteral("/sys/devices/virtual/input/"))) {
+                    entry.rejected = true;
+                    entry.nextMs = -1;
+                    continue;
+                }
+            }
             const int fd = q->openDevice(path);
             if (fd < 0) {
                 entry.error = errno;
@@ -277,6 +307,7 @@ struct EvdevInputSource::Impl {
                 continue;
             }
             auto device = std::make_shared<Device>(); device->fd = fd;
+            device->identity = identity;
             const int flags = fcntl(fd, F_GETFL);
             if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0 || fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
                 entry.configurationFailed = true;
@@ -306,7 +337,7 @@ struct EvdevInputSource::Impl {
     }
     void hotplug() {
         alignas(inotify_event) char buffer[4096];
-        for (;;) {
+        for (int batch = 0; batch < 16; ++batch) {
             const auto count = read(monitor, buffer, sizeof(buffer));
             if (count < 0 && errno == EINTR) continue;
             if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) break;
@@ -317,6 +348,8 @@ struct EvdevInputSource::Impl {
             }
             for (size_t offset = 0; offset + sizeof(inotify_event) <= size_t(count);) {
                 const auto *event = reinterpret_cast<const inotify_event *>(buffer + offset);
+                // A moved directory keeps its watch until explicitly removed.
+                if (event->mask & IN_MOVE_SELF) inotify_rm_watch(monitor, event->wd);
                 if (event->mask & (IN_IGNORED | IN_DELETE_SELF | IN_MOVE_SELF)) {
                     if (event->wd == directoryWatch) directoryWatch = -1;
                     if (event->wd == parentWatch) parentWatch = -1;
@@ -394,6 +427,8 @@ bool EvdevInputSource::probeDevice(int fd, DeviceInfo *info) {
         info->probeError = errno != ENOTTY && errno != EINVAL; // ENOTTY/EINVAL: not an evdev node at all
         return false;
     }
+    input_id id{};
+    if (ioctl(fd, EVIOCGID, &id) == 0 && id.bustype == BUS_VIRTUAL) return false;
     const bool keyboard = bit(keys, KEY_A) && bit(keys, KEY_Z) && bit(keys, KEY_ENTER);
     const bool mouse = bit(keys, BTN_LEFT);
     const bool gamepad = bit(keys, BTN_SOUTH) || bit(keys, BTN_EAST);

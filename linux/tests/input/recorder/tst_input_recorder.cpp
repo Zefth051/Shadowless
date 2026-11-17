@@ -1,5 +1,5 @@
 #include "fake_input_source.h"
-#include "input_recorder.h"
+#include "input_sidecar_session.h"
 #include "input_timeline.h"
 #include <QDir>
 #include <QFile>
@@ -26,6 +26,8 @@ class RecorderTests : public QObject {
     Q_OBJECT
 private slots:
     void replayWindow();
+    void captureWithUnavailableInput_data();
+    void captureWithUnavailableInput();
     void continuous_data();
     void continuous();
     void allowlistAndStop();
@@ -41,6 +43,36 @@ private slots:
     void retentionCanChangeAtRuntime();
     void truncatedOnlyWhenTheWindowLostEvents();
 };
+
+void RecorderTests::captureWithUnavailableInput_data() {
+    QTest::addColumn<bool>("recording");
+    QTest::newRow("instant replay") << false;
+    QTest::newRow("continuous recording") << true;
+}
+
+void RecorderTests::captureWithUnavailableInput() {
+    QFETCH(bool, recording);
+    QTemporaryDir dir;
+    const auto clip = dir.filePath("capture.mp4");
+    QFile video(clip);
+    QVERIFY(video.open(QIODevice::WriteOnly));
+    QCOMPARE(video.write("capture"), 7);
+    video.close();
+
+    FakeInputSource source;
+    source.fail(InputStatus::PermissionDenied, {});
+    qint64 now = 100;
+    InputSidecarSession session(&source, [&] { return now; });
+    session.captureStarted(recording);
+    session.update({true, "qwerty", true, recording, 1000});
+    now += 500;
+    if (recording) session.recordingStopRequested();
+    else session.replaySaveRequested();
+    QCOMPARE(session.writeClip(clip, recording), InputSidecarSession::Outcome::Written);
+    QCOMPARE(readSidecar(clip).value("events"), QJsonValue(QJsonArray{}));
+    QVERIFY(video.open(QIODevice::ReadOnly));
+    QCOMPARE(video.readAll(), QByteArray("capture"));
+}
 
 void RecorderTests::replayWindow() {
     QTemporaryDir dir;
