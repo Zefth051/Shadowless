@@ -45,11 +45,11 @@ QImage renderInputOverlay(const Layout &layout, const InputState &state, const Q
         const QRectF r(origin.x() + e.rect.x() * scale, origin.y() + e.rect.y() * scale, e.rect.width() * scale, e.rect.height() * scale);
         const QPainterPath path = shapePath(e, r);
         const bool down = e.interactive() && state.isDown(e.id);
-        p.setPen(QPen(style.outline, qMax(1., scale * .06)));
+        p.setPen(QPen(style.outline, qMax(1., scale * .05)));
         p.setBrush(!e.interactive() ? QBrush(Qt::NoBrush) : QBrush(down ? style.accent : style.idle));
         p.drawPath(path);
         if (e.label.isEmpty()) continue;
-        font.setPixelSize(qMax(6, int(qMin(r.height() * .5, r.width() * .8 / qMax<qsizetype>(1, e.label.size()) * 1.6))));
+        font.setPixelSize(qMax(6, int(qMin(r.height() * .42, r.width() * .7 / qMax<qsizetype>(1, e.label.size()) * 1.6))));
         font.setWeight(QFont::DemiBold);
         p.setFont(font);
         p.setPen(down ? QColor(255, 255, 255) : style.text);
@@ -70,7 +70,7 @@ InputState demoState(const Layout &layout) {
 }
 
 double defaultWidthFraction(const QString &scope) {
-    return scope == QLatin1String("pad") ? .18 : scope == QLatin1String("full") ? .40 : .30;
+    return scope == QLatin1String("pad") ? .18 : scope == QLatin1String("full") ? .38 : .30;
 }
 
 QRect overlayRect(const QRect &video, const QSizeF &units, const QString &corner, int scalePercent, const QString &scope) {

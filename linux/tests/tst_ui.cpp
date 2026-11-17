@@ -380,7 +380,7 @@ private slots:
         QVERIFY(dashboard.rect().contains(box->mapTo(&dashboard, box->rect().bottomLeft())));
     }
     void builtInMouseLayoutsAreVerticallyCentredOnTheKeyboard() {
-        for (const QString id : {"qwerty", "qwerty-full", "azerty", "arrows"}) {
+        for (const QString id : {"qwerty", "azerty", "arrows"}) {
             Input::Layout layout; QString error; QVERIFY(Input::Layout::builtin(id, &layout, &error));
             double kbTop = 1e9, kbBottom = -1e9, mouseTop = 1e9, mouseBottom = -1e9;
             for (const auto &e : layout.elements()) {
@@ -391,12 +391,25 @@ private slots:
             QVERIFY2(qAbs((kbTop + kbBottom) / 2 - (mouseTop + mouseBottom) / 2) < 0.01, qPrintable(id));
         }
     }
+    void fullKeyboardKeepsMouseAndArrowsInOneCompactColumn() {
+        Input::Layout layout; QString error; QVERIFY(Input::Layout::builtin("qwerty-full", &layout, &error));
+        QRectF mouse, up, space; double keysRight = 0;
+        for (const auto &e : layout.elements()) {
+            if (e.shape == "mouseBody") mouse = e.rect; else if (e.id == "key.up") up = e.rect;
+            else if (e.id == "key.space") space = e.rect; else if (e.id == "key.backspace") keysRight = e.rect.right();
+        }
+        QVERIFY(mouse.bottom() < up.top());                                   // mouse sits above the arrows, no overlap
+        QVERIFY(mouse.left() > keysRight && up.left() > keysRight);           // both right of the main keys
+        QVERIFY(layout.size().width() / layout.size().height() < 3.2);        // compact silhouette, not a long strip
+        QVERIFY(qAbs(mouse.center().x() - up.center().x()) < 0.01);           // column is centred on itself
+        QVERIFY(space.width() > 5);                                            // still a recognisable full keyboard
+    }
     void fullKeyboardGetsMoreRoomThanGameplayLayouts() {
         const QRect video(0, 0, 1920, 1080);
         const QRect full = Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 100, "full");
         const QRect game = Input::overlayRect(video, {11.05, 5.62}, "bottom-left", 100, "gameplay");
         QVERIFY(full.width() > game.width());
-        QVERIFY(full.width() <= video.width() * 45 / 100);                     // still moderate
+        QVERIFY(full.width() <= video.width() * 40 / 100);                     // still moderate
         QCOMPARE(Input::overlayRect(video, {24.05, 6.775}, "bottom-left", 50, "full").width(), full.width() / 2);
     }
     void overlayRectHonoursCornerMarginsAndShrinksGamepads() {
