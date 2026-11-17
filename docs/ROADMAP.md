@@ -1,81 +1,147 @@
 # Windows and Linux roadmap
 
-Requested on 2026-11-12. This is a shared backlog, not a release commitment.
-Every product feature targets both branches. Work proceeds gradually; the order
-below is a proposal, not an approved implementation schedule. Checked, struck
-items are implemented; platform verification limits are recorded separately.
+Requested on 2026-11-12. This is a shared backlog, not a release commitment. Work
+proceeds gradually; the order below is a proposal, not an approved schedule.
+Reconciled on 2026-11-17 against both branches' changelogs and logs.
+
+## How to read statuses
+
+- Every item lists a status for each platform: `done`, `partial`, `open` or `n/a`.
+  `done` means implemented in that branch. Verification limits (real hardware, a real
+  desktop, a Windows host) are written next to it and are never inherited from the
+  other platform: a feature that works on Linux is not marked on Windows because of it.
+- The checkbox is checked, and the text struck, only when every applicable platform is
+  `done`. Open items name what is still missing per platform.
+- Implementation checks do not establish full hardware coverage. The dated sections
+  after the backlog are platform logs (Linux sections in the Linux branch, Windows
+  sections in the Windows branch) and hold the evidence behind each status.
 
 ## Immediate distribution work
 
-- [x] ~~Windows: enable public updates in Release builds, accepting only published
-  final Windows releases, excluding drafts and prereleases even on `0.x`.~~
-  Automated policy tests and native Windows CI pass; installer validation is
-  tracked in release status.
-- [x] ~~Linux: keep a maintained copy of GSR engine source in the Linux branch
-  and bundle its build with Shadowless, without a separate GSR installation or
-  graphical interface.~~ GSR 6.1.7 and its matching helper are bundled; Shadowless
-  retains subprocess integration. Build, source provenance, engine selection,
-  forced-stop handling and AppImage startup checks pass. Live KMS authorization
-  and capture with the bundled helper still need interactive validation.
+- [x] ~~Enable public updates in Release builds, accepting only published final
+  releases, excluding drafts and prereleases even on `0.x`.~~
+  - Windows: done. Automated policy tests and native Windows CI pass; installer
+    validation is tracked in release status.
+  - Linux: done. The public 0.3.3 updater's discovery, download, SHA-256 check and
+    atomic install passed with isolated files. Upgrading the installed AppImage to the
+    next published release is still unverified.
+- [x] ~~Keep a maintained copy of the GSR engine source in the Linux branch and bundle
+  its build with Shadowless, without a separate GSR installation or graphical interface.~~
+  - Linux: done. GSR 6.1.7 and its matching helper are bundled; build, provenance,
+    engine selection, forced-stop handling and AppImage startup checks pass. Live KMS
+    authorization and capture with the bundled helper still need interactive validation.
+  - Windows: n/a.
 
 ## Minor changes
 
-- [x] ~~Two independent settings: launch Shadowless at login and start replay
+- [x] ~~Two independent settings: launch Shadowless at login, and start replay
   buffering whenever Shadowless launches, including manual launches.~~
-  Both branches implement opt-in settings. Recovery preserves active capture.
-  Linux supports XDG and the default Hyprland Lua/legacy configuration paths.
-- [ ] Let users choose the UI accent color using a HEX value.
+  - Linux: done. XDG and the default Hyprland Lua/legacy configuration paths; recovery
+    preserves active capture. A real logout/login cycle and custom Hyprland config
+    locations are unverified.
+  - Windows: done. Startup/config tests pass; runtime on a Windows host is unverified.
+- [x] ~~Let users choose the UI accent color using a HEX value.~~
+  - Linux: done (validated HEX, persisted; shipped in 0.3.4).
+  - Windows: done (validated #RRGGBB beside the presets; shipped in 0.3.2). The custom-accent
+    WPF QA and a visual check of settings and the editor still need a Windows host.
 - [ ] Organize clips into the correct game folders. Check detection and fallback
   behavior, not just the folder creation toggle; preserve existing files.
+  - Linux: done. Conflicting game identities fall back to the output root, Plasma falls
+    back safely without hyprctl, and existing files are preserved.
+  - Windows: partial. Per-game folders with friendly names exist and replay folder
+    routing is checked in CI; the detection and fallback review has not been done.
 
 ## Medium changes
 
-- [ ] Refresh the UI and buttons while retaining Shadowless's visual identity.
-  Use restrained animations with negligible recording overhead.
+- [ ] Refresh the UI and buttons while retaining Shadowless's visual identity. Use
+  restrained animations with negligible recording overhead.
+  - Linux: partial. QSS only (rounder buttons and sections, accent hover and scrollbar
+    states, no animations); not visually verified on a running build.
+  - Windows: partial. Shared buttons gained press/focus feedback and safe icons moved to
+    vector paths; no new animations; not visually verified.
 - [ ] Improve overlay performance and settings usability. Reproduce and fix laptop
   behavior issues individually; exact cases still need to be described.
+  - Linux: open. The suspected Plasma Settings scroll crash (a graphics effect over the
+    scrolled capture settings) was removed but is not confirmed on a real Plasma session.
+  - Windows: partial. Hidden editors stop preview polling and settings writes debounce;
+    no CPU/GPU overhead measurements.
+- [ ] Fix black recordings on laptops. Reproduce integrated/discrete GPU and hybrid
+  graphics capture; validate saved video playback before claiming laptop compatibility.
+  - Linux: open. Needs real laptop hardware.
+  - Windows: partial. The adapter/output selection audit adds a guarded fallback; it is
+    **not verified fixed** (needs Auto/DXGI, denied borderless access, both GPU
+    preferences and monitor unplug/replug on Windows 11).
 - [ ] Refresh icons across both branches.
-- [x] ~~Add an open-containing-folder button between playback and deletion in both
-  branches, matching the supplied screenshot.~~ Windows already had this action;
-  Linux now opens the clip's actual directory, including game subfolders.
-- [ ] Add simple Discord Rich Presence that works without user configuration.
+  - Linux: partial. Bundled SVGs for clip refresh and trash; film icon for clips without
+    a thumbnail.
+  - Windows: partial. Refresh, close and notification glyphs replaced by vector paths.
+- [ ] Linux: fix the app icons shown in audio source lists.
+  - Linux: partial. Icons come from PulseAudio metadata with a bundled fallback; real
+    themed icons in the public AppImage remain unvalidated.
+  - Windows: n/a.
+- [x] ~~Add an open-containing-folder button between playback and deletion.~~
+  - Linux: done (opens the clip's real directory, including game subfolders).
+  - Windows: done.
+- [x] ~~Add simple Discord Rich Presence that works without user configuration.~~
+  - Linux: done. Shown only while capturing a recognized game, with a Settings switch.
+    Real Discord verification is pending.
+  - Windows: done. Same behavior and a persisted setting in all 11 languages. Real Discord
+    checks and `tools/DiscordPresenceQa` still need a Windows host.
 
 ## Major changes
 
-- [ ] Add a Medal-style overlay for pressed keys, KPS, and future statistics.
-  Investigate moving or removing it in the clip editor. An overlay burned into
-  captured frames cannot simply be removed to recover the original image;
-  editable overlays need separate event/layer data and clean video underneath.
-  Assess storage, synchronization, input permissions, privacy and overhead first.
-- [ ] Offer background clip compression only while no game is open. Preserve
-  originals until successful validation. Distinguish mathematically lossless
-  compression from visually similar lossy compression; reduced size without
-  any quality loss is not guaranteed for already compressed footage.
-- [ ] Allow saving replay clips during continuous recording. Linux already exposes
-  this through one GSR process; verify behavior and Windows parity before
-  implementing additional capture pipelines.
-- [ ] Complete separate audio tracks and independent controls for PC, game, music,
-  and microphone. Define PC as the remainder when app sources are separated
-  to avoid duplicating game/music audio. Check platform routing support and
-  distinguish capture controls from editor playback/export controls.
+- [ ] Add a Medal-style overlay for pressed keys, mouse and gamepad inputs, then KPS and
+  future statistics. Editable overlays need separate event data and clean video
+  underneath; an overlay burned into captured frames cannot be removed afterwards.
+  - Linux: partial. Phase 1 is implemented (2026-11-17): five layouts in Capture overlays,
+    live preview, canvas placement, opt-in `<clip>.inputs.json` and playback over clean
+    video. Real keyboard/mouse/DualSense, hotplug and video timing are unverified.
+  - Windows: open. The layout JSON and sidecar schema (`docs/LINUX_INPUT_OVERLAY.md`) are
+    shared; a Windows input source (`WH_KEYBOARD_LL`/`WH_MOUSE_LL` with scan codes,
+    gamepad API) and WPF rendering are pending.
+  - Open on both: burn the overlay into captured frames only if the cost is low; export
+    with the overlay; dragging the overlay in the player.
+- [ ] KPS overlay on the same input event stream. Define the counting window, display
+  and privacy controls first; to be designed after the current overlay is tested on
+  real hardware.
+  - Linux: open. Windows: open.
+- [ ] Offer background clip compression only while no game is open. Preserve originals
+  until validation succeeds. Distinguish mathematically lossless from visually similar
+  lossy compression; a size reduction is not guaranteed for already compressed footage.
+  - Linux: done. Opt-in, near-lossless HEVC with `ffprobe` and SSIM checks before a
+    replacement; long-run behavior is unverified.
+  - Windows: open.
+- [x] ~~Allow saving replay clips during continuous recording.~~
+  - Linux: done (one GSR process).
+  - Windows: done (shared encoders, shared pause). Native lifecycle QA exists; actual
+    Windows execution is pending.
+- [ ] Complete separate audio tracks and independent controls for PC, game, music and
+  microphone. Define PC as the remainder when app sources are separated.
+  - Linux: done. Four-track mode with independent Game and Music levels, dynamic
+    application discovery, and editor playback and export of every track. Live PipeWire
+    isolation and a real four-track capture are unverified.
+  - Windows: partial. Per-application routing to tracks 1-6, a System track for "all
+    audio except the selected apps", and microphone fallback; there is no PC/Game/Music/
+    Microphone role model. Real audio verification is pending.
+- [ ] Add camera capture from local webcams (V4L2 on Linux) and compatible virtual-camera
+  sources, including Camo/DroidCam-style network cameras. Assess source discovery,
+  synchronization, permissions and platform support before choosing the capture path.
+  - Linux: open (design). Windows: open.
 
 ## Proposed delivery order
 
 1. Finish and validate the immediate distribution work.
-2. Check existing behavior in both branches; finish startup options, game-folder
-   organization, the containing-folder button and HEX accent customization.
-3. Fix reproducible laptop/overlay issues, then refresh UI and add Discord RPC.
-4. Validate concurrent clipping/recording and audio separation; prototype editable
-   input overlays and idle compression before committing to their designs.
+2. Check existing behavior in both branches; finish game-folder organization on Windows.
+3. Fix reproducible laptop/overlay issues, then refresh the UI.
+4. Validate concurrent clipping/recording and audio separation on real hardware; test the
+   input overlay on a real desktop before designing KPS or the Windows port.
 
-Linux already documents optional organization by game and concurrent replay /
-recording. These remain unchecked until the requested behavior is reviewed across
-both branches. Implementation checks do not establish full hardware coverage.
-
-Startup/config tests pass on both platforms; Linux UI and command-execution
-fixtures pass. A real Linux logout/login cycle, custom Hyprland config locations,
-Windows GPU capture and public-release UI upgrades remain unverified.
 Public visibility and release publication remain separate owner decisions.
+
+## Platform logs
+
+The dated sections below are implementation logs for one platform. They record the
+evidence and verification limits behind the statuses above.
 
 ## Windows appearance update — 2026-11-16
 
