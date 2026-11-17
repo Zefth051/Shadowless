@@ -11,6 +11,7 @@ All notable user-facing changes are documented here.
 
 ### Improved
 
+- **Input devices that cannot be read are no longer retried on every device event:** After a permission change (for example installing the udev rule) or a reconnect, the overlay recovers by itself; unreadable devices are retried a bounded number of times with backoff instead of continuously.
 - **Settings stay editable while capture stops:** After turning Instant Clip off you can open Settings immediately. Capture options changed during shutdown apply as soon as it finishes instead of being dropped.
 
 ### Privacy and permissions
