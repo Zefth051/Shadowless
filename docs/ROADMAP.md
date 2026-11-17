@@ -53,6 +53,16 @@ items are implemented; platform verification limits are recorded separately.
 
 ## Major changes
 
+- [ ] Add camera capture from local webcams (V4L2 on Linux) and compatible virtual-camera
+  sources, including Camo/DroidCam-style network cameras. Assess source discovery,
+  synchronization, permissions and platform support before choosing the capture path.
+- [ ] Add a KPS overlay as a separate input-overlay feature. Define the counting window,
+  display behavior and privacy controls; derive it from the input event stream without
+  storing typed text.
+- [ ] Deliver the input overlay in phases: (1) opt-in live Settings preview with an
+  allowlisted layout; (2) timestamped sidecar events and editable overlay playback in the
+  editor over clean video; (3) layout/style controls and parity across Windows and Linux.
+  Validate input permissions, synchronization, privacy and capture overhead at each phase.
 - [ ] Add a Medal-style overlay for pressed keys, KPS, and future statistics.
   Investigate moving or removing it in the clip editor. An overlay burned into
   captured frames cannot simply be removed to recover the original image;
