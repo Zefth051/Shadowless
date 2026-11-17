@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QTemporaryDir>
+#include <unistd.h>
 #include <QtTest>
 
 using namespace Shadowless::Input;
@@ -258,15 +259,17 @@ void RecorderTests::atomicFailures() {
     QTemporaryDir dir;
     FakeInputSource source;
     InputRecorder recorder(&source, "qwerty", 0);
-    const auto permissions = QFile::permissions(dir.path());
-    QVERIFY(QFile::setPermissions(dir.path(), QFile::ReadOwner | QFile::ExeOwner));
     QString error;
-    const bool written = recorder.writeWindow(dir.filePath("readonly.mp4"), 1, 2, &error);
-    const QStringList leftovers = QDir(dir.path()).entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot);
-    QVERIFY(QFile::setPermissions(dir.path(), permissions));
-    QVERIFY(!written);
-    QVERIFY(!error.isEmpty());
-    QVERIFY(leftovers.isEmpty());
+    if (::geteuid() != 0) { // root ignores directory permissions, so this case only applies to normal users
+        const auto permissions = QFile::permissions(dir.path());
+        QVERIFY(QFile::setPermissions(dir.path(), QFile::ReadOwner | QFile::ExeOwner));
+        const bool written = recorder.writeWindow(dir.filePath("readonly.mp4"), 1, 2, &error);
+        const QStringList leftovers = QDir(dir.path()).entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot);
+        QVERIFY(QFile::setPermissions(dir.path(), permissions));
+        QVERIFY(!written);
+        QVERIFY(!error.isEmpty());
+        QVERIFY(leftovers.isEmpty());
+    }
     // A destination directory exercises failure without leaving temporary files.
     QVERIFY(QDir().mkdir(dir.filePath("blocked.mp4.inputs.json")));
     QVERIFY(!recorder.writeWindow(dir.filePath("blocked.mp4"), 1, 2, &error));
