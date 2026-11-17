@@ -315,6 +315,34 @@ private slots:
         layer.clear();
         QVERIFY(!layer.hasTimeline() && !layer.isVisible());
     }
+    void inputIsOnlyRequestedWhileSettingsShowAnOverlay() {
+        SettingsPage page(caps); applyTheme(&page, "violet");
+        GsrOptions options; QTemporaryDir directory; options.outputDirectory = directory.path();
+        page.edit(options, false, false, keys);
+        QSignalSpy wanted(&page, &SettingsPage::inputPreviewWanted);
+        page.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&page));
+        QVERIFY(!wanted.isEmpty() && wanted.last().first().toString().isEmpty()); // None selected: nothing is read
+        auto *layout = page.findChild<QComboBox *>("inputOverlayLayout"); QVERIFY(layout);
+        layout->setCurrentIndex(layout->findData("dualsense"));
+        QCOMPARE(wanted.last().first().toString(), QString("dualsense"));
+        layout->setCurrentIndex(0);
+        QVERIFY(wanted.last().first().toString().isEmpty());
+        layout->setCurrentIndex(layout->findData("qwerty"));
+        QCOMPARE(wanted.last().first().toString(), QString("qwerty"));
+        page.hide();                                                          // leaving Settings stops reading
+        QVERIFY(wanted.last().first().toString().isEmpty());
+        // Status from the source drives the help text; a live state replaces the demo presses.
+        page.show(); QVERIFY(QTest::qWaitForWindowExposed(&page));
+        auto *setup = page.findChild<QLabel *>("inputOverlaySetup"); QVERIFY(setup);
+        page.setInputStatus(Input::InputStatus::PermissionDenied, "denied");
+        QVERIFY(!setup->isHidden());
+        QVERIFY(setup->text().contains("never changes permissions"));
+        QVERIFY(!setup->text().contains("usermod"));                           // no instruction to join the input group
+        page.setInputStatus(Input::InputStatus::Active, {});
+        QVERIFY(setup->isHidden());
+        page.setInputLive(Input::InputState{});
+    }
     void failedStartupSavePreservesCurrentValues() {
         QTemporaryDir directory;
         QFile blocked(directory.filePath("not-a-directory"));

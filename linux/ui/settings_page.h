@@ -1,6 +1,7 @@
 #pragma once
 #include "../settings/settings.h"
 #include "../capture/audio.h"
+#include "../overlays/input/core/input_source.h"
 #include <QWidget>
 #include <QFutureWatcher>
 class QCheckBox;
@@ -34,9 +35,15 @@ public:
     void showAudio();
     void setShortcutStatus(const QString &message);
     void setCaptureActive(bool active);
+    // Live input preview driven by the controller's input source (never read by the page itself).
+    void setInputLive(const Input::InputState &state);
+    void setInputStatus(Input::InputStatus status, const QString &detail);
 signals:
     void saved(const Shadowless::GsrOptions &options, bool indicator, const QStringList &keys, const QString &accent, const QString &position);
     void cancelled();
+    // Layout id while the page is visible with an overlay selected, empty otherwise. The controller reads
+    // input only while this is non-empty (or while recording the sidecar).
+    void inputPreviewWanted(const QString &layoutId);
 private:
     GsrCapabilities m_caps;
     GsrOptions m_original;
@@ -58,6 +65,12 @@ private:
     QCheckBox *m_inputSidecar;
     QLabel *m_inputNotice, *m_inputAccess, *m_inputSetup;
     void updateInputOverlay();
+    void announceInputPreview();
+    Input::InputStatus m_inputStatus = Input::InputStatus::Stopped;
+    QString m_inputStatusDetail;
+protected:
+    void showEvent(QShowEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
     QList<QKeySequenceEdit *> m_keys;
     QTableWidget *m_applications;
     QPushButton *m_refreshAudio;

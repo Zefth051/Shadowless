@@ -26,6 +26,8 @@
 #include <QRegularExpressionValidator>
 #include <QtConcurrentRun>
 #include <QPainter>
+#include <QShowEvent>
+#include <QHideEvent>
 #include <QDir>
 #include <QFile>
 #include <unistd.h>
@@ -578,17 +580,35 @@ void SettingsPage::updateInputOverlay() {
                    "so enable the saved events only if you accept that. Prefer a gameplay layout."
                  : "Only the keys and buttons shown above are read. Nothing is logged or stored unless saved events are on, "
                    "and then only those keys with their timing, never text.");
-    // Access check: read permission on any input event device (no device is opened).
+    // Prefer the real source status; before the source runs fall back to a read-permission probe (no device is opened).
     bool readable = false, present = false;
     for (const QString &name : QDir("/dev/input").entryList({"event*"}, QDir::System | QDir::Files | QDir::NoDotAndDotDot)) {
         present = true;
         if (::access(QFile::encodeName("/dev/input/" + name).constData(), R_OK) == 0) { readable = true; break; }
     }
-    m_inputAccess->setVisible(enabled && !readable);
-    m_inputSetup->setVisible(enabled && !readable);
-    m_inputAccess->setText(present ? "Shadowless cannot read your input devices yet, so the overlay will stay empty. Setup steps are below."
-                                   : "No input devices were found.");
+    using Input::InputStatus;
+    const bool denied = m_inputStatus == InputStatus::PermissionDenied || (m_inputStatus == InputStatus::Stopped && present && !readable);
+    const bool empty = m_inputStatus == InputStatus::NoDevices || !present;
+    const bool failed = m_inputStatus == InputStatus::Error;
+    m_inputAccess->setVisible(enabled && (denied || empty || failed));
+    m_inputSetup->setVisible(enabled && denied);
+    m_inputAccess->setText(denied ? "Shadowless cannot read your input devices yet, so the overlay will stay empty. Setup steps are below."
+                           : failed ? (m_inputStatusDetail.isEmpty() ? QString("Input devices could not be read.") : m_inputStatusDetail)
+                                    : "No keyboard, mouse or gamepad was found.");
+    announceInputPreview();
 }
+void SettingsPage::announceInputPreview() {
+    const QString id = m_inputLayout->currentData().toString();
+    emit inputPreviewWanted(isVisible() && id != Input::Layout::none() ? id : QString());
+}
+void SettingsPage::setInputLive(const Input::InputState &state) { m_inputPreview->setLiveState(state); }
+void SettingsPage::setInputStatus(Input::InputStatus status, const QString &detail) {
+    m_inputStatus = status; m_inputStatusDetail = detail;
+    if (status != Input::InputStatus::Active) m_inputPreview->clearLiveState();
+    updateInputOverlay();
+}
+void SettingsPage::showEvent(QShowEvent *event) { QWidget::showEvent(event); announceInputPreview(); }
+void SettingsPage::hideEvent(QHideEvent *event) { QWidget::hideEvent(event); emit inputPreviewWanted(QString()); }
 void SettingsPage::showVideo() {
     focusSection(m_source);
 }

@@ -5,6 +5,7 @@
 #include "../platform/hyprland/shortcuts.h"
 #include <QSystemTrayIcon>
 #include <optional>
+#include "../overlays/input/source/evdev_source.h"
 #include <QFutureWatcher>
 #include <QSoundEffect>
 #include <functional>
@@ -30,6 +31,12 @@ private:
     OverlayScene m_scene, m_applying;
     std::optional<OverlayScene> m_pending;
     std::optional<GsrOptions> m_deferredOptions; // saved while capture was stopping
+    // Peripheral overlay input. One source, started only while something needs it (Settings preview, sidecar).
+    Input::EvdevInputSource m_input;
+    Input::InputState m_inputState;
+    QString m_inputPreviewLayout;
+    QSet<Input::InputId> m_inputAllowlist;
+    void updateInputSource();
     GsrCapture m_engine;
     OverlayClient m_overlays;
     Shortcuts m_shortcuts;

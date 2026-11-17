@@ -1,4 +1,5 @@
 #include "controller.h"
+#include "../overlays/input/core/layout.h"
 #include "desktop_entry.h"
 #include "../ui/dashboard.h"
 #include "../ui/settings_page.h"
@@ -161,6 +162,17 @@ Controller::Controller(const GsrCapabilities &caps, const QString &probeError, b
         // While the engine is still shutting down the new capture options wait for stopped(); settings stay editable.
         if (!m_engine.active()) m_options = options; else if (m_stopping) m_deferredOptions = options;
         m_indicatorEnabled = indicator; m_shortcutKeys = keys; m_shortcuts.setKeys(keys); m_dashboard->setShortcutKeys(keys); persist(); refresh(); m_dashboard->home(); m_dashboard->refreshLibrary(m_options.outputDirectory);
+    });
+    qRegisterMetaType<Input::InputEvent>(); qRegisterMetaType<Input::InputStatus>();
+    connect(m_dashboard->settingsPage(), &SettingsPage::inputPreviewWanted, this, [this](const QString &layout) {
+        m_inputPreviewLayout = layout; updateInputSource();
+    });
+    connect(&m_input, &Input::InputSource::inputChanged, this, [this](const Input::InputEvent &event) {
+        m_inputState.apply(event);
+        m_dashboard->settingsPage()->setInputLive(m_inputState);
+    });
+    connect(&m_input, &Input::InputSource::statusChanged, this, [this](Input::InputStatus status, const QString &detail) {
+        m_dashboard->settingsPage()->setInputStatus(status, detail);
     });
     connect(m_dashboard->overlayEditor(), &OverlayEditor::changed, this, &Controller::apply);
     connect(&m_shortcuts, &Shortcuts::activated, this, [this](const QString &action) {
@@ -396,10 +408,24 @@ bool Controller::persist(QString *result) {
     if (result) *result = error;
     return ok;
 }
+// Starts, restarts or stops the single input source so it reads only what is needed right now: the layout
+// previewed in Settings. Nothing is read while no overlay is selected or Settings is closed.
+void Controller::updateInputSource() {
+    QSet<Input::InputId> wanted;
+    Input::Layout layout; QString error;
+    if (!m_inputPreviewLayout.isEmpty() && Input::Layout::builtin(m_inputPreviewLayout, &layout, &error)) wanted = layout.allowlist();
+    if (wanted == m_inputAllowlist && (wanted.isEmpty() == (m_input.status() == Input::InputStatus::Stopped))) return;
+    m_input.stop();
+    m_inputState.clear();
+    m_dashboard->settingsPage()->setInputLive(m_inputState);
+    m_inputAllowlist = wanted;
+    if (!wanted.isEmpty()) m_input.start(wanted);
+}
 void Controller::quit() {
     if (m_quitting) return;
     m_dashboard->overlayEditor()->flush();
     if (m_saveLevels.isActive()) { m_saveLevels.stop(); persist(); }
+    m_inputPreviewLayout.clear(); m_input.stop();
     m_quitting = true; m_compressor.setBusy(true); m_presence.stop(); m_dashboard->hide(); m_indicator->hide();
     m_notification->dismiss();
     if (m_options.continuousRecording || m_engine.replayRecording()) m_recordingSave = true;
