@@ -6,7 +6,7 @@
 #include <QSystemTrayIcon>
 #include <optional>
 #include "../overlays/input/source/evdev_source.h"
-#include "../overlays/input/source/input_recorder.h"
+#include "../overlays/input/source/input_sidecar_session.h"
 #include <QFutureWatcher>
 #include <QSoundEffect>
 #include <functional>
@@ -38,14 +38,8 @@ private:
     QString m_inputPreviewLayout;
     QSet<Input::InputId> m_inputAllowlist;
     void updateInputSource();
-    // Optional sidecar (<clip>.inputs.json): allowlisted events of the selected layout, timed against the clip.
-    std::unique_ptr<Input::InputRecorder> m_recorder;
-    QString m_recorderLayout;
-    qint64 m_captureStartMs = 0, m_clipRequestMs = 0, m_recordingStartMs = 0, m_recordingStopMs = 0;
-    QHash<QString, QSet<Input::InputId>> m_allowlists; // parsed once per built-in layout
-    QSet<Input::InputId> allowlistFor(const QString &layoutId);
-    bool m_recordingPausedOnce = false;
-    void writeInputSidecar(const QString &clip, bool recording);
+    // Optional sidecar (<clip>.inputs.json): timing marks, recorder lifecycle and the window rules live in the session.
+    Input::InputSidecarSession m_sidecar{&m_input};
     GsrCapture m_engine;
     OverlayClient m_overlays;
     Shortcuts m_shortcuts;
