@@ -240,7 +240,7 @@ ClipPlayer::ClipPlayer(QWidget *parent):QWidget(parent),m_player(new MpvPlayer(t
         audioLabel->setVisible(count>0);
     });
     m_mix=new QCheckBox("Merge selected audio tracks into one");
-    auto *jobs=range; jobs->addSpacing(16); jobs->addWidget(m_mix); m_jobStatus=new QLabel; m_jobStatus->setTextFormat(Qt::PlainText); jobs->addWidget(m_jobStatus,1); m_cancel=button("Cancel job","clipCancel",jobs); m_export=button("Save trimmed copy…","clipExport",jobs); m_export->setToolTip("Original video quality. Cuts may start at the preceding keyframe. Selected audio stays separate unless merged."); playback->addWidget(m_editing); m_editing->hide(); m_cancel->hide();
+    auto *jobs=range; jobs->addSpacing(6); jobs->addWidget(m_mix); m_jobStatus=new QLabel; m_jobStatus->setTextFormat(Qt::PlainText); jobs->addWidget(m_jobStatus,1); m_cancel=button("Cancel job","clipCancel",jobs); m_export=button("Save trimmed copy…","clipExport",jobs); m_export->setToolTip("Original video quality. Cuts may start at the preceding keyframe. Selected audio stays separate unless merged."); playback->addWidget(m_editing); m_editing->hide(); m_cancel->hide();
     m_error=new QLabel; m_error->setTextFormat(Qt::PlainText); m_error->setWordWrap(true); playback->addWidget(m_error);
     connect(backButton,&QPushButton::clicked,this,&ClipPlayer::back);
     connect(m_player,&MpvPlayer::aspectChanged,this,&ClipPlayer::layoutVideo);
