@@ -8,7 +8,7 @@ normal application instance was launched. Verification level: E1/E2 for the pack
 
 | Check | Result |
 | --- | --- |
-| `linux/build.sh` (engine, app, all offline suites) | Pass. 17 suites, 0 failures (skips: 2 UI, 1 updates, 7 player/playback environment-dependent). Includes input access 21, helper 10, evdev 48, recorder 22, camera, shortcuts. |
+| `linux/build.sh` (engine, app, all offline suites) | Pass. 17 suites, 0 failures (10 environment-dependent skips in total). Includes input access 21, helper 10, evdev 48, recorder 22, camera, shortcuts. |
 | `python3 -m unittest discover -s linux/tests/packaging` | 34 pass (after the long-`TMPDIR` fixture fix below). |
 | AppImage build (`build_appimage.py`) | Success, 103 MB, SHA-256 recorded. Built as 0.3.7 because the app's default version is 0.3.7; a real 0.3.8 needs `SHADOWLESS_VERSION=0.3.8` at build time. |
 | `--check-dependencies` | Exit 0 on this host. |
@@ -35,3 +35,10 @@ normal application instance was launched. Verification level: E1/E2 for the pack
 
 Real pkexec authorization dialog (Hyprland `hyprpolkitagent`, Plasma agent), live capture and KMS authorization from the
 packaged image, tray/overlay on a real session, upgrading an installed 0.3.7 AppImage in place, FUSE-less hosts.
+
+## Maintainer check for the real authorization dialog (2 minutes, optional)
+
+1. Run the AppImage normally, open Capture overlays > Peripheral overlay > Enable input access, pick one device.
+2. Expected: the desktop's own password dialog appears; cancelling shows the calm "cancelled" message; a wrong password or
+   no agent shows its own message (not "cancelled"); success makes the overlay LIVE and survives a reboot.
+3. Remove input access and confirm `getfacl /dev/input/eventN` no longer lists your user and the device is unreadable.

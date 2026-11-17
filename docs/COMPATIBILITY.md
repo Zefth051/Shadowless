@@ -50,8 +50,9 @@ that every GPU, driver or desktop configuration works. A claim needs evidence
 - **Optional**: Polkit authentication agent only when direct KMS capture or
   Peripheral overlay input access asks for authorization. Declining or lacking it
   never disables capture.
-- Glibc baseline: the AppImage must be matched to the system's glibc; older
-  distributions are not validated.
+- Glibc baseline: measured on the 0.3.8 development AppImage (built on CachyOS): the app needs GLIBC 2.34 but the
+  bundled libraries need **GLIBC 2.44**, so it runs only on systems at least that new (current Arch/CachyOS). Older
+  distributions need an AppImage built on an older baseline (`docs/LINUX_APPIMAGE_VALIDATION.md`).
 
 ## Evidence levels
 
