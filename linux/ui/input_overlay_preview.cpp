@@ -13,14 +13,12 @@ void InputOverlayPreview::setLayoutId(const QString &id) {
     m_layout = Input::Layout();
     QString error;
     if (id != Input::Layout::none()) Input::Layout::builtin(id, &m_layout, &error);
-    rebuildDemo();
     setAccessibleDescription(m_layout.isValid() ? m_layout.name() : "No peripheral overlay");
     update();
 }
 void InputOverlayPreview::setOpacity(int percent) { m_style.opacity = qBound(20, percent, 100) / 100.; update(); }
-void InputOverlayPreview::setLiveState(const Input::InputState &state) { m_live = state; m_isLive = true; update(); }
-void InputOverlayPreview::clearLiveState() { m_isLive = false; m_live.clear(); update(); }
-void InputOverlayPreview::rebuildDemo() { m_demo = Input::demoState(m_layout); }
+void InputOverlayPreview::setLiveState(const Input::InputState &state) { m_live = state; update(); }
+void InputOverlayPreview::clearLiveState() { m_live.clear(); update(); }
 void InputOverlayPreview::paintEvent(QPaintEvent *) {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
@@ -37,7 +35,7 @@ void InputOverlayPreview::paintEvent(QPaintEvent *) {
     const QRect inner = rect().adjusted(18, 16, -18, -16);
     Input::RenderStyle style = m_style;
     style.accent = window()->palette().color(QPalette::Accent); // follows the application accent
-    QImage image = Input::renderInputOverlay(m_layout, m_isLive ? m_live : m_demo, inner.size() * ratio, style);
+    QImage image = Input::renderInputOverlay(m_layout, m_live, inner.size() * ratio, style);
     image.setDevicePixelRatio(ratio);
     p.drawImage(inner.topLeft(), image);
 }

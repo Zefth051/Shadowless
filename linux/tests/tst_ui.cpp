@@ -238,13 +238,12 @@ private slots:
         const QImage empty = preview.grab().toImage();
         preview.setLayoutId("qwerty");
         QCOMPARE(preview.layoutId(), QString("qwerty")); QVERIFY(preview.hasLayout());
-        const QImage demo = preview.grab().toImage();
-        QVERIFY(demo != empty);
-        Input::InputState none; preview.setLiveState(none);
-        const QImage live = preview.grab().toImage();
-        QVERIFY(live != demo); // live (nothing pressed) replaces the demo presses
+        const QImage neutral = preview.grab().toImage();
+        QVERIFY(neutral != empty);
+        Input::InputState held; held.apply({"key.w", true, 0}); preview.setLiveState(held);
+        QVERIFY(preview.grab().toImage() != neutral);                        // only real state draws pressed keys
         preview.clearLiveState();
-        QCOMPARE(preview.grab().toImage(), demo);
+        QCOMPARE(preview.grab().toImage(), neutral);                         // no invented presses
         preview.setLayoutId("unknown-layout");
         QVERIFY(!preview.hasLayout());
     }
@@ -362,6 +361,49 @@ private slots:
         QVERIFY(rightHalfChanged && !leftHalfChanged);                       // bottom-right corner only
         canvas.setInputOverlay({});
         QCOMPARE(canvas.grab().toImage(), before);
+    }
+    void overlayRectHonoursCornerMarginsAndShrinksGamepads() {
+        const QRect video(0, 0, 1920, 1080);
+        const QRect bl = Input::overlayRect(video, {11.05, 5.62}, "bottom-left", 100);
+        QCOMPARE(bl.left(), 14); QCOMPARE(video.bottom() - bl.bottom(), 14);
+        const QRect br = Input::overlayRect(video, {11.05, 5.62}, "bottom-right", 100);
+        QCOMPARE(video.right() - br.right(), 14); QCOMPARE(video.bottom() - br.bottom(), 14);
+        const QRect pad = Input::overlayRect(video, {11.0, 7.6}, "bottom-left", 100, true);
+        QVERIFY(pad.width() < bl.width());                                    // placeholder gamepad is smaller by default
+        QCOMPARE(video.bottom() - pad.bottom(), 14);
+    }
+    void captureCanvasKeepsBottomMarginAndNeutralState() {
+        OverlayCanvas canvas; applyTheme(&canvas, "violet"); canvas.resize(640, 360);
+        canvas.setCaptureVisible(false);
+        QSignalSpy status(&canvas, &OverlayCanvas::statusTextChanged);
+        canvas.setCaptureVisible(true); canvas.setCaptureVisible(false);
+        QVERIFY(!status.isEmpty());                                            // status travels as text, not painted in the canvas
+        QVERIFY(canvas.statusText().contains("not the recorded output"));
+        const QImage before = canvas.grab().toImage();
+        InputOverlaySettings value; value.layout = "qwerty"; value.corner = "bottom-left";
+        canvas.setInputOverlay(value);
+        const QImage neutral = canvas.grab().toImage();
+        int lowest = -1;
+        for (int y = 359; y >= 0 && lowest < 0; --y) for (int x = 0; x < 640; ++x) if (neutral.pixel(x, y) != before.pixel(x, y)) { lowest = y; break; }
+        QVERIFY(lowest >= 0);
+        const QRectF area = QRectF(0, 0, 640, 360);
+        QVERIFY(area.bottom() - lowest <= 6 + 14 + 2);                         // only canvas margin + corner margin, no reserved strip
+        Input::InputState held; held.apply({"key.w", true, 0}); canvas.setInputLive(held);
+        QVERIFY(canvas.grab().toImage() != neutral);
+        canvas.setInputOverlay(value);                                         // layout/settings changes reset to neutral
+        QCOMPARE(canvas.grab().toImage(), neutral);
+    }
+    void peripheralStatusBadgeNeverClaimsLiveWithoutSource() {
+        InputOverlayPanel panel; panel.show();
+        QCOMPARE(panel.statusBadge(), QString("OFF"));
+        InputOverlaySettings value; value.layout = "dualsense"; panel.setValue(value);
+        auto *badge = panel.findChild<QLabel *>("inputOverlayStatus"); QVERIFY(badge);
+        panel.setInputStatus(Input::InputStatus::PermissionDenied, {}); QCOMPARE(badge->text(), QString("PERMISSION DENIED"));
+        panel.setInputStatus(Input::InputStatus::NoDevices, {});        QCOMPARE(badge->text(), QString("DISCONNECTED"));
+        panel.setInputStatus(Input::InputStatus::Error, "x");           QCOMPARE(badge->text(), QString("ERROR"));
+        QVERIFY(badge->text() != "LIVE");
+        panel.setInputStatus(Input::InputStatus::Active, {});           QCOMPARE(badge->text(), QString("LIVE"));
+        QVERIFY(!panel.findChild<QLabel *>("inputOverlayPlaceholder")->isHidden());
     }
     void failedStartupSavePreservesCurrentValues() {
         QTemporaryDir directory;

@@ -1,4 +1,4 @@
-{"schema": 1, "id": "dualsense", "name": "Dualsense Controller", "scope": "pad", "width": 11.0, "height": 7.6,
+{"schema": 1, "id": "dualsense", "name": "Dualsense Controller (placeholder)", "scope": "pad", "width": 11.0, "height": 7.6,
  "elements": [
   {"shape": "padBody", "x": 0, "y": 1.2, "w": 11.0, "h": 6.4},
   {"id": "pad.l2", "label": "L2", "shape": "round", "x": 0.9, "y": 0, "w": 2.2, "h": 0.9, "evdev": 312},

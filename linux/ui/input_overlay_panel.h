@@ -21,6 +21,7 @@ public:
     void setValue(const InputOverlaySettings &value); // does not emit changed()
     void setInputLive(const Input::InputState &state);
     void setInputStatus(Input::InputStatus status, const QString &detail);
+    QString statusBadge() const; // LIVE, PERMISSION DENIED, DISCONNECTED, ERROR or IDLE; never LIVE without a readable source
 signals:
     void changed(const Shadowless::InputOverlaySettings &value); // user edits only
     // Layout id while the panel is visible with an overlay selected, empty otherwise.
@@ -34,7 +35,7 @@ private:
     QComboBox *m_layout, *m_corner;
     QSpinBox *m_scale, *m_opacity;
     QCheckBox *m_sidecar;
-    QLabel *m_notice, *m_access, *m_setup;
+    QLabel *m_notice, *m_access, *m_setup, *m_badge, *m_placeholder;
     Input::InputStatus m_status = Input::InputStatus::Stopped;
     QString m_statusDetail;
     bool m_loading = false;

@@ -34,6 +34,8 @@ InputOverlayPanel::InputOverlayPanel(QWidget *parent) : QWidget(parent) {
     layout->addWidget(note("Show pressed keys, mouse buttons or gamepad inputs in the video."));
     m_preview = new InputOverlayPreview;
     layout->addWidget(m_preview);
+    m_badge = new QLabel; m_badge->setObjectName("inputOverlayStatus"); m_badge->setAlignment(Qt::AlignCenter); m_badge->setTextFormat(Qt::PlainText);
+    layout->addWidget(m_badge);
     m_layout = new ClickToAdjust<QComboBox>;
     m_layout->setObjectName("inputOverlayLayout");
     m_layout->setAccessibleName("Peripheral overlay");
@@ -78,7 +80,9 @@ InputOverlayPanel::InputOverlayPanel(QWidget *parent) : QWidget(parent) {
     m_setup->setObjectName("inputOverlaySetup");
     m_setup->setTextFormat(Qt::PlainText);
     m_setup->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    for (auto *label : {m_notice, m_access, m_setup}) layout->addWidget(label);
+    m_placeholder = note("Temporary placeholder layout: the controller artwork will be replaced by a proper DualSense / Xbox model.");
+    m_placeholder->setObjectName("inputOverlayPlaceholder");
+    for (auto *label : {m_notice, m_access, m_setup, m_placeholder}) layout->addWidget(label);
     connect(m_layout, &QComboBox::currentIndexChanged, this, [this] { edited(); });
     connect(m_corner, &QComboBox::currentIndexChanged, this, [this] { edited(); });
     connect(m_scale, &QSpinBox::valueChanged, this, [this] { edited(); });
@@ -142,7 +146,31 @@ void InputOverlayPanel::refresh() {
     m_access->setText(denied ? "Shadowless cannot read your input devices yet, so the overlay will stay empty. Setup steps are below."
                       : failed ? (m_statusDetail.isEmpty() ? QString("Input devices could not be read.") : m_statusDetail)
                                : "No keyboard, mouse or gamepad was found.");
+    m_placeholder->setVisible(enabled && layout.isValid() && layout.scope() == "pad");
+    const QString badge = statusBadge();
+    m_badge->setVisible(enabled);
+    m_badge->setText(badge);
+    m_badge->setProperty("inputState", badge.toLower().replace(' ', '-'));
+    m_badge->setToolTip(badge == "LIVE" ? "Showing real input." : "The preview shows the layout only; no key presses are simulated.");
     announce();
+}
+QString InputOverlayPanel::statusBadge() const {
+    using Input::InputStatus;
+    if (m_layout->currentData().toString() == Input::Layout::none()) return "OFF";
+    switch (m_status) {
+    case InputStatus::Active: return "LIVE";
+    case InputStatus::PermissionDenied: return "PERMISSION DENIED";
+    case InputStatus::NoDevices: return "DISCONNECTED";
+    case InputStatus::Error: return "ERROR";
+    default: break;
+    }
+    // Not started yet: tell a missing permission apart without opening any device.
+    bool present = false, readable = false;
+    for (const QString &name : QDir("/dev/input").entryList({"event*"}, QDir::System | QDir::Files | QDir::NoDotAndDotDot)) {
+        present = true;
+        if (::access(QFile::encodeName("/dev/input/" + name).constData(), R_OK) == 0) { readable = true; break; }
+    }
+    return !present ? "DISCONNECTED" : !readable ? "PERMISSION DENIED" : "IDLE";
 }
 void InputOverlayPanel::announce() {
     const QString id = m_layout->currentData().toString();

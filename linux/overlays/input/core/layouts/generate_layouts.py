@@ -112,7 +112,7 @@ SETS = [
     layout("qwerty-full", "QWERTY Keyboard + Mouse (Full)", "full", mouse_with(scale(full()), 1.2)),
     layout("arrows", "Arrow Keys + Mouse", "gameplay", mouse_with(scale(arrows(0, 1.1)), 1.0)),
     layout("azerty", "AZERTY Keyboard + Mouse", "gameplay", mouse_with(scale(compact(True)))),
-    layout("dualsense", "Dualsense Controller", "pad", dualsense()),
+    layout("dualsense", "Dualsense Controller (placeholder)", "pad", dualsense()),
 ]
 for s in SETS:
     path = os.path.join(OUT, f"{s['id']}.json")

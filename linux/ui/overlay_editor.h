@@ -24,8 +24,9 @@ public:
     explicit OverlayCanvas(QWidget *parent = nullptr);
     void setScene(const OverlayScene &scene, int selected);
     void setPreviewSocket(const QString &path);
+    void setInputLive(const Input::InputState &state);
     void setCaptureVisible(bool visible);
-    // Shows where the peripheral overlay will sit in the capture (demo presses unless live state is given).
+    // Shows where the peripheral overlay will sit in the capture (neutral unless live state is given).
     void setInputOverlay(const InputOverlaySettings &settings);
     QString mediaError() const { return m_error; }
 signals:
@@ -51,8 +52,13 @@ private:
     QString m_previewStatus = "Capture is off · layer editing remains available.";
     InputOverlaySettings m_input;
     Input::Layout m_inputLayout;
-    Input::InputState m_inputState;
+    Input::InputState m_inputState; // neutral unless live input is flowing
     QRectF canvasRect() const;
+    void refreshStatus();
+public:
+    QString statusText() const;
+signals:
+    void statusTextChanged(const QString &text);
 };
 class OverlayEditor : public QWidget {
     Q_OBJECT

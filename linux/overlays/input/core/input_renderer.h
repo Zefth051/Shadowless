@@ -24,5 +24,6 @@ namespace Shadowless::Input {
 // clamped so it never exceeds 90% of the video. Shared by the clip player and the overlay editor canvas.
 // A few representative inputs held down (W, left click, a face button...) for previews and screenshots.
 InputState demoState(const Layout &layout);
-QRect overlayRect(const QRect &video, const QSizeF &layoutSize, const QString &corner, int scalePercent);
+// `compact` (gamepads) uses a smaller default width so a tall controller does not dwarf keyboard layouts.
+QRect overlayRect(const QRect &video, const QSizeF &layoutSize, const QString &corner, int scalePercent, bool compact = false);
 } // namespace Shadowless::Input

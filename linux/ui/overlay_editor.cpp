@@ -28,12 +28,12 @@ OverlayCanvas::OverlayCanvas(QWidget *parent) : QWidget(parent) {
         if (changed) update();
     });
     connect(&m_preview, &PreviewClient::frameReady, this, [this](const QImage &image, QSize source) {
-        m_capture = image; m_sourceSize = source; update();
+        m_capture = image; m_sourceSize = source; refreshStatus(); update();
     });
     connect(&m_preview, &PreviewClient::statusChanged, this, [this](const QString &status) {
         m_previewStatus = status;
         if (status != "Live capture preview") m_capture = {};
-        update();
+        refreshStatus(); update();
     });
 }
 void OverlayCanvas::setPreviewSocket(const QString &path) { m_preview.setSocketPath(path); }
@@ -41,15 +41,21 @@ void OverlayCanvas::setCaptureVisible(bool visible) {
     m_captureVisible = visible;
     m_preview.setActive(isVisible() && visible);
     if (!visible) m_capture = {};
-    update();
+    refreshStatus(); update();
 }
 void OverlayCanvas::setInputOverlay(const InputOverlaySettings &settings) {
     m_input = settings.sanitized();
     m_inputLayout = Input::Layout(); QString error;
     if (m_input.enabled()) Input::Layout::builtin(m_input.layout, &m_inputLayout, &error);
-    m_inputState = Input::demoState(m_inputLayout);
+    m_inputState.clear(); // never shows invented key presses
     update();
 }
+void OverlayCanvas::setInputLive(const Input::InputState &state) { m_inputState = state; update(); }
+QString OverlayCanvas::statusText() const {
+    return !m_captureVisible ? QString("Layers only · not the recorded output") : m_previewStatus == "Live capture preview"
+        ? QString("Live capture preview · %1 × %2").arg(m_sourceSize.width()).arg(m_sourceSize.height()) : m_previewStatus;
+}
+void OverlayCanvas::refreshStatus() { emit statusTextChanged(statusText()); }
 QRectF OverlayCanvas::canvasRect() const {
     QSizeF size(m_sourceSize); size.scale(QSizeF(width() - 12, height() - 12), Qt::KeepAspectRatio);
     return QRectF(QPointF((width() - size.width()) / 2, (height() - size.height()) / 2), size);
@@ -94,9 +100,7 @@ void OverlayCanvas::paintEvent(QPaintEvent *) {
     }
     painter.setOpacity(1.);
     if (m_inputLayout.isValid()) {
-        // Keep clear of the status strip drawn along the bottom edge below.
-        const QRect area = canvas.toRect().adjusted(0, 0, 0, property("compactPreview").toBool() ? 0 : -38);
-        const QRect box = Input::overlayRect(area, m_inputLayout.size(), m_input.corner, m_input.scale);
+        const QRect box = Input::overlayRect(canvas.toRect(), m_inputLayout.size(), m_input.corner, m_input.scale, m_inputLayout.scope() == "pad");
         Input::RenderStyle style;
         style.accent = palette().color(QPalette::Accent); style.opacity = m_input.opacity / 100.;
         const qreal ratio = devicePixelRatioF();
@@ -108,14 +112,6 @@ void OverlayCanvas::paintEvent(QPaintEvent *) {
         const auto &layer = m_scene.layers[m_selected];
         painter.setPen(QPen(palette().color(QPalette::Accent), 2, Qt::DashLine));
         painter.drawRect(QRectF(canvas.x() + layer.x * canvas.width(), canvas.y() + layer.y * canvas.height(), layer.width * canvas.width(), layer.height * canvas.height()));
-    }
-    if (!property("compactPreview").toBool()) {
-        painter.setPen(QColor("#8b969d"));
-        const auto label = !m_captureVisible ? QString("Layers only · not the recorded output") : m_previewStatus == "Live capture preview"
-            ? QString("Live capture preview · %1 × %2").arg(m_sourceSize.width()).arg(m_sourceSize.height()) : m_previewStatus;
-        const auto box = canvas.adjusted(8, canvas.height() - 38, -8, -8);
-        painter.fillRect(box, QColor(16, 20, 22, 210));
-        painter.drawText(box.adjusted(5, 0, -5, 0), Qt::AlignVCenter | Qt::AlignLeft, label);
     }
 }
 void OverlayCanvas::mousePressEvent(QMouseEvent *event) {
@@ -160,6 +156,9 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
     m_canvas->setAccessibleName("Capture composition preview");
     connect(live, &QPushButton::toggled, m_canvas, &OverlayCanvas::setCaptureVisible);
     preview->addWidget(m_canvas, 1);
+    auto *canvasStatus = new QLabel(m_canvas->statusText()); canvasStatus->setObjectName("canvasStatus"); canvasStatus->setProperty("muted", true); canvasStatus->setTextFormat(Qt::PlainText);
+    connect(m_canvas, &OverlayCanvas::statusTextChanged, canvasStatus, &QLabel::setText);
+    preview->addWidget(canvasStatus);
     auto *dragHint = new QLabel("Drag the selected layer to position it in the capture.");
     dragHint->setWordWrap(true);
     dragHint->setProperty("muted", true);
@@ -281,8 +280,11 @@ OverlayEditor::OverlayEditor(QWidget *parent) : QWidget(parent) {
     });
 }
 void OverlayEditor::setInputOverlay(const InputOverlaySettings &settings) { m_inputPanel->setValue(settings); }
-void OverlayEditor::setInputLive(const Input::InputState &state) { m_inputPanel->setInputLive(state); }
-void OverlayEditor::setInputStatus(Input::InputStatus status, const QString &detail) { m_inputPanel->setInputStatus(status, detail); }
+void OverlayEditor::setInputLive(const Input::InputState &state) { m_inputPanel->setInputLive(state); m_canvas->setInputLive(state); }
+void OverlayEditor::setInputStatus(Input::InputStatus status, const QString &detail) {
+    m_inputPanel->setInputStatus(status, detail);
+    if (status != Input::InputStatus::Active) m_canvas->setInputLive({});
+}
 void OverlayEditor::edit(const OverlayScene &scene) {
     m_pages->setCurrentIndex(0);
     m_debounce.stop(); m_scene = scene; m_loading = true; m_master->setChecked(scene.enabled); m_loading = false; refreshList(scene.layers.isEmpty() ? -1 : 0);

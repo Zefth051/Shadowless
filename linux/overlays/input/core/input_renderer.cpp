@@ -69,10 +69,10 @@ InputState demoState(const Layout &layout) {
     return state;
 }
 
-QRect overlayRect(const QRect &video, const QSizeF &units, const QString &corner, int scalePercent) {
+QRect overlayRect(const QRect &video, const QSizeF &units, const QString &corner, int scalePercent, bool compact) {
     if (video.isEmpty() || units.isEmpty()) return {};
     const int margin = 14;
-    int w = qBound(120, qRound(video.width() * .30 * scalePercent / 100.), qMax(120, int(video.width() * .9)));
+    int w = qBound(120, qRound(video.width() * (compact ? .18 : .30) * scalePercent / 100.), qMax(120, int(video.width() * .9)));
     int h = qRound(w * units.height() / units.width());
     if (h > video.height() * .9) { h = int(video.height() * .9); w = qRound(h * units.width() / units.height()); }
     const bool right = corner.endsWith("right"), bottom = corner.startsWith("bottom");
