@@ -225,4 +225,3 @@ publication or installed AppImage replacement is part of this change.
 - [ ] KPS overlay on top of the same event stream (counting window and display behavior still to design).
 - [ ] Windows port: the layout JSON and sidecar schema are shared; a Windows input source (`WH_KEYBOARD_LL`/`WH_MOUSE_LL` with scan codes, gamepad API) and WPF rendering are pending.
 - [ ] Export with the overlay burned in, and moving the overlay by dragging in the player.
-
