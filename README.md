@@ -10,7 +10,7 @@ See [AI disclosure](docs/AI_DEVELOPMENT.md) and the
 [Windows / Linux feature comparison](docs/FEATURES.md).
 
 [Windows installer / releases](https://github.com/Zefth051/Shadowless/releases) ·
-[Linux AppImage 0.3.5](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.5) ·
+[Linux AppImage 0.3.6](https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.6) ·
 [Installation guide](docs/INSTALL.md)
 
 **Capture engines:** Windows uses OBS components (`libobs`), included in the
@@ -21,7 +21,7 @@ GSR interface is needed. The existing 0.2.4 draft still requires host GSR.
 
 <p align="center">
   <a href="https://github.com/Zefth051/Shadowless/releases"><img src="docs/readme-download.svg" alt="Download Shadowless for Windows" width="286"></a>
-  <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.5"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
+  <a href="https://github.com/Zefth051/Shadowless/releases/tag/linux-v0.3.6"><img src="docs/readme-download-linux.svg" alt="Download Shadowless for Linux" width="286"></a>
 </p>
 
 Current Linux source also adds Plasma 6 Wayland startup/portal support, custom HEX
@@ -31,7 +31,7 @@ live Plasma capture and desktop integration remain unverified. See the
 
 ## Current release status
 
-**Public source and releases.** Linux 0.3.5 is available as an AppImage with
+**Public source and releases.** Linux 0.3.6 is available as an AppImage with
 checksums, build inventory and dependency source materials. Windows 0.3.1 is the
 current Windows release. See [available packages and validation status](docs/RELEASE_STATUS.md).
 
