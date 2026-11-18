@@ -46,7 +46,8 @@ packaged image, tray/overlay on a real session, upgrading an installed 0.3.7 App
 ## CI build of the real AppImage
 
 - Run it by pushing the dev branch to `ci/linux-appimage/<name>` (for example
-  `git push origin HEAD:ci/linux-appimage/0.3.8`), or start `.github/workflows/linux-appimage-ci.yml` manually.
+  `git push shadowless HEAD:ci/linux-appimage/0.3.8`). The push trigger works immediately from the branch;
+  manual dispatch only becomes available once this workflow file exists on the repository's default branch.
 - It builds version 0.3.8 with public updates off and produces only a workflow artifact
   (`Shadowless-0.3.8-linux-x86_64-ci`, kept 7 days). It creates no release or tag and runs with read-only permissions.
 - It validates the build, offline regressions, packaging tests and AppImage smoke test in an Arch container. It does not
