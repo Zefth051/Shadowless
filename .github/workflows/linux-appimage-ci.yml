@@ -1,0 +1,75 @@
+name: Build Linux AppImage (CI artifact)
+# Artifact-only build of the real AppImage from dev branches. No release, no tag, no write token.
+on:
+  push:
+    branches:
+      - 'ci/linux-appimage/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: linux-appimage-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  appimage:
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    timeout-minutes: 45
+    env:
+      VERSION: 0.3.8
+      SHADOWLESS_VERSION: 0.3.8
+      SHADOWLESS_PUBLIC_UPDATES: false
+      QT_QPA_PLATFORM: offscreen
+      PULSE_SERVER: unix:/tmp/shadowless-ci-pulse/native
+    steps:
+      - name: Install native build dependencies
+        run: >-
+          pacman -Syu --noconfirm --needed git python qt6-base qt6-multimedia
+          qt6-wayland qt6-svg qt6-imageformats layer-shell-qt ffmpeg mpv
+          pkgconf mesa libpulse pipewire pulseaudio meson ninja patchelf
+          libxcomposite libxrandr libxfixes libxdamage libva libdrm libcap vulkan-headers lua
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate version and repository
+        shell: bash
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          # checkout's temporary HOME does not persist Git ownership trust into container steps.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 tools/check_secrets.py --history
+      - name: Start isolated timed audio for playback tests
+        shell: bash
+        run: |
+          getent group pulse >/dev/null || groupadd --system pulse
+          getent passwd pulse >/dev/null || useradd --system --gid pulse --home-dir /var/lib/pulse --create-home --shell /usr/bin/nologin pulse
+          install -d -o pulse -g pulse -m 0755 /tmp/shadowless-ci-pulse
+          pulseaudio --system --daemonize=yes --use-pid-file=no \
+            --disallow-exit=yes --disallow-module-loading=yes \
+            --exit-idle-time=-1 --fail=yes -n \
+            --load='module-null-sink sink_name=shadowless_ci rate=48000 channels=2' \
+            --load='module-native-protocol-unix socket=/tmp/shadowless-ci-pulse/native auth-anonymous=1' \
+            --log-target=file:/tmp/shadowless-ci-pulse/server.log
+          pactl list short sinks
+          [[ "$(pactl get-default-sink)" == shadowless_ci ]]
+      - name: Build and run offline regressions
+        shell: bash
+        run: ./linux/build.sh
+      - name: Test packaging
+        run: python3 -m unittest discover -s linux/tests/packaging
+      - name: Package and smoke-test AppImage
+        run: python3 linux/packaging/build_appimage.py --version "$VERSION"
+      - name: Record build environment
+        run: pacman -Q > "artifacts/release/linux-$VERSION/BUILD_PACKAGES.txt"
+      - name: Upload CI artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: Shadowless-0.3.8-linux-x86_64-ci
+          path: |
+            artifacts/release/linux-0.3.8/*.AppImage
+            artifacts/release/linux-0.3.8/SHA256SUMS.txt
+            artifacts/release/linux-0.3.8/BUILD_PACKAGES.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
