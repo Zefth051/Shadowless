@@ -42,3 +42,12 @@ packaged image, tray/overlay on a real session, upgrading an installed 0.3.7 App
 2. Expected: the desktop's own password dialog appears; cancelling shows the calm "cancelled" message; a wrong password or
    no agent shows its own message (not "cancelled"); success makes the overlay LIVE and survives a reboot.
 3. Remove input access and confirm `getfacl /dev/input/eventN` no longer lists your user and the device is unreadable.
+
+## CI build of the real AppImage
+
+- Run it by pushing the dev branch to `ci/linux-appimage/<name>` (for example
+  `git push origin HEAD:ci/linux-appimage/0.3.8`), or start `.github/workflows/linux-appimage-ci.yml` manually.
+- It builds version 0.3.8 with public updates off and produces only a workflow artifact
+  (`Shadowless-0.3.8-linux-x86_64-ci`, kept 7 days). It creates no release or tag and runs with read-only permissions.
+- It validates the build, offline regressions, packaging tests and AppImage smoke test in an Arch container. It does not
+  cover physical Wayland, tray/overlay or Polkit/pkexec behaviour; those still need the maintainer check above.
